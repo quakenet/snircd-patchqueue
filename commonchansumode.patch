@@ -1,0 +1,225 @@
+Add usermode +q which requires users /msg'ing or /notice'ing you to be in at least one common channel.
+This is designed to stop the spam bots which sit outside a channel, while a spy sits inside, preventing channel operators dealing with the problem.
+We currently also block invites, this might not be such a good idea, but these days everyone can get Q.
+
+diff -r f2182ca2442a include/channel.h
+--- a/include/channel.h	Sun Jan 11 22:53:16 2009 +0000
++++ b/include/channel.h	Sun Jan 11 22:54:00 2009 +0000
+@@ -462,5 +462,6 @@
+ extern void free_ban(struct Ban *ban);
+ 
+ extern unsigned int get_channel_marker(void);
++extern int common_chan_count(struct Client *a, struct Client *b, int max);
+ 
+ #endif /* INCLUDED_channel_h */
+diff -r f2182ca2442a include/client.h
+--- a/include/client.h	Sun Jan 11 22:53:16 2009 +0000
++++ b/include/client.h	Sun Jan 11 22:54:00 2009 +0000
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioOswkgxRXInP"
++#define infousermodes "dioOswkgxRXInPq"
+ 
+ /** Character to indicate no oper name available */
+ #define NOOPERNAMECHARACTER '-'
+@@ -192,7 +192,8 @@
+     FLAG_NOIDLE,                    /**< user's idletime is hidden */
+     FLAG_XTRAOP,                    /**< oper has special powers */
+     FLAG_OPERNAME,                  /**< Server sends oper name in mode string */
+-
++    FLAG_COMMONCHANSONLY,           /**< SNIRCD_q: hide privmsgs/notices if in no
++					 common channels (with +ok exceptions) */
+     FLAG_LAST_FLAG,                 /**< number of flags */
+     FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
+     FLAG_GLOBAL_UMODES = FLAG_OPER  /**< First global mode flag */
+@@ -622,6 +623,8 @@
+ #define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
+ /** Return non-zero if the server should send opername information */
+ #define IsSendOperName(x)         HasFlag(x, FLAG_OPERNAME)
++/** Return non-zero if the client has set mode +q (common chans only). */
++#define IsCommonChansOnly(x)    HasFlag(x, FLAG_COMMONCHANSONLY)
+ 
+ /** Return non-zero if the client has operator or server privileges. */
+ #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
+@@ -685,6 +688,8 @@
+ #define SetAccountOnly(x)       SetFlag(x, FLAG_ACCOUNTONLY)
+ /** Mark a client as having mode +P (paranoid). */
+ #define SetParanoid(x)          SetFlag(x, FLAG_PARANOID)
++/** Mark a client as having mode +q (common chans only). */
++#define SetCommonChansOnly(x)   SetFlag(x, FLAG_COMMONCHANSONLY)
+ 
+ /** Return non-zero if \a sptr sees \a acptr as an operator. */
+ #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
+@@ -730,6 +735,8 @@
+ #define ClearAccountOnly(x)     ClrFlag(x, FLAG_ACCOUNTONLY)
+ /** Remove mode +P (paranoid) from a client */
+ #define ClearParanoid(x)        ClrFlag(x, FLAG_PARANOID)
++/** Remove mode +q (common chans only) from a client */
++#define ClearCommonChansOnly(x) ClrFlag(x, FLAG_COMMONCHANSONLY)
+ 
+ /* free flags */
+ #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
+diff -r f2182ca2442a include/numeric.h
+--- a/include/numeric.h	Sun Jan 11 22:53:16 2009 +0000
++++ b/include/numeric.h	Sun Jan 11 22:54:00 2009 +0000
+@@ -420,6 +420,7 @@
+ /*	ERR_HTMDISABLED      486	   unreal */
+ #define ERR_ACCOUNTONLY      486	/* QuakeNet/ASUKA extension */
+ /*      ERR_CHANTOORECENT    487           IRCnet extension (?) */
++#define ERR_COMMONCHANSONLY  487        /* QuakeNet/snircd extension */
+ /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
+ #define ERR_VOICENEEDED      489        /* Undernet extension */
+ 
+diff -r f2182ca2442a ircd/channel.c
+--- a/ircd/channel.c	Sun Jan 11 22:53:16 2009 +0000
++++ b/ircd/channel.c	Sun Jan 11 22:54:00 2009 +0000
+@@ -3801,3 +3801,39 @@
+ 
+   return marker;
+ }
++
++/* Returns the number of common channels between two users, upto max. */
++int common_chan_count(struct Client *a, struct Client *b, int max)
++{
++  int count = 0;
++  struct Membership *cptr;
++  struct User *ua, *ub;
++  unsigned int marker = get_client_marker();
++
++  ua = cli_user(a);
++  ub = cli_user(b);
++
++  /* makes no difference to the big O complexity I know */
++  if(ua->joined > ub->joined)
++  {
++    struct User *swapee = ua;
++    ua = ub;
++    ub = swapee;
++  }
++
++  for (cptr=ua->channel;cptr;cptr=cptr->next_channel)
++  {
++    cptr->channel->marker = marker;
++  }
++
++  for (cptr=ub->channel;cptr;cptr=cptr->next_channel)
++  {
++    if (cptr->channel->marker == marker) {
++      count++;
++      if (max && (count >= max))
++        return count;
++    }
++  }
++
++  return count;
++}
+diff -r f2182ca2442a ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sun Jan 11 22:53:16 2009 +0000
++++ b/ircd/ircd_relay.c	Sun Jan 11 22:54:00 2009 +0000
+@@ -308,6 +308,10 @@
+   if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
+     return;
+ 
++  /* slug: same applies here, since only opers can be +k */
++  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
++    return;
++
+   if (!(is_silenced(sptr, acptr)))
+     sendcmdto_one(sptr, CMD_PRIVATE, acptr, "%s :%s", name, text);
+ }
+@@ -360,6 +364,9 @@
+   if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
+     return;
+ 
++  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
++    return;
++
+   if (!(is_silenced(sptr, acptr)))
+     sendcmdto_one(sptr, CMD_NOTICE, acptr, "%s :%s", name, text);
+ }
+@@ -399,6 +406,11 @@
+     return;
+   }
+ 
++  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1)) {
++    send_reply(sptr, ERR_COMMONCHANSONLY, cli_name(acptr));
++    return;
++  }
++
+   /*
+    * send away message if user away
+    */
+@@ -443,6 +455,9 @@
+   if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
+     return;
+ 
++  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
++    return;
++
+   /*
+    * deliver the message
+    */
+diff -r f2182ca2442a ircd/m_invite.c
+--- a/ircd/m_invite.c	Sun Jan 11 22:53:16 2009 +0000
++++ b/ircd/m_invite.c	Sun Jan 11 22:54:00 2009 +0000
+@@ -171,6 +171,9 @@
+     return 0;
+   }
+   
++  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
++    return;
++
+   if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
+     return 0;
+ 
+diff -r f2182ca2442a ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jan 11 22:53:16 2009 +0000
++++ b/ircd/s_err.c	Sun Jan 11 22:54:00 2009 +0000
+@@ -1006,7 +1006,7 @@
+ /* 486 */
+   { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user -- For details of how to obtain an account visit %s", "486" },
+ /* 487 */
+-  { 0 },
++  { ERR_COMMONCHANSONLY, "%s :You must share at least one channel with this user in order to message them", "487" },
+ /* 488 */
+   { 0 },
+ /* 489 */
+diff -r f2182ca2442a ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jan 11 22:53:16 2009 +0000
++++ b/ircd/s_user.c	Sun Jan 11 22:54:00 2009 +0000
+@@ -546,7 +546,8 @@
+   { FLAG_NOCHAN,      'n' },
+   { FLAG_NOIDLE,      'I' },
+   { FLAG_SETHOST,     'h' },
+-  { FLAG_PARANOID,    'P' }
++  { FLAG_PARANOID,    'P' },
++  { FLAG_COMMONCHANSONLY, 'q' }
+ };
+ 
+ /** Length of #userModeList. */
+@@ -856,7 +857,9 @@
+       send_reply(source, ERR_ACCOUNTONLY, cli_name(source), feature_str(FEAT_URLREG));
+     return 0;
+   }
+-          
++
++  /* No check here for IsCommonChansOnly since by definition we share at least one! */
++
+   if (is_notice)
+     sendcmdto_one(source, CMD_NOTICE, dest, "%C :%s", dest, text);
+   else
+@@ -1428,6 +1431,12 @@
+         else
+           ClearParanoid(sptr);
+ 	break;
++      case 'q':
++	if (what == MODE_ADD)
++          SetCommonChansOnly(sptr);
++        else
++          ClearCommonChansOnly(sptr);
++	break;
+       case 'r':
+ 	if ((what == MODE_ADD) && *(p + 1)) {
+ 	  account = *(++p);
