@@ -1,0 +1,96 @@
+SNO_GLINE and SNO_AUTO
+before, glines with reason starting with "AUTO" end up in SNO_AUTO, all other in SNO_GLINE
+now
+/* figure out what snomask to send to, send to SNO_GLINE when:
+*  source is a user and is not on a service server
+*  gline is local, a badchan, or a realname gline
+*  duration is either 120 seconds or less, or 2 weeks or more
+*  nick part is not equal to *
+*  the gline is wide
+* otherwise, send to SNO_AUTO
+*/
+
+diff -r 16b56cea76d8 ircd/gline.c
+--- a/ircd/gline.c	Sun Jan 11 22:38:40 2009 +0000
++++ b/ircd/gline.c	Sun Jan 11 22:38:41 2009 +0000
+@@ -209,7 +209,7 @@
+  * @return Zero, unless \a sptr G-lined himself, in which case CPTR_KILLED.
+  */
+ static int
+-do_gline(struct Client *cptr, struct Client *sptr, struct Gline *gline)
++do_gline(struct Client *cptr, struct Client *sptr, struct Gline *gline, int snomask)
+ {
+   struct Client *acptr;
+   int fd, retval = 0, tval;
+@@ -278,7 +278,7 @@
+         	   gline->gl_reason);
+ 
+         /* let the ops know about it */
+-        sendto_opmask_butone(0, SNO_GLINE, "G-line active for %s",
++        sendto_opmask_butone(0, snomask, "G-line active for %s",
+                              get_client_name(acptr, SHOW_IP));
+ 
+         /* and get rid of him */
+@@ -470,6 +470,7 @@
+   char uhmask[NICKLEN + USERLEN + HOSTLEN + 3];
+   char *nick, *user, *host;
+   int tmp;
++  int snomask;
+ 
+   assert(0 != userhost);
+   assert(0 != reason);
+@@ -543,9 +544,25 @@
+ 
+   /* lifetime is already an absolute timestamp */
+ 
++  /* figure out what snomask to send to, send to SNO_GLINE when:
++   *  source is a user and is not on a service server
++   *  gline is local, a badchan, or a realname gline
++   *  duration is either 120 seconds or less, or 2 weeks or more
++   *  nick part is not equal to *
++   *  the gline is wide
++   * otherwise, send to SNO_AUTO   
++   */
++  if ((IsUser(sptr) && !IsService(cli_user(sptr)->server)) ||
++       (flags & (GLINE_LOCAL|GLINE_BADCHAN|GLINE_REALNAME)) ||
++       ((expire - CurrentTime <= 120) || (expire - CurrentTime >= 1209600)) ||
++       !(nick[0] == '*' && nick[1] == '\0') ||
++       (gline_checkmask(host) != CHECK_APPROVED))
++    snomask = SNO_GLINE;
++  else
++    snomask = SNO_AUTO;
++
+   /* Inform ops... */
+-  sendto_opmask_butone(0, ircd_strncmp(reason, "AUTO", 4) ? SNO_GLINE :
+-                       SNO_AUTO, "%s adding %s %s for %s%s%s%s%s, expiring at "
++  sendto_opmask_butone(0, snomask, "%s adding %s %s for %s%s%s%s%s, expiring at "
+                        "%Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          cli_name(sptr) :
+@@ -581,7 +598,7 @@
+ 
+   gline_propagate(cptr, sptr, agline);
+ 
+-  return do_gline(cptr, sptr, agline); /* knock off users if necessary */
++  return do_gline(cptr, sptr, agline, snomask); /* knock off users if necessary */
+ }
+ 
+ /** Activate a currently inactive G-line.
+@@ -644,7 +661,7 @@
+   if (!(flags & GLINE_LOCAL)) /* don't propagate local changes */
+     gline_propagate(cptr, sptr, gline);
+ 
+-  return do_gline(cptr, sptr, gline);
++  return do_gline(cptr, sptr, gline, SNO_GLINE);
+ }
+ 
+ /** Deactivate a G-line.
+@@ -928,7 +945,7 @@
+ 			  gline->gl_lifetime, gline->gl_reason);
+ 
+   /* OK, let's do the G-line... */
+-  return do_gline(cptr, sptr, gline);
++  return do_gline(cptr, sptr, gline, SNO_GLINE);
+ }
+ 
+ /** Destroy a local G-line.

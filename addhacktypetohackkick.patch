@@ -1,0 +1,23 @@
+make HACK notices for KICKs consitent with other HACK notices, add the type of HACK to the message (2 or 4)
+
+diff -r 9c1421eb77c1 ircd/m_kick.c
+--- a/ircd/m_kick.c	Sun Jan 11 22:38:39 2009 +0000
++++ b/ircd/m_kick.c	Sun Jan 11 22:38:39 2009 +0000
+@@ -239,7 +239,7 @@
+   if (IsServer(sptr) &&
+       !IsBurstOrBurstAck(sptr) &&
+       sptr!=cli_user(who)->server)
+-    sendto_opmask_butone(0, SNO_HACK4, "HACK: %C KICK %H %C %s", sptr, chptr,
++    sendto_opmask_butone(0, SNO_HACK4, "HACK(4): %C KICK %H %C %s", sptr, chptr,
+ 			 who, comment);
+ 
+   /* Unless someone accepted it downstream (or the user isn't on the channel
+@@ -248,7 +248,7 @@
+    */
+   if (!IsServer(sptr) && member && cli_from(who) != cptr &&
+       (!(sptr_link = find_member_link(chptr, sptr)) || !IsChanOp(sptr_link))) {
+-    sendto_opmask_butone(0, SNO_HACK2, "HACK: %C KICK %H %C %s", sptr, chptr,
++    sendto_opmask_butone(0, SNO_HACK2, "HACK(2): %C KICK %H %C %s", sptr, chptr,
+ 			 who, comment);
+ 
+     sendcmdto_one(who, CMD_JOIN, cptr, "%H", chptr);

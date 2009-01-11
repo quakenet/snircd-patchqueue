@@ -1,0 +1,12 @@
+netriderexemptumodekbigxpriv.patch
+fixstatsv.patch
+addnickchasetomodenick.patch
+chanopaccountabilityforkickdelayedjoin.patch
+addopkickcmd.patch
+addhacktypetohackkick.patch
+hidebanowner.patch
+hisadmin.patch
+hisversionremote.patch
+glinesnomask.patch
+hiskgline.patch
+whotopic.patch

@@ -1,0 +1,97 @@
+tidy up HIS G-line/K-line reasons, instead of examing the quit reason, set a flag and use that to determine whether or not the quit reason shown to other users should be altered.
+
+diff -r b737284f4c26 include/client.h
+--- a/include/client.h	Sun Jan 11 22:38:41 2009 +0000
++++ b/include/client.h	Sun Jan 11 22:38:41 2009 +0000
+@@ -156,6 +156,8 @@
+     FLAG_PINGSENT,                  /**< Unreplied ping sent */
+     FLAG_DEADSOCKET,                /**< Local socket is dead--Exiting soon */
+     FLAG_KILLED,                    /**< Prevents "QUIT" from being sent for this */
++    FLAG_KLINED,                    /**< HIS K-line reasons, prevents K-line reason from being shown to others */
++    FLAG_GLINED,                    /**< HIS G-line reasons, prevents G-line reason from being shown to others */
+     FLAG_BLOCKED,                   /**< socket is in a blocked condition */
+     FLAG_CLOSING,                   /**< set when closing to suppress errors */
+     FLAG_UPING,                     /**< has active UDP ping request */
+diff -r b737284f4c26 ircd/gline.c
+--- a/ircd/gline.c	Sun Jan 11 22:38:41 2009 +0000
++++ b/ircd/gline.c	Sun Jan 11 22:38:41 2009 +0000
+@@ -282,9 +282,10 @@
+                              get_client_name(acptr, SHOW_IP));
+ 
+         /* and get rid of him */
+-        /* WARNING: code in exit_client() relies on the quit message starting with
+-         * G-lined or K-lined for HIS purposes
++        /* set FLAG_GLINED for HIS function
++         * prevents G-line reason from being shown to other users
+          */
++        SetFlag(acptr, FLAG_GLINED);
+         if ((tval = exit_client_msg(cptr, acptr, &me, "G-lined (%s)", gline->gl_reason))) 
+         retval = tval; /* retain killed status */
+       }
+diff -r b737284f4c26 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sun Jan 11 22:38:41 2009 +0000
++++ b/ircd/s_auth.c	Sun Jan 11 22:38:41 2009 +0000
+@@ -270,9 +270,10 @@
+   killreason = find_kill(sptr, 1, &reason);
+   if (killreason) {
+     ServerStats->is_ref++;
+-   /* WARNING: code in exit_client() relies on the quit message starting with
+-    * G-lined or K-lined for HIS purposes
+-    */
++    /* set FLAG_KLINED or FLAG_GLINED for HIS function
++     * prevents K-line and G-line reason from being shown to other users
++     */
++    SetFlag(sptr, killreason == -1 ? FLAG_KLINED : FLAG_GLINED);
+     return exit_client_msg(sptr, sptr, &me, "%s (%s)",
+                        (killreason == -1 ? "K-lined" : "G-lined"), reason);
+   }
+diff -r b737284f4c26 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sun Jan 11 22:38:41 2009 +0000
++++ b/ircd/s_conf.c	Sun Jan 11 22:38:41 2009 +0000
+@@ -993,9 +993,10 @@
+                              "K-line active for %s%s",
+                              IsUnknown(acptr) ? "Unregistered Client ":"",
+                              get_client_name(acptr, SHOW_IP));
+-      /* WARNING: code in exit_client() relies on the quit message starting with
+-       * G-lined or K-lined for HIS purposes
+-       */
++        /* set FLAG_KLINED or FLAG_GLINED for HIS function
++         * prevents K-line and G-line reason from being shown to other users
++         */
++        SetFlag(acptr, found_g == -2 ? FLAG_GLINED : FLAG_KLINED);
+         if (exit_client_msg(cptr, acptr, &me, "%s (%s)", found_g == -2 ? "G-lined" :
+             "K-lined", reason) == CPTR_KILLED)
+           ret = CPTR_KILLED;
+diff -r b737284f4c26 ircd/s_misc.c
+--- a/ircd/s_misc.c	Sun Jan 11 22:38:41 2009 +0000
++++ b/ircd/s_misc.c	Sun Jan 11 22:38:41 2009 +0000
+@@ -496,11 +496,24 @@
+ 	sendcmdto_one(killer, CMD_SQUIT, dlp->value.cptr, "%s %Tu :%s",
+ 		      cli_name(victim), cli_serv(victim)->timestamp, comment);
+       else if (IsUser(victim) && !HasFlag(victim, FLAG_KILLED)) {
+-        /* do not show G-line or K-line reasons to other users, so remove them - wiebe */
+-        if (!strncmp(comment, "G-lined", 7))
+-          comment = "G-lined";
+-        else if (!strncmp(comment, "K-lined", 7))
+-          comment = "K-lined";
++        /* my user is hit by K-line or G-line, hide the reason */
++        if (MyUser(victim)) {
++          if (HasFlag(victim, FLAG_KLINED))
++            comment = "K-lined";
++          else if (HasFlag(victim, FLAG_GLINED))
++            comment = "G-lined";
++        } else {
++          /* backwards compatibility
++           * remove G-line and K-line reasons from quits from remote users
++           * as snircd 1.3.x still sends those upstream           
++           * this part of the code can be removed for the next snircd release
++           * December 2008 - wiebe
++           */
++          if (!strncmp(comment, "G-lined", 7))
++            comment = "G-lined";
++          else if (!strncmp(comment, "K-lined", 7))
++            comment = "K-lined";
++	}
+   sendcmdto_one(victim, CMD_QUIT, dlp->value.cptr, ":%s", comment);
+       }
+     }

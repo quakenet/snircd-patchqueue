@@ -1,0 +1,43 @@
+kicking of a delayedjoin user by a chanop is shown to ALL chanops on the channel, for accountability reasons (instead of only to source and victim)
+
+diff -r c4d8c0416ae6 ircd/m_kick.c
+--- a/ircd/m_kick.c	Sun Jan 11 22:38:38 2009 +0000
++++ b/ircd/m_kick.c	Sun Jan 11 22:38:39 2009 +0000
+@@ -176,11 +176,17 @@
+ 
+   if (IsDelayedJoin(member)) {
+     /* If it's a delayed join, only send the KICK to the person doing
+-     * the kicking and the victim */
++     * the kicking and the victim
++     * ok, but accountability among chanops:
++     *   a chanop kicks the victim, tell the other chanops about his action,
++     *   join the victim to the channel, followed by the kick
++     */
+     if (MyUser(who))
+       sendcmdto_one(sptr, CMD_KICK, who, "%H %C :%s", chptr, who, comment);
+-    sendcmdto_one(who, CMD_JOIN, sptr, "%H", chptr);
+-    sendcmdto_one(sptr, CMD_KICK, sptr, "%H %C :%s", chptr, who, comment);
++    sendcmdto_channel_butserv_butone(who, CMD_JOIN, chptr, NULL, SKIP_NONOPS,
++      "%H", chptr);
++    sendcmdto_channel_butserv_butone(sptr, CMD_KICK, chptr, NULL, SKIP_NONOPS,
++      "%H %C :%s", chptr, who, comment);
+     CheckDelayedJoins(chptr);
+   } else
+     sendcmdto_channel_butserv_butone((IsServer(sptr) ? &me : sptr), CMD_KICK, chptr, NULL, 0, "%H %C :%s", chptr, who,
+@@ -270,6 +276,16 @@
+ 
+     if (member) { /* and tell the channel about it */
+       if (IsDelayedJoin(member)) {
++        /* accountability among chanops:
++	 *   a chanop kicks the victim, tell the other chanops about his action,
++	 *   join the victim to the channel, followed by the kick
++	 */
++        if (IsUser(sptr)) {
++          sendcmdto_channel_butserv_butone(who, CMD_JOIN, chptr, NULL, SKIP_NONOPS,
++            "%H", chptr);
++          sendcmdto_channel_butserv_butone(sptr, CMD_KICK, chptr, NULL, SKIP_NONOPS,
++            "%H %C :%s", chptr, who, comment);
++        }
+         if (MyUser(who))
+           sendcmdto_one(IsServer(sptr) ? &his : sptr, CMD_KICK,
+                         who, "%H %C :%s", chptr, who, comment);

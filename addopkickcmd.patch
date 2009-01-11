@@ -1,0 +1,109 @@
+add opkick command, similar to opmode command, but then for kicking
+priv controlled by LOCAL_OPMODE and OPMODE
+feature controlled by OPKICK (disabled by default), new p10 token OK
+if implemented, it must not be enabled until ALL servers and services are upgraded
+generates HACK(4) snomask notice for accountability with oper as source
+probably needs some work (for one i simply copied the header from m_kick.c)
+
+diff -r f1d6c059e808 include/handlers.h
+--- a/include/handlers.h	Sun Jan 11 22:38:39 2009 +0000
++++ b/include/handlers.h	Sun Jan 11 22:38:39 2009 +0000
+@@ -167,6 +167,7 @@
+ extern int mo_kill(struct Client*, struct Client*, int, char*[]);
+ extern int mo_notice(struct Client*, struct Client*, int, char*[]);
+ extern int mo_oper(struct Client*, struct Client*, int, char*[]);
++extern int mo_opkick(struct Client*, struct Client*, int, char*[]);
+ extern int mo_opmode(struct Client*, struct Client*, int, char*[]);
+ extern int mo_ping(struct Client*, struct Client*, int, char*[]);
+ extern int mo_privmsg(struct Client*, struct Client*, int, char*[]);
+@@ -216,6 +217,7 @@
+ extern int ms_nick(struct Client*, struct Client*, int, char*[]);
+ extern int ms_notice(struct Client*, struct Client*, int, char*[]);
+ extern int ms_oper(struct Client*, struct Client*, int, char*[]);
++extern int ms_opkick(struct Client*, struct Client*, int, char*[]);
+ extern int ms_opmode(struct Client*, struct Client*, int, char*[]);
+ extern int ms_part(struct Client*, struct Client*, int, char*[]);
+ extern int ms_ping(struct Client*, struct Client*, int, char*[]);
+diff -r f1d6c059e808 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jan 11 22:38:39 2009 +0000
++++ b/include/ircd_features.h	Sun Jan 11 22:38:39 2009 +0000
+@@ -105,6 +105,7 @@
+   /* features that affect all operators */
+   FEAT_EXTENDED_CHECKCMD,
+   FEAT_CONFIG_OPERCMDS,
++  FEAT_OPKICK,
+   FEAT_SETHOST,
+   FEAT_SETHOST_USER,
+   FEAT_SETHOST_AUTO,
+diff -r f1d6c059e808 include/msg.h
+--- a/include/msg.h	Sun Jan 11 22:38:39 2009 +0000
++++ b/include/msg.h	Sun Jan 11 22:38:39 2009 +0000
+@@ -236,6 +236,10 @@
+ #define TOK_KICK                "K"
+ #define CMD_KICK		MSG_KICK, TOK_KICK
+ 
++#define MSG_OPKICK              "OPKICK"          /* OPKICK */
++#define TOK_OPKICK              "OK"
++#define CMD_OPKICK		MSG_OPKICK, TOK_OPKICK
++
+ #define MSG_USERHOST            "USERHOST"      /* USER -> USRH */
+ #define TOK_USERHOST            "USERHOST"
+ #define CMD_USERHOST		MSG_USERHOST, TOK_USERHOST
+diff -r f1d6c059e808 ircd/Makefile.in
+--- a/ircd/Makefile.in	Sun Jan 11 22:38:39 2009 +0000
++++ b/ircd/Makefile.in	Sun Jan 11 22:38:39 2009 +0000
+@@ -151,6 +151,7 @@
+ 	m_nick.c \
+ 	m_notice.c \
+ 	m_oper.c \
++	m_opkick.c \
+ 	m_opmode.c \
+ 	m_part.c \
+ 	m_pass.c \
+@@ -884,6 +885,14 @@
+   ../include/ircd_features.h ../include/s_conf.h ../include/client.h \
+   ../include/s_debug.h ../include/s_user.h ../include/s_misc.h \
+   ../include/send.h
++m_opkick.o: m_opkick.c ../config.h ../include/channel.h \
++  ../include/ircd_defs.h ../include/res.h ../config.h ../include/client.h \
++  ../include/dbuf.h ../include/msgq.h ../include/ircd_events.h \
++  ../include/ircd_handler.h ../include/capab.h ../include/hash.h \
++  ../include/ircd.h ../include/struct.h ../include/ircd_log.h \
++  ../include/ircd_reply.h ../include/ircd_string.h \
++  ../include/ircd_chattr.h ../include/msg.h ../include/numeric.h \
++  ../include/numnicks.h ../include/send.h ../include/ircd_features.h
+ m_opmode.o: m_opmode.c ../config.h ../include/client.h \
+   ../include/ircd_defs.h ../include/dbuf.h ../include/msgq.h \
+   ../include/ircd_events.h ../config.h ../include/ircd_handler.h \
+diff -r f1d6c059e808 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jan 11 22:38:39 2009 +0000
++++ b/ircd/ircd_features.c	Sun Jan 11 22:38:39 2009 +0000
+@@ -359,6 +359,7 @@
+   /* features that affect all operators */
+   F_B(EXTENDED_CHECKCMD, 0, 0, 0),
+   F_B(CONFIG_OPERCMDS, 0, 0, 0),
++  F_B(OPKICK, 0, 0, 0),
+   F_B(SETHOST, 0, 0, 0),
+   F_B(SETHOST_USER, 0, 0, 0),
+   F_B(SETHOST_AUTO, 0, 0, 0),
+diff -r f1d6c059e808 ircd/parse.c
+--- a/ircd/parse.c	Sun Jan 11 22:38:39 2009 +0000
++++ b/ircd/parse.c	Sun Jan 11 22:38:39 2009 +0000
+@@ -656,6 +656,17 @@
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+     { m_unregistered, m_not_oper, m_check, m_check, m_ignore }
+   },
++  
++  /*
++   * Add the command for OPKICK.
++   */
++  {
++    MSG_OPKICK,
++    TOK_OPKICK,
++    0, MAXPARA, MFLG_SLOW, 0, NULL,
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
++    { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore }
++  },
+ 
+   /* This command is an alias for QUIT during the unregistered part of
+    * of the server.  This is because someone jumping via a broken web
