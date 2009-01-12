@@ -1,13 +1,14 @@
-netriderexemptumodekbigxpriv.patch
-fixstatsv.patch
-addnickchasetomodenick.patch
+addnickchasetomodenick.patch #+nickchase
 chanopaccountabilityforkickdelayedjoin.patch
-addopkickcmd.patch
+addopkickcmd.patch #+opkick
 addhacktypetohackkick.patch
-hidebanowner.patch
+hidebanowner.patch #+hidebanowner
 hisadmin.patch
 hisversionremote.patch
 glinesnomask.patch
 hiskgline.patch
 whotopic.patch
 commonchansumode.patch
+remoteglinejupe.patch
+whoban.patch
+opername.patch

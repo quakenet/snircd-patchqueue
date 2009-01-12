@@ -1,0 +1,82 @@
+add account into ban owner info
+
+diff -r bde54f5247bf include/channel.h
+--- a/include/channel.h	Mon Jan 12 18:28:44 2009 +0100
++++ b/include/channel.h	Mon Jan 12 18:45:19 2009 +0100
+@@ -266,7 +266,8 @@
+   unsigned short flags;       /**< modifier flags for the ban */
+   unsigned char nu_len;       /**< length of nick!user part of banstr */
+   unsigned char addrbits;     /**< netmask length for BAN_IPMASK bans */
+-  char who[NICKLEN+1];        /**< name of client that set the ban */
++  char who[ACCOUNTLEN > NICKLEN ? ACCOUNTLEN+1 : NICKLEN+1];        /**< nick or the account of client that set the ban */
++  int who_is_account;         /**< 0 when who is nick, 1 when an account */
+   char banstr[NICKLEN+USERLEN+HOSTLEN+3];  /**< hostmask that the ban matches */
+ };
+ 
+diff -r bde54f5247bf ircd/channel.c
+--- a/ircd/channel.c	Mon Jan 12 18:28:44 2009 +0100
++++ b/ircd/channel.c	Mon Jan 12 18:45:19 2009 +0100
+@@ -1249,7 +1249,10 @@
+ 
+   for (lp = chptr->banlist; lp; lp = lp->next)
+     send_reply(cptr, RPL_BANLIST, chptr->chname, lp->banstr,
+-	       lp->who, lp->when);
++	       lp->who,
++	       lp->who_is_account ? "." : "",
++	       lp->who_is_account ? feature_str(FEAT_HIDDEN_HOST) : "",
++	       lp->when);
+ 
+   send_reply(cptr, RPL_ENDOFBANLIST, chptr->chname);
+ }
+@@ -2965,8 +2968,12 @@
+   if (!IsUser(state->sptr) || 
+     (feature_bool(FEAT_HIS_MODEWHO) && state->mbuf != NULL && (state->mbuf->mb_dest & MODEBUF_DEST_OPMODE))) {
+     ircd_strncpy(newban->who, "*", NICKLEN);
++    newban->who_is_account = 0;
+   } else {
+-    ircd_strncpy(newban->who, cli_name(state->sptr), NICKLEN);
++    ircd_strncpy(newban->who,
++      IsAccount(state->sptr) ? cli_user(state->sptr)->account : cli_name(state->sptr),
++      IsAccount(state->sptr) ? ACCOUNTLEN : NICKLEN);
++    newban->who_is_account = IsAccount(state->sptr) ? 1 : 0;
+   }
+ 
+   newban->when = TStime();
+@@ -3054,6 +3061,7 @@
+ 	  if (state->flags & MODE_PARSE_SET) { /* create a new ban */
+ 	    newban = make_ban(ban->banstr);
+             strcpy(newban->who, ban->who);
++            newban->who_is_account = ban->who_is_account;
+ 	    newban->when = ban->when;
+ 	    newban->flags = ban->flags & BAN_IPMASK;
+ 
+diff -r bde54f5247bf ircd/m_check.c
+--- a/ircd/m_check.c	Mon Jan 12 18:28:44 2009 +0100
++++ b/ircd/m_check.c	Mon Jan 12 18:45:19 2009 +0100
+@@ -348,8 +348,12 @@
+     send_reply(sptr, RPL_DATASTR, "Bans on channel::");
+ 
+     for (ban = chptr->banlist; ban; ban = ban->next) {
+-      ircd_snprintf(0, outbuf, sizeof(outbuf),  "[%d] - %s - Set by %s, on %s (%Tu)",
+-        ++bans, ban->banstr, ban->who, myctime(ban->when), ban->when);
++      ircd_snprintf(0, outbuf, sizeof(outbuf),  "[%d] - %s - Set by %s%s%s, on %s (%Tu)",
++        ++bans, ban->banstr,
++        ban->who,
++        ban->who_is_account ? "." : "",
++        ban->who_is_account ? feature_str(FEAT_HIDDEN_HOST) : "",
++        myctime(ban->when), ban->when);
+       send_reply(sptr, RPL_DATASTR, outbuf);
+     }
+ 
+diff -r bde54f5247bf ircd/s_err.c
+--- a/ircd/s_err.c	Mon Jan 12 18:28:44 2009 +0100
++++ b/ircd/s_err.c	Mon Jan 12 18:45:19 2009 +0100
+@@ -766,7 +766,7 @@
+ /* 366 */
+   { RPL_ENDOFNAMES, "%s :End of /NAMES list.", "366" },
+ /* 367 */
+-  { RPL_BANLIST, "%s %s %s %Tu", "367" },
++  { RPL_BANLIST, "%s %s %s%s%s %Tu", "367" },
+ /* 368 */
+   { RPL_ENDOFBANLIST, "%s :End of Channel Ban List", "368" },
+ /* 369 */

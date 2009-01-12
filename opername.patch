@@ -1,0 +1,310 @@
+Add opername to snomask, remote connect wallops, and logging
+
+diff -r 897950943d34 include/client.h
+--- a/include/client.h	Mon Jan 12 18:45:19 2009 +0100
++++ b/include/client.h	Mon Jan 12 19:23:07 2009 +0100
+@@ -806,6 +806,7 @@
+ #define IPV6USERBITS 64
+ 
+ extern const char* get_client_name(const struct Client* sptr, int showip);
++extern const char* get_client_name_and_opername(const struct Client* sptr);
+ extern const char* client_get_default_umode(const struct Client* sptr);
+ extern int client_get_ping(const struct Client* local_client);
+ extern void client_drop_sendq(struct Connection* con);
+diff -r 897950943d34 ircd/channel.c
+--- a/ircd/channel.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/channel.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -1850,8 +1850,8 @@
+     if (mbuf->mb_dest & MODEBUF_DEST_HACK4)
+       sendto_opmask_butone(0, SNO_HACK4, "HACK(4): %s MODE %s %s%s%s%s%s%s "
+ 			   "[%Tu]",
+-			   cli_name(feature_bool(FEAT_HIS_SNOTICES) ?
+-                                    mbuf->mb_source : app_source),
++			   feature_bool(FEAT_HIS_SNOTICES) ?
++                           get_client_name_and_opername(mbuf->mb_source) : cli_name(app_source),
+ 			   mbuf->mb_channel->chname,
+ 			   rembuf_i ? "-" : "", rembuf, addbuf_i ? "+" : "",
+ 			   addbuf, remstr, addstr,
+@@ -1859,7 +1859,7 @@
+ 
+     if (mbuf->mb_dest & MODEBUF_DEST_LOG)
+       log_write(LS_OPERMODE, L_INFO, LOG_NOSNOTICE,
+-		"%#C OPMODE %H %s%s%s%s%s%s", mbuf->mb_source,
++		"%s OPMODE %H %s%s%s%s%s%s", get_client_name_and_opername(mbuf->mb_source),
+ 		mbuf->mb_channel, rembuf_i ? "-" : "", rembuf,
+ 		addbuf_i ? "+" : "", addbuf, remstr, addstr);
+ 
+diff -r 897950943d34 ircd/gline.c
+--- a/ircd/gline.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/gline.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -566,7 +566,7 @@
+   sendto_opmask_butone(0, snomask, "%s adding %s %s for %s%s%s%s%s, expiring at "
+                        "%Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-                         cli_name(sptr) :
++                         get_client_name_and_opername(sptr) :
+                          cli_name((cli_user(sptr))->server),
+ 		       (flags & GLINE_LOCAL) ? "local" : "global",
+ 		       (flags & GLINE_BADCHAN) ? "BADCHAN" : "GLINE",
+@@ -579,7 +579,7 @@
+ 
+   /* and log it */
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C adding %s %s for %s%s%s%s%s, expiring at %Tu: %s", sptr,
++	    "%s adding %s %s for %s%s%s%s%s, expiring at %Tu: %s", get_client_name_and_opername(sptr),
+ 	    flags & GLINE_LOCAL ? "local" : "global",
+ 	    flags & GLINE_BADCHAN ? "BADCHAN" : "GLINE",
+             flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : nick,
+@@ -652,7 +652,7 @@
+   sendto_opmask_butone(0, SNO_GLINE, "%s activating global %s for %s%s%s%s%s, "
+                        "expiring at %Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-                         cli_name(sptr) :
++                         get_client_name_and_opername(sptr) :
+                          cli_name((cli_user(sptr))->server),
+                        GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+@@ -662,7 +662,7 @@
+                        gline->gl_expire + TSoffset, gline->gl_reason);
+   
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-            "%#C activating global %s for %s%s%s%s%s, expiring at %Tu: %s", sptr,
++            "%s activating global %s for %s%s%s%s%s, expiring at %Tu: %s", get_client_name_and_opername(sptr),
+             GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+             GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+             GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+@@ -725,7 +725,7 @@
+   sendto_opmask_butone(0, SNO_GLINE, "%s %s %s for %s%s%s%s%s, expiring at %Tu: "
+ 		       "%s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-                         cli_name(sptr) :
++                         get_client_name_and_opername(sptr) :
+                          cli_name((cli_user(sptr))->server),
+ 		       msg, GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+@@ -735,7 +735,7 @@
+ 		       gline->gl_expire + TSoffset, gline->gl_reason);
+ 
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-            "%#C %s %s for %s%s%s%s%s, expiring at %Tu: %s", sptr, msg,
++            "%s %s %s for %s%s%s%s%s, expiring at %Tu: %s", get_client_name_and_opername(sptr), msg,
+             GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+             GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+             GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+@@ -940,7 +940,7 @@
+   /* All right, inform ops... */
+   sendto_opmask_butone(0, SNO_GLINE, "%s modifying global %s for %s%s%s%s%s:%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-		       cli_name(sptr) : cli_name((cli_user(sptr))->server),
++		       get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+@@ -949,7 +949,7 @@
+ 
+   /* and log the change */
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C modifying global %s for %s%s%s:%s", sptr,
++	    "%s modifying global %s for %s%s%s:%s", get_client_name_and_opername(sptr),
+ 	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE", gline->gl_user,
+ 	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "",
+ 	    buf);
+@@ -997,14 +997,14 @@
+   /* Inform ops and log it */
+   sendto_opmask_butone(0, SNO_GLINE, "%s removing local %s for %s%s%s%s%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-		       cli_name(sptr) : cli_name((cli_user(sptr))->server),
++		       get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+ 		       gline->gl_user, gline->gl_host ? "@" : "",
+ 		       gline->gl_host ? gline->gl_host : "");
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C removing local %s for %s%s%s%s%s", sptr,
++	    "%s removing local %s for %s%s%s%s%s", get_client_name_and_opername(sptr),
+ 	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE", 
+             GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+             GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+diff -r 897950943d34 ircd/ircd_log.c
+--- a/ircd/ircd_log.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/ircd_log.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -469,11 +469,11 @@
+ {
+   if (MyUser(victim))
+     log_write(IsServer(killer) ? LS_SERVKILL : LS_OPERKILL, L_TRACE, 0,
+-	      "A local client %#C KILLED by %#C Path: %s!%s %s",
+-	      victim, killer, inpath, path, msg);
++	      "A local client %#C KILLED by %s Path: %s!%s %s",
++	      victim, get_client_name_and_opername(killer), inpath, path, msg);
+   else
+     log_write(IsServer(killer) ? LS_SERVKILL : LS_OPERKILL, L_TRACE, 0,
+-	      "KILL from %C For %C Path: %s!%s %s", killer, victim, inpath,
++	      "KILL from %s For %C Path: %s!%s %s", get_client_name_and_opername(killer), victim, inpath,
+ 	      path, msg);
+ }
+ 
+diff -r 897950943d34 ircd/jupe.c
+--- a/ircd/jupe.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/jupe.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -156,13 +156,13 @@
+   sendto_opmask_butone(0, SNO_NETWORK, "%s adding %sJUPE for %s, expiring at "
+                        "%Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-                         cli_name(sptr) :
++                         get_client_name_and_opername(sptr) :
+                          cli_name((cli_user(sptr))->server),
+ 		       flags & JUPE_LOCAL ? "local " : "", server,
+ 		       expire + TSoffset, reason);
+ 
+   log_write(LS_JUPE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C adding %sJUPE for %s, expiring at %Tu: %s", sptr,
++	    "%s adding %sJUPE for %s, expiring at %Tu: %s", get_client_name_and_opername(sptr),
+ 	    flags & JUPE_LOCAL ? "local " : "", server, expire + TSoffset,
+ 	    reason);
+ 
+@@ -216,13 +216,13 @@
+   sendto_opmask_butone(0, SNO_NETWORK, "%s activating JUPE for %s, expiring "
+ 		       "at %Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-                         cli_name(sptr) :
++                         get_client_name_and_opername(sptr) :
+                          cli_name((cli_user(sptr))->server),
+ 		       jupe->ju_server, jupe->ju_expire + TSoffset,
+ 		       jupe->ju_reason);
+ 
+   log_write(LS_JUPE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C activating JUPE for %s, expiring at %Tu: %s",sptr,
++	    "%s activating JUPE for %s, expiring at %Tu: %s", get_client_name_and_opername(sptr),
+ 	    jupe->ju_server, jupe->ju_expire + TSoffset, jupe->ju_reason);
+ 
+   if (!(flags & JUPE_LOCAL)) /* don't propagate local changes */
+@@ -269,14 +269,14 @@
+   sendto_opmask_butone(0, SNO_NETWORK, "%s %s JUPE for %s, expiring at %Tu: "
+ 		       "%s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+-                         cli_name(sptr) :
++                         get_client_name_and_opername(sptr) :
+                          cli_name((cli_user(sptr))->server),
+ 		       JupeIsLocal(jupe) ? "removing local" : "deactivating",
+ 		       jupe->ju_server, jupe->ju_expire + TSoffset,
+ 		       jupe->ju_reason);
+ 
+   log_write(LS_JUPE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C %s JUPE for %s, expiring at %Tu: %s", sptr,
++	    "%s %s JUPE for %s, expiring at %Tu: %s", get_client_name_and_opername(sptr),
+ 	    JupeIsLocal(jupe) ? "removing local" : "deactivating",
+ 	    jupe->ju_server, jupe->ju_expire + TSoffset, jupe->ju_reason);
+ 
+diff -r 897950943d34 ircd/m_connect.c
+--- a/ircd/m_connect.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/m_connect.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -197,8 +197,9 @@
+   sendwallto_group_butone(&me, WALL_WALLOPS, 0,
+                        "Remote CONNECT %s %s from %s", aconf->name,
+ 			parv[2] ? parv[2] : "",
+-			get_client_name(sptr, HIDE_IP));
+-  log_write(LS_NETWORK, L_INFO, 0, "CONNECT From %C : %s %s", sptr, aconf->name,
++			get_client_name_and_opername(sptr));
++  log_write(LS_NETWORK, L_INFO, 0, "CONNECT From %s : %s %s",
++            get_client_name_and_opername(sptr), aconf->name,
+ 	    parv[2] ? parv[2] : "");
+ 
+   if (connect_server(aconf, sptr)) {
+diff -r 897950943d34 ircd/m_join.c
+--- a/ircd/m_join.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/m_join.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -242,8 +242,8 @@
+         }
+         /* send accountability notice */
+         if (err)
+-          sendto_opmask_butone(0, SNO_HACK4, "OPER JOIN: %C JOIN %H "
+-                               "(overriding +%c)", sptr, chptr, err);
++          sendto_opmask_butone(0, SNO_HACK4, "OPER JOIN: %s JOIN %H "
++                               "(overriding +%c)", get_client_name_and_opername(sptr), chptr, err);
+         err = 0;
+       }
+ 
+diff -r 897950943d34 ircd/m_kill.c
+--- a/ircd/m_kill.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/m_kill.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -127,7 +127,7 @@
+    */
+   sendto_opmask_butone(0, snomask,
+                        "Received KILL message for %s from %s Path: %s!%s %s",
+-                       get_client_name(victim, SHOW_IP), cli_name(sptr),
++                       get_client_name(victim, SHOW_IP), get_client_name_and_opername(sptr),
+                        inpath, path, msg);
+   log_write_kill(victim, sptr, inpath, path, msg);
+ 
+diff -r 897950943d34 ircd/m_rehash.c
+--- a/ircd/m_rehash.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/m_rehash.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -121,10 +121,10 @@
+   }
+ 
+   send_reply(sptr, RPL_REHASHING, configfile);
+-  sendto_opmask_butone(0, SNO_OLDSNO, "%C is rehashing Server config file",
+-		       sptr);
++  sendto_opmask_butone(0, SNO_OLDSNO, "%s is rehashing Server config file",
++		       get_client_name_and_opername(sptr));
+ 
+-  log_write(LS_SYSTEM, L_INFO, 0, "REHASH From %#C", sptr);
++  log_write(LS_SYSTEM, L_INFO, 0, "REHASH From %s", get_client_name_and_opername(sptr));
+ 
+   return rehash(cptr, flag);
+ }
+diff -r 897950943d34 ircd/m_settime.c
+--- a/ircd/m_settime.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/m_settime.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -177,7 +177,7 @@
+   else /* tell opers about time change */
+   {
+     sendto_opmask_butone(0, SNO_OLDSNO, "SETTIME from %s, clock is set %ld "
+-			 "seconds %s", cli_name(sptr), (dt < 0) ? -dt : dt,
++			 "seconds %s", get_client_name_and_opername(sptr), (dt < 0) ? -dt : dt,
+ 			 (dt < 0) ? "forwards" : "backwards");
+     /* Apply time change... */
+     TSoffset -= dt;
+@@ -252,7 +252,7 @@
+   else /* tell opers about time change */
+   {
+     sendto_opmask_butone(0, SNO_OLDSNO, "SETTIME from %s, clock is set %ld "
+-			 "seconds %s", cli_name(sptr), (dt < 0) ? -dt : dt,
++			 "seconds %s", get_client_name_and_opername(sptr), (dt < 0) ? -dt : dt,
+ 			 (dt < 0) ? "forwards" : "backwards");
+     TSoffset -= dt; /* apply time change */
+     if (IsUser(sptr)) /* let user know what we did */
+diff -r 897950943d34 ircd/s_misc.c
+--- a/ircd/s_misc.c	Mon Jan 12 18:45:19 2009 +0100
++++ b/ircd/s_misc.c	Mon Jan 12 19:23:07 2009 +0100
+@@ -169,6 +169,20 @@
+   ircd_snprintf(0, nbuf, sizeof(nbuf), "%s[%s@%s]", cli_name(sptr),
+                 IsIdented(sptr) ? cli_username(sptr) : "",
+                 cli_sock_ip(sptr));
++  return nbuf;
++}
++
++/** Return the name of the client and the opername for accountability purposes
++ * in snomask and other places.
++ * @param sptr Client to operate on.
++ * @return Either cli_name(\a sptr) or a static buffer.
++ */
++const char* get_client_name_and_opername(const struct Client* sptr) {
++  static char nbuf[NICKLEN + 1 + ACCOUNTLEN + 2];
++
++  if (!IsUser(sptr) || !cli_user(sptr)->opername)
++    return cli_name(sptr);
++  ircd_snprintf(0, nbuf, sizeof(nbuf), "%s(%s)", cli_name(sptr), cli_user(sptr)->opername);
+   return nbuf;
+ }
+ 
+@@ -474,7 +488,7 @@
+ 			   (cli_user(killer)->server == victim ||
+ 			    cli_user(killer)->server == cli_serv(victim)->up) ?
+ 			   "Local" : "Remote",
+-			   get_client_name(killer, HIDE_IP),
++			   get_client_name_and_opername(killer),
+ 			   cli_name(cli_user(killer)->server));
+     else if (killer != &me && cli_serv(victim)->up != killer)
+       sendto_opmask_butone(0, SNO_OLDSNO, "Received SQUIT %s from %s :",

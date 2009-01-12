@@ -1,0 +1,101 @@
+diff -r 31a4a0514c74 ircd/gline.c
+--- a/ircd/gline.c	Mon Jan 12 18:14:17 2009 +0100
++++ b/ircd/gline.c	Mon Jan 12 18:18:57 2009 +0100
+@@ -589,6 +589,18 @@
+ 	    flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : host,
+ 	    expire + TSoffset, reason);
+ 
++  /* local gline set by remote user, inform oper of success */
++  if ((flags & GLINE_LOCAL) && IsUser(sptr) && !MyUser(sptr))
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s adding local %s for %s%s%s%s%s, expiring at %Tu: %s",
++                       sptr, cli_name(sptr),
++		       (flags & GLINE_BADCHAN) ? "BADCHAN" : "GLINE",
++                       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : nick,
++                       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : "!",
++                       user,
++		       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : "@",
++		       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : host,
++		       expire + TSoffset, reason);
++
+   /* make the gline */
+   agline = make_gline(nick, user, host, reason, expire, lastmod, lifetime, flags);
+ 
+@@ -731,6 +743,17 @@
+ 	    gline->gl_host ? "@" : "",
+ 	    gline->gl_host ? gline->gl_host : "",
+ 	    gline->gl_expire + TSoffset, gline->gl_reason);
++
++  /* local gline removed by remote user, inform oper of success */
++  if ((flags & GLINE_LOCAL) && IsUser(sptr) && !MyUser(sptr))
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s %s for %s%s%s%s%s, expiring at %Tu: %s",
++                       sptr, cli_name(sptr),
++		       msg, GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++		       gline->gl_user, gline->gl_host ? "@" : "",
++                       gline->gl_host ? gline->gl_host : "",
++		       gline->gl_expire + TSoffset, gline->gl_reason);
+ 
+   if (!(flags & GLINE_LOCAL)) /* don't propagate local changes */
+     gline_propagate(cptr, sptr, gline);
+@@ -931,6 +954,16 @@
+ 	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "",
+ 	    buf);
+ 
++  /* local change by remote user, inform oper of success */
++  if ((action == GLINE_LOCAL_ACTIVATE || action == GLINE_LOCAL_DEACTIVATE) && IsUser(sptr) && !MyUser(sptr))
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s modifying global %s for %s%s%s%s%s:%s",
++		       sptr, cli_name(sptr),
++		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++		       gline->gl_user, gline->gl_host ? "@" : "",
++		       gline->gl_host ? gline->gl_host : "", buf);
++
+   /* We'll be simple for this release, but we can update this to change
+    * the propagation syntax on future updates
+    */
+@@ -977,6 +1010,16 @@
+             GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+             gline->gl_user,
+ 	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "");
++
++  /* local change by remote user, inform oper of success */
++  if (IsUser(sptr) && !MyUser(sptr))
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s removing local %s for %s%s%s%s%s",
++		       sptr, cli_name(sptr),
++		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++		       gline->gl_user, gline->gl_host ? "@" : "",
++		       gline->gl_host ? gline->gl_host : "");
+ 
+   gline_free(gline); /* get rid of the G-line */
+ 
+diff -r 31a4a0514c74 ircd/jupe.c
+--- a/ircd/jupe.c	Mon Jan 12 18:14:17 2009 +0100
++++ b/ircd/jupe.c	Mon Jan 12 18:18:57 2009 +0100
+@@ -166,6 +166,11 @@
+ 	    flags & JUPE_LOCAL ? "local " : "", server, expire + TSoffset,
+ 	    reason);
+ 
++  /* local jupe set by remote user, inform oper of success */
++  if ((flags & JUPE_LOCAL) && IsUser(sptr) && !MyUser(sptr))
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s adding local JUPE for %s, expiring at %Tu: %s",
++      sptr, cli_name(sptr), server, expire + TSoffset, reason);
++
+   /* make the jupe */
+   ajupe = make_jupe(server, reason, expire, lastmod, flags);
+ 
+@@ -274,6 +279,11 @@
+ 	    "%#C %s JUPE for %s, expiring at %Tu: %s", sptr,
+ 	    JupeIsLocal(jupe) ? "removing local" : "deactivating",
+ 	    jupe->ju_server, jupe->ju_expire + TSoffset, jupe->ju_reason);
++
++  /* local jupe removed by remote user, inform oper of success */
++  if ((flags & JUPE_LOCAL) && IsUser(sptr) && !MyUser(sptr))
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s removing local JUPE for %s, expiring at %Tu: %s",
++      sptr, cli_name(sptr), jupe->ju_server, jupe->ju_expire + TSoffset, jupe->ju_reason);
+ 
+   if (JupeIsLocal(jupe))
+     jupe_free(jupe);
