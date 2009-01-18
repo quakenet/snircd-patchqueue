@@ -1,0 +1,46 @@
+Add accountid field 'b' to /who, we don't allow selecting by it though.
+
+diff -r 92f6cb6562e2 include/whocmds.h
+--- a/include/whocmds.h	Tue Jan 13 22:17:04 2009 +0000
++++ b/include/whocmds.h	Sun Jan 18 19:13:32 2009 +0000
+@@ -38,6 +38,7 @@
+ #define WHO_FIELD_IDL 1024 /**< Show idle time. */
+ #define WHO_FIELD_ACC 2048 /**< Show account name. */
+ #define WHO_FIELD_OPL 4096 /**< Show oplevel. */
++#define WHO_FIELD_AID 8192 /**< Show account id. */
+ 
+ /** Default fields for /WHO */
+ #define WHO_FIELD_DEF ( WHO_FIELD_NIC | WHO_FIELD_UID | WHO_FIELD_HOS | WHO_FIELD_SER )
+diff -r 92f6cb6562e2 ircd/m_who.c
+--- a/ircd/m_who.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/m_who.c	Sun Jan 18 19:13:32 2009 +0000
+@@ -205,6 +205,10 @@
+         counter++;
+         switch (ch)
+         {
++          case 'b':
++          case 'B':
++            fields |= WHO_FIELD_AID;
++            break;
+           case 'c':
+           case 'C':
+             fields |= WHO_FIELD_CHA;
+diff -r 92f6cb6562e2 ircd/whocmds.c
+--- a/ircd/whocmds.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/whocmds.c	Sun Jan 18 19:13:32 2009 +0000
+@@ -251,6 +251,15 @@
+       *(p1++) = '0';
+   }
+ 
++  if (fields & WHO_FIELD_AID)
++  {
++    *p1++ = ' ';
++    if(*(cli_user(acptr)->account)) /* char account[X] can't be NULL */
++      p1 += ircd_snprintf(0, p1, 22, "%lu", cli_user(acptr)->acc_id);
++    else
++      *p1++ = '0';
++  }
++
+   if (fields & WHO_FIELD_OPL)
+   {
+       if (!chan || !IsChanOp(chan))
