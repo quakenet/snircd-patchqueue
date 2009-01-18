@@ -1,0 +1,26 @@
+make /HELP <command> work - oper only feature?
+need to make small test case to see how hard/easy this would be to add.
+
+diff -r ce13b0a1253e ircd/m_help.c
+--- a/ircd/m_help.c	Wed Jan 14 14:19:43 2009 +0100
++++ b/ircd/m_help.c	Wed Jan 14 15:01:46 2009 +0100
+@@ -100,7 +100,7 @@
+ int m_help(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+   int i;
+-
++/* check here for param and find command, then call the function set for that entry? */
+   for (i = 0; msgtab[i].cmd; i++)
+     sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s", sptr, msgtab[i].cmd);
+   return 0;
+diff -r ce13b0a1253e ircd/parse.c
+--- a/ircd/parse.c	Wed Jan 14 14:19:43 2009 +0100
++++ b/ircd/parse.c	Wed Jan 14 15:01:46 2009 +0100
+@@ -105,6 +105,7 @@
+ static struct MessageTree tok_tree;
+ 
+ /** Array of all supported commands. */
++/* add mh_<command> here? mh = message help */
+ struct Message msgtab[] = {
+   {
+     MSG_PRIVATE,

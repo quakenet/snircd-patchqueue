@@ -1,0 +1,138 @@
+add header to /STATS output and make TOTAL: line in /STATS z more clear.
+
+diff -r 92f6cb6562e2 include/numeric.h
+--- a/include/numeric.h	Tue Jan 13 22:17:04 2009 +0000
++++ b/include/numeric.h	Sun Jan 18 17:44:05 2009 +0100
+@@ -117,6 +117,7 @@
+ 	RPL_STATSVLINE	     227	   unreal */
+ #define RPL_STATSALINE       226        /* Hybrid, Undernet */
+ #define RPL_STATSQLINE       228        /* Undernet extension */
++#define RPL_STATSHEADER      230        /* QuakeNet extension */
+ 
+ /*      RPL_SERVICEINFO      231	unused */
+ /*      RPL_ENDOFSERVICES    232	unused */
+diff -r 92f6cb6562e2 ircd/ircd_res.c
+--- a/ircd/ircd_res.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/ircd_res.c	Sun Jan 18 17:44:05 2009 +0100
+@@ -917,6 +917,10 @@
+   int i;
+   char ipaddr[128];
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(source_p, SND_EXPLICIT | RPL_STATSHEADER,
++    "A DNS-server");
++
+   for (i = 0; i < irc_nscount; i++)
+   {
+     ircd_ntoa_r(ipaddr, &irc_nsaddr_list[i].addr);
+diff -r 92f6cb6562e2 ircd/s_debug.c
+--- a/ircd/s_debug.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/s_debug.c	Sun Jan 18 17:44:05 2009 +0100
+@@ -389,7 +389,7 @@
+ #endif
+ 
+   send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
+-	     ":Total: ww %zu ch %zu cl %zu co %zu db %zu ms %zu mb %zu",
++	     ":Total: Whowas %zu Channels %zu Clients %zu Config %zu DBufs %zu Msgs %zu MsgBufs %zu",
+ 	     totww, totch, totcl, com, dbufs_allocated, msg_allocated,
+ 	     msgbuf_allocated);
+ }
+diff -r 92f6cb6562e2 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/s_err.c	Sun Jan 18 17:44:05 2009 +0100
+@@ -492,7 +492,7 @@
+ /* 229 */
+   { 0 },
+ /* 230 */
+-  { 0 },
++  { RPL_STATSHEADER, 0, "230" },
+ /* 231 */
+   { 0 },
+ /* 232 */
+diff -r 92f6cb6562e2 ircd/s_stats.c
+--- a/ircd/s_stats.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/s_stats.c	Sun Jan 18 17:44:05 2009 +0100
+@@ -92,6 +92,16 @@
+   int maximum;
+   char *host, *pass, *name, *username, *hub_limit;
+ 
++  /* send header so the client knows what we are showing */
++  if (sd->sd_funcdata == CONF_UWORLD)
++    send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER, "U server");
++  else if (sd->sd_funcdata == CONF_SERVER)
++    send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
++      "C server * port hoplimit hubmask class");
++  else if (sd->sd_funcdata == CONF_OPERATOR)
++    send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
++      "O user@host * name class");
++
+   for (tmp = GlobalConfList; tmp; tmp = tmp->next)
+   {
+     if ((tmp->status & sd->sd_funcdata))
+@@ -137,6 +147,10 @@
+ {
+   const struct CRuleConf* p = conf_get_crule_list();
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
++    "%c server rule", p->type & CRULE_ALL ? 'D' : 'd');
++
+   for ( ; p; p = p->next)
+   {
+     if (p->type & sd->sd_funcdata)
+@@ -167,6 +181,10 @@
+   int wilds = 0;
+   int count = 1000;
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
++    "I [user@]hostmask maximum IPmask port class");
++
+   if (!param)
+   {
+     stats_configured_links(to, sd, param);
+@@ -204,6 +222,11 @@
+ report_deny_list(struct Client* to)
+ {
+   const struct DenyConf* p = conf_get_deny_list();
++
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
++    "K user@host \"message or path/file\" \"realname\" 0 0");
++
+   for ( ; p; p = p->next)
+     send_reply(to, RPL_STATSKLINE, p->bits > 0 ? 'k' : 'K',
+                p->usermask ? p->usermask : "*",
+@@ -251,6 +274,10 @@
+   }
+   else
+     host = mask;
++
++  /* send header so the client knows what we are showing */
++  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
++    "K user@host \"message or path/file\" \"realname\" 0 0");
+ 
+   for (conf = conf_get_deny_list(); conf; conf = conf->next)
+   {
+@@ -377,6 +404,10 @@
+ {
+   struct Message *mptr;
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
++    "m command count bytes");
++
+   for (mptr = msgtab; mptr->cmd; mptr++)
+     if (mptr->count)
+       send_reply(to, RPL_STATSCOMMANDS, mptr->cmd, mptr->count, mptr->bytes);
+@@ -391,6 +422,10 @@
+ stats_quarantine(struct Client* to, const struct StatDesc* sd, char* param)
+ {
+   struct qline *qline;
++
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
++    "Q channel reason");
+ 
+   for (qline = GlobalQuarantineList; qline; qline = qline->next)
+   {

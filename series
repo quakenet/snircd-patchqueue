@@ -1,3 +1,4 @@
+statsheader.patch
 addnickchasetomodenick.patch #+nickchase
 chanopaccountabilityforkickdelayedjoin.patch
 addopkickcmd.patch #+opkick
@@ -12,3 +13,5 @@ commonchansumode.patch
 remoteglinejupe.patch
 whoban.patch
 opername.patch
+cmdhelp.patch
+split.patch

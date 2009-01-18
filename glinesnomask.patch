@@ -1,4 +1,7 @@
 SNO_GLINE and SNO_AUTO
+
+change of plans.
+
 before, glines with reason starting with "AUTO" end up in SNO_AUTO, all other in SNO_GLINE
 now
 /* figure out what snomask to send to, send to SNO_GLINE when:
