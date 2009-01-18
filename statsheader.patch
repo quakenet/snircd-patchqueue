@@ -2,7 +2,7 @@ add header to /STATS output and make TOTAL: line in /STATS z more clear.
 
 diff -r 92f6cb6562e2 include/numeric.h
 --- a/include/numeric.h	Tue Jan 13 22:17:04 2009 +0000
-+++ b/include/numeric.h	Sun Jan 18 17:44:05 2009 +0100
++++ b/include/numeric.h	Mon Jan 19 00:27:57 2009 +0100
 @@ -117,6 +117,7 @@
  	RPL_STATSVLINE	     227	   unreal */
  #define RPL_STATSALINE       226        /* Hybrid, Undernet */
@@ -11,23 +11,132 @@ diff -r 92f6cb6562e2 include/numeric.h
  
  /*      RPL_SERVICEINFO      231	unused */
  /*      RPL_ENDOFSERVICES    232	unused */
+diff -r 92f6cb6562e2 ircd/class.c
+--- a/ircd/class.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/class.c	Mon Jan 19 00:27:57 2009 +0100
+@@ -257,6 +257,10 @@
+ {
+   struct ConnectionClass *cltmp;
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
++    "Y ConnClass PingFreq ConnFreq MaxLinks MaxSendQ Links");
++
+   for (cltmp = connClassList; cltmp; cltmp = cltmp->next)
+     send_reply(sptr, RPL_STATSYLINE, (cltmp->valid ? 'Y' : 'y'),
+                ConClass(cltmp), PingFreq(cltmp), ConFreq(cltmp),
+diff -r 92f6cb6562e2 ircd/gline.c
+--- a/ircd/gline.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/gline.c	Mon Jan 19 00:27:57 2009 +0100
+@@ -1295,6 +1295,10 @@
+   struct Gline *gline;
+   struct Gline *sgline;
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
++    "G Mask Expire Lastmod Lifetime Status :Reason");
++
+   gliter(GlobalGlineList, gline, sgline) {
+     send_reply(sptr, RPL_STATSGLINE, 'G', 
+                gline->gl_nick ? gline->gl_nick : "",
+diff -r 92f6cb6562e2 ircd/hash.c
+--- a/ircd/hash.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/hash.c	Mon Jan 19 00:27:57 2009 +0100
+@@ -421,6 +421,10 @@
+ stats_nickjupes(struct Client* to, const struct StatDesc* sd, char* param)
+ {
+   int i;
++
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER, "J Nick");
++
+   for (i = 0; i < JUPEHASHSIZE; i++)
+     if (jupeTable[i][0])
+       send_reply(to, RPL_STATSJLINE, jupeTable[i]);
+diff -r 92f6cb6562e2 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/ircd_features.c	Mon Jan 19 00:27:57 2009 +0100
+@@ -827,6 +827,10 @@
+ {
+   int i;
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
++    "F Feature/Log Value");
++
+   for (i = 0; features[i].type; i++) {
+     if ((features[i].flags & FEAT_NODISP) ||
+ 	(features[i].flags & FEAT_MYOPER && !MyOper(to)) ||
 diff -r 92f6cb6562e2 ircd/ircd_res.c
 --- a/ircd/ircd_res.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/ircd_res.c	Sun Jan 18 17:44:05 2009 +0100
++++ b/ircd/ircd_res.c	Mon Jan 19 00:27:57 2009 +0100
 @@ -917,6 +917,10 @@
    int i;
    char ipaddr[128];
  
 +  /* send header so the client knows what we are showing */
 +  send_reply(source_p, SND_EXPLICIT | RPL_STATSHEADER,
-+    "A DNS-server");
++    "A DNS-Server");
 +
    for (i = 0; i < irc_nscount; i++)
    {
      ircd_ntoa_r(ipaddr, &irc_nsaddr_list[i].addr);
+diff -r 92f6cb6562e2 ircd/listener.c
+--- a/ircd/listener.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/listener.c	Mon Jan 19 00:27:57 2009 +0100
+@@ -138,6 +138,10 @@
+   int len;
+ 
+   assert(0 != sptr);
++
++  /* send header so the client knows what we are showing */
++  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
++    "P Port Conns Flags Status");
+ 
+   if (param)
+     port = atoi(param);
+diff -r 92f6cb6562e2 ircd/motd.c
+--- a/ircd/motd.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/motd.c	Mon Jan 19 00:27:57 2009 +0100
+@@ -433,6 +433,10 @@
+ {
+   struct Motd *ptr;
+ 
++  /* send header so the client knows what we are showing */
++  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
++    "T Hostmask/Class File");
++
+   for (ptr = MotdList.other; ptr; ptr = ptr->next)
+     send_reply(to, SND_EXPLICIT | RPL_STATSTLINE, "T %s %s",
+                ptr->hostmask, ptr->path);
+diff -r 92f6cb6562e2 ircd/s_auth.c
+--- a/ircd/s_auth.c	Tue Jan 13 22:17:04 2009 +0000
++++ b/ircd/s_auth.c	Mon Jan 19 00:27:57 2009 +0100
+@@ -2189,6 +2189,10 @@
+ {
+     struct SLink *link;
+ 
++    /* send header so the client knows what we are showing */
++    send_reply(cptr, SND_EXPLICIT | RPL_STATSHEADER,
++      "IAUTHCONF config");
++
+     if (iauth) for (link = iauth->i_config; link; link = link->next)
+     {
+         send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG, ":%s",
+@@ -2205,6 +2209,10 @@
+ {
+     struct SLink *link;
+ 
++    /* send header so the client knows what we are showing */
++    send_reply(cptr, SND_EXPLICIT | RPL_STATSHEADER,
++      "IAUTH info");
++
+     if (iauth) for (link = iauth->i_stats; link; link = link->next)
+     {
+         send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG, ":%s",
 diff -r 92f6cb6562e2 ircd/s_debug.c
 --- a/ircd/s_debug.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/s_debug.c	Sun Jan 18 17:44:05 2009 +0100
++++ b/ircd/s_debug.c	Mon Jan 19 00:27:57 2009 +0100
 @@ -389,7 +389,7 @@
  #endif
  
@@ -39,7 +148,7 @@ diff -r 92f6cb6562e2 ircd/s_debug.c
  }
 diff -r 92f6cb6562e2 ircd/s_err.c
 --- a/ircd/s_err.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/s_err.c	Sun Jan 18 17:44:05 2009 +0100
++++ b/ircd/s_err.c	Mon Jan 19 00:27:57 2009 +0100
 @@ -492,7 +492,7 @@
  /* 229 */
    { 0 },
@@ -51,20 +160,20 @@ diff -r 92f6cb6562e2 ircd/s_err.c
  /* 232 */
 diff -r 92f6cb6562e2 ircd/s_stats.c
 --- a/ircd/s_stats.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/s_stats.c	Sun Jan 18 17:44:05 2009 +0100
++++ b/ircd/s_stats.c	Mon Jan 19 00:27:57 2009 +0100
 @@ -92,6 +92,16 @@
    int maximum;
    char *host, *pass, *name, *username, *hub_limit;
  
 +  /* send header so the client knows what we are showing */
 +  if (sd->sd_funcdata == CONF_UWORLD)
-+    send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER, "U server");
++    send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER, "U Server");
 +  else if (sd->sd_funcdata == CONF_SERVER)
 +    send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
-+      "C server * port hoplimit hubmask class");
++      "C Server * Port Hoplimit Hubmask Class");
 +  else if (sd->sd_funcdata == CONF_OPERATOR)
 +    send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
-+      "O user@host * name class");
++      "O Mask * Name Class");
 +
    for (tmp = GlobalConfList; tmp; tmp = tmp->next)
    {
@@ -75,7 +184,7 @@ diff -r 92f6cb6562e2 ircd/s_stats.c
  
 +  /* send header so the client knows what we are showing */
 +  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
-+    "%c server rule", p->type & CRULE_ALL ? 'D' : 'd');
++    "D Server Rule");
 +
    for ( ; p; p = p->next)
    {
@@ -86,7 +195,7 @@ diff -r 92f6cb6562e2 ircd/s_stats.c
  
 +  /* send header so the client knows what we are showing */
 +  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
-+    "I [user@]hostmask maximum IPmask port class");
++    "I Hostmask Maximum IPmask Port Class");
 +
    if (!param)
    {
@@ -98,7 +207,7 @@ diff -r 92f6cb6562e2 ircd/s_stats.c
 +
 +  /* send header so the client knows what we are showing */
 +  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
-+    "K user@host \"message or path/file\" \"realname\" 0 0");
++    "K Mask \"Message/File\" \"Realname\" 0 0");
 +
    for ( ; p; p = p->next)
      send_reply(to, RPL_STATSKLINE, p->bits > 0 ? 'k' : 'K',
@@ -110,7 +219,7 @@ diff -r 92f6cb6562e2 ircd/s_stats.c
 +
 +  /* send header so the client knows what we are showing */
 +  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
-+    "K user@host \"message or path/file\" \"realname\" 0 0");
++    "K Mask \"Message/File\" \"Realname\" 0 0");
  
    for (conf = conf_get_deny_list(); conf; conf = conf->next)
    {
@@ -120,7 +229,7 @@ diff -r 92f6cb6562e2 ircd/s_stats.c
  
 +  /* send header so the client knows what we are showing */
 +  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
-+    "m command count bytes");
++    "m Command Count Bytes");
 +
    for (mptr = msgtab; mptr->cmd; mptr++)
      if (mptr->count)
@@ -132,7 +241,7 @@ diff -r 92f6cb6562e2 ircd/s_stats.c
 +
 +  /* send header so the client knows what we are showing */
 +  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
-+    "Q channel reason");
++    "Q Channel Reason");
  
    for (qline = GlobalQuarantineList; qline; qline = qline->next)
    {

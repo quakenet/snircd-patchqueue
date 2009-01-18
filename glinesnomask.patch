@@ -1,99 +1,419 @@
 SNO_GLINE and SNO_AUTO
 
-change of plans.
+Add = mask prefix to glines to be used by services
+so their gline actions end up in SNO_AUTO,
+freeing SNO_GLINE from spam
 
-before, glines with reason starting with "AUTO" end up in SNO_AUTO, all other in SNO_GLINE
-now
-/* figure out what snomask to send to, send to SNO_GLINE when:
-*  source is a user and is not on a service server
-*  gline is local, a badchan, or a realname gline
-*  duration is either 120 seconds or less, or 2 weeks or more
-*  nick part is not equal to *
-*  the gline is wide
-* otherwise, send to SNO_AUTO
-*/
+Services can do add this prefix before the mask for
+automated hits, but not add them for glines manually
+set by an oper on the service.
 
-diff -r 16b56cea76d8 ircd/gline.c
---- a/ircd/gline.c	Sun Jan 11 22:38:40 2009 +0000
-+++ b/ircd/gline.c	Sun Jan 11 22:38:41 2009 +0000
-@@ -209,7 +209,7 @@
-  * @return Zero, unless \a sptr G-lined himself, in which case CPTR_KILLED.
-  */
- static int
--do_gline(struct Client *cptr, struct Client *sptr, struct Gline *gline)
-+do_gline(struct Client *cptr, struct Client *sptr, struct Gline *gline, int snomask)
- {
-   struct Client *acptr;
-   int fd, retval = 0, tval;
+<source> GL <target> [=][!][+-<>]<mask> ..
+
+Oper is not allowed to use = prefix in /GLINE,
+as that would be cheating :-)
+
+*** important ***
+This prefix must not be used until the entire network
+and services are upgraded to handle it!
+
+diff -r a4507a57b7cd include/gline.h
+--- a/include/gline.h	Sun Jan 18 21:11:24 2009 +0100
++++ b/include/gline.h	Sun Jan 18 23:19:34 2009 +0100
+@@ -88,8 +88,10 @@
+ #define GLINE_LIFETIME	0x2000	/**< Record lifetime update */
+ #define GLINE_REASON	0x4000	/**< Reason update */
+ 
++#define GLINE_AUTO  0x8000  /**< G-line set auto by service */
++
+ /** Controllable flags that can be set on an actual G-line. */
+-#define GLINE_MASK	(GLINE_ACTIVE | GLINE_BADCHAN | GLINE_LOCAL | GLINE_REALNAME)
++#define GLINE_MASK	(GLINE_ACTIVE | GLINE_BADCHAN | GLINE_LOCAL | GLINE_REALNAME | GLINE_AUTO)
+ /** Mask for G-line activity flags. */
+ #define GLINE_ACTMASK	(GLINE_ACTIVE | GLINE_LDEACT)
+ 
+@@ -110,6 +112,8 @@
+ #define GlineIsBadChan(g)	((g)->gl_flags & GLINE_BADCHAN)
+ /** Test whether \a g is local to this server. */
+ #define GlineIsLocal(g)		((g)->gl_flags & GLINE_LOCAL)
++/** Test whether \a g is auto set by service */
++#define GlineIsAuto(g)		((g)->gl_flags & GLINE_AUTO)
+ 
+ /** Return nick mask of a G-line. */
+ #define GlineNick(g)		((g)->gl_nick)
+diff -r a4507a57b7cd ircd/gline.c
+--- a/ircd/gline.c	Sun Jan 18 21:11:24 2009 +0100
++++ b/ircd/gline.c	Sun Jan 18 23:19:35 2009 +0100
 @@ -278,7 +278,7 @@
          	   gline->gl_reason);
  
          /* let the ops know about it */
 -        sendto_opmask_butone(0, SNO_GLINE, "G-line active for %s",
-+        sendto_opmask_butone(0, snomask, "G-line active for %s",
++        sendto_opmask_butone(0, GlineIsAuto(gline) ? SNO_AUTO : SNO_GLINE, "G-line active for %s",
                               get_client_name(acptr, SHOW_IP));
  
          /* and get rid of him */
-@@ -470,6 +470,7 @@
-   char uhmask[NICKLEN + USERLEN + HOSTLEN + 3];
-   char *nick, *user, *host;
-   int tmp;
-+  int snomask;
+@@ -378,7 +378,8 @@
+     return 0;
  
-   assert(0 != userhost);
-   assert(0 != reason);
-@@ -543,9 +544,25 @@
- 
+   assert(gline->gl_lastmod);
+-  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %c%s%s%s%s%s %Tu %Tu %Tu :%s",
++  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %s%c%s%s%s%s%s %Tu %Tu %Tu :%s",
++			GlineIsAuto(gline) ? "=" : "",
+ 			GlineIsRemActive(gline) ? '+' : '-',
+                         GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+                         GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+@@ -555,8 +556,8 @@
    /* lifetime is already an absolute timestamp */
  
-+  /* figure out what snomask to send to, send to SNO_GLINE when:
-+   *  source is a user and is not on a service server
-+   *  gline is local, a badchan, or a realname gline
-+   *  duration is either 120 seconds or less, or 2 weeks or more
-+   *  nick part is not equal to *
-+   *  the gline is wide
-+   * otherwise, send to SNO_AUTO   
-+   */
-+  if ((IsUser(sptr) && !IsService(cli_user(sptr)->server)) ||
-+       (flags & (GLINE_LOCAL|GLINE_BADCHAN|GLINE_REALNAME)) ||
-+       ((expire - CurrentTime <= 120) || (expire - CurrentTime >= 1209600)) ||
-+       !(nick[0] == '*' && nick[1] == '\0') ||
-+       (gline_checkmask(host) != CHECK_APPROVED))
-+    snomask = SNO_GLINE;
-+  else
-+    snomask = SNO_AUTO;
-+
    /* Inform ops... */
 -  sendto_opmask_butone(0, ircd_strncmp(reason, "AUTO", 4) ? SNO_GLINE :
 -                       SNO_AUTO, "%s adding %s %s for %s%s%s%s%s, expiring at "
-+  sendto_opmask_butone(0, snomask, "%s adding %s %s for %s%s%s%s%s, expiring at "
++  sendto_opmask_butone(0, (flags & GLINE_AUTO) ? SNO_AUTO : SNO_GLINE,
++                       "%s adding %s %s for %s%s%s%s%s, expiring at "
                         "%Tu: %s",
                         (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
                           cli_name(sptr) :
-@@ -581,7 +598,7 @@
+@@ -630,7 +631,8 @@
+     return 0; /* was active to begin with */
  
-   gline_propagate(cptr, sptr, agline);
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s activating global %s for %s%s%s%s%s, "
++  sendto_opmask_butone(0, GlineIsAuto(gline) ? SNO_AUTO : SNO_GLINE,
++                       "%s activating global %s for %s%s%s%s%s, "
+                        "expiring at %Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          cli_name(sptr) :
+@@ -756,7 +758,8 @@
+     lifetime = expire;
  
--  return do_gline(cptr, sptr, agline); /* knock off users if necessary */
-+  return do_gline(cptr, sptr, agline, snomask); /* knock off users if necessary */
- }
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s %s GLINE for %s, expiring at %Tu",
++  sendto_opmask_butone(0, (flags & GLINE_AUTO) ? SNO_AUTO : SNO_GLINE,
++                       "%s %s GLINE for %s, expiring at %Tu",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          cli_name(sptr) : cli_name((cli_user(sptr))->server),
+ 		       msg, userhost, expire + TSoffset);
+@@ -765,7 +768,8 @@
+ 	    "%#C %s GLINE for %s, expiring at %Tu", sptr, msg, userhost,
+ 	    expire);
  
- /** Activate a currently inactive G-line.
-@@ -644,7 +661,7 @@
-   if (!(flags & GLINE_LOCAL)) /* don't propagate local changes */
-     gline_propagate(cptr, sptr, gline);
+-  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* -%s %Tu %Tu %Tu",
++  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %s-%s %Tu %Tu %Tu",
++                        (flags & GLINE_AUTO) ? "=" : "",
+                         userhost, expire, lastmod, lifetime);
  
--  return do_gline(cptr, sptr, gline);
-+  return do_gline(cptr, sptr, gline, SNO_GLINE);
- }
+   return 0;
+@@ -912,6 +916,12 @@
+     break;
+   }
  
- /** Deactivate a G-line.
-@@ -928,7 +945,7 @@
- 			  gline->gl_lifetime, gline->gl_reason);
++  /* Handle the change of auto or manual G-line */
++  if ((flags & GLINE_AUTO) && !GlineIsAuto(gline))
++    gline->gl_flags |= GLINE_AUTO; /* mark as auto */
++  else if (!(flags & GLINE_AUTO) && GlineIsAuto(gline))
++    gline->gl_flags &= ~GLINE_AUTO; /* mark as manual */
++
+   /* Handle expiration changes... */
+   if (flags & GLINE_EXPIRE) {
+     gline->gl_expire = expire; /* save new expiration time */
+@@ -944,7 +954,8 @@
+   }
  
-   /* OK, let's do the G-line... */
--  return do_gline(cptr, sptr, gline);
-+  return do_gline(cptr, sptr, gline, SNO_GLINE);
- }
+   /* All right, inform ops... */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s modifying global %s for %s%s%s%s%s:%s",
++  sendto_opmask_butone(0, flags & GLINE_AUTO ? SNO_GLINE : SNO_GLINE,
++		       "%s modifying global %s for %s%s%s%s%s:%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+ 		       cli_name(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+@@ -965,7 +976,8 @@
+    */
+   if (action != GLINE_LOCAL_ACTIVATE && action != GLINE_LOCAL_DEACTIVATE)
+     sendcmdto_serv_butone(sptr, CMD_GLINE, cptr,
+-			  "* %s%s%s%s%s%s%s %Tu %Tu %Tu :%s",
++			  "* %s%s%s%s%s%s%s%s %Tu %Tu %Tu :%s",
++			  (flags & GLINE_AUTO) ? "=" : "",
+ 			  flags & GLINE_OPERFORCE ? "!" : "", op,
+                           GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+                           GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+@@ -1179,8 +1191,9 @@
  
- /** Destroy a local G-line.
+   gliter(GlobalGlineList, gline, sgline) {
+     if (!GlineIsLocal(gline) && gline->gl_lastmod)
+-      sendcmdto_one(&me, CMD_GLINE, cptr, "* %c%s%s%s%s%s %Tu %Tu %Tu :%s",
+-		    GlineIsRemActive(gline) ? '+' : '-', 
++      sendcmdto_one(&me, CMD_GLINE, cptr, "* %s%c%s%s%s%s%s %Tu %Tu %Tu :%s",
++		    GlineIsAuto(gline) ? "=" : "",
++		    GlineIsRemActive(gline) ? '+' : '-',
+                     gline->gl_nick ? gline->gl_nick : "",
+                     gline->gl_nick ? "!" : "",
+                     gline->gl_user,
+@@ -1192,7 +1205,8 @@
+ 
+   gliter(BadChanGlineList, gline, sgline) {
+     if (!GlineIsLocal(gline) && gline->gl_lastmod)
+-      sendcmdto_one(&me, CMD_GLINE, cptr, "* %c%s %Tu %Tu %Tu :%s",
++      sendcmdto_one(&me, CMD_GLINE, cptr, "* %s%c%s %Tu %Tu %Tu :%s",
++		    GlineIsAuto(gline) ? "=" : "",
+ 		    GlineIsRemActive(gline) ? '+' : '-', gline->gl_user,
+ 		    gline->gl_expire - CurrentTime, gline->gl_lastmod,
+ 		    gline->gl_lifetime, gline->gl_reason);
+@@ -1210,7 +1224,8 @@
+   if (GlineIsLocal(gline) || !gline->gl_lastmod)
+     return 0;
+ 
+-  sendcmdto_one(&me, CMD_GLINE, cptr, "* %c%s%s%s%s%s %Tu %Tu %Tu :%s",
++  sendcmdto_one(&me, CMD_GLINE, cptr, "* %s%c%s%s%s%s%s %Tu %Tu %Tu :%s",
++		GlineIsAuto(gline) ? "=" : "",
+ 		GlineIsRemActive(gline) ? '+' : '-', 
+                 GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
+                 GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+@@ -1249,6 +1264,7 @@
+ 	       gline->gl_expire + TSoffset, gline->gl_lastmod,
+ 	       gline->gl_lifetime + TSoffset,
+ 	       GlineIsLocal(gline) ? cli_name(&me) : "*",
++	       GlineIsAuto(gline) && IsAnOper(sptr) ? "=" : "",
+ 	       gline->gl_state == GLOCAL_ACTIVATED ? ">" :
+ 	       (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
+ 	       GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
+@@ -1263,6 +1279,7 @@
+ 		 gline->gl_expire + TSoffset, gline->gl_lastmod,
+ 		 gline->gl_lifetime + TSoffset,
+ 		 GlineIsLocal(gline) ? cli_name(&me) : "*",
++		 GlineIsAuto(gline) && IsAnOper(sptr) ? "=" : "",
+ 		 gline->gl_state == GLOCAL_ACTIVATED ? ">" :
+ 		 (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
+ 		 GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
+@@ -1273,6 +1290,7 @@
+ 		 gline->gl_expire + TSoffset, gline->gl_lastmod,
+ 		 gline->gl_lifetime + TSoffset,
+ 		 GlineIsLocal(gline) ? cli_name(&me) : "*",
++		 GlineIsAuto(gline) && IsAnOper(sptr) ? "=" : "",
+ 		 gline->gl_state == GLOCAL_ACTIVATED ? ">" :
+ 		 (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
+ 		 GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
+@@ -1304,6 +1322,7 @@
+ 	       gline->gl_host ? gline->gl_host : "",
+ 	       gline->gl_expire + TSoffset, gline->gl_lastmod,
+ 	       gline->gl_lifetime + TSoffset,
++	       GlineIsAuto(gline) && IsAnOper(sptr) ? "=" : "",
+ 	       gline->gl_state == GLOCAL_ACTIVATED ? ">" :
+ 	       (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
+ 	       GlineIsRemActive(gline) ? '+' : '-',
+@@ -1314,6 +1333,7 @@
+     send_reply(sptr, RPL_STATSGLINE, 'G', gline->gl_user, "", "", "", "",
+                gline->gl_expire + TSoffset, gline->gl_lastmod,
+                gline->gl_lifetime + TSoffset,
++               GlineIsAuto(gline) && IsAnOper(sptr) ? "=" : "",
+                gline->gl_state == GLOCAL_ACTIVATED ? ">" :
+                (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
+                GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
+diff -r a4507a57b7cd ircd/m_gline.c
+--- a/ircd/m_gline.c	Sun Jan 18 21:11:24 2009 +0100
++++ b/ircd/m_gline.c	Sun Jan 18 23:19:35 2009 +0100
+@@ -140,6 +140,11 @@
+   if (IsServer(sptr))
+     flags |= GLINE_FORCE;
+ 
++  if (*mask == '=') {
++    mask++;
++    flags |= GLINE_AUTO; /* auto G-line action by service */
++  }
++
+   if (*mask == '!') {
+     mask++;
+     flags |= GLINE_OPERFORCE; /* assume oper had WIDE_GLINE */
+@@ -183,11 +188,14 @@
+   if ((action == GLINE_LOCAL_ACTIVATE || action == GLINE_LOCAL_DEACTIVATE) &&
+       !IsMe(acptr)) {
+     Debug((DEBUG_DEBUG, "I am forwarding a local change to a global gline "
+-	   "to a remote server; target %s, mask %s, operforce %s, action %c",
+-	   target, mask, flags & GLINE_OPERFORCE ? "YES" : "NO",
++	   "to a remote server; target %s, mask %s, operforce %s, auto %s, action %c",
++	   target, mask,
++	   flags & GLINE_OPERFORCE ? "YES" : "NO",
++	   flags & GLINE_AUTO ? "YES" : "NO",
+ 	   action == GLINE_LOCAL_ACTIVATE ? '>' : '<'));
+ 
+-    sendcmdto_one(sptr, CMD_GLINE, acptr, "%C %s%c%s", acptr,
++    sendcmdto_one(sptr, CMD_GLINE, acptr, "%C %s%s%c%s", acptr,
++		  flags & GLINE_AUTO ? "=" : "",
+ 		  flags & GLINE_OPERFORCE ? "!" : "",
+ 		  action == GLINE_LOCAL_ACTIVATE ? '>' : '<', mask);
+ 
+@@ -226,8 +234,10 @@
+ 
+ 	/* OK, create the local G-line */
+ 	Debug((DEBUG_DEBUG, "I am creating a local G-line here; target %s, "
+-	       "mask %s, operforce %s, action %s, expire %Tu, reason: %s",
+-	       target, mask, flags & GLINE_OPERFORCE ? "YES" : "NO",
++	       "mask %s, operforce %s, auto %s, action %s, expire %Tu, reason: %s",
++	       target, mask,
++	       flags & GLINE_OPERFORCE ? "YES" : "NO",
++	       flags & GLINE_AUTO ? "YES" : "NO",
+ 	       action == GLINE_ACTIVATE ? "+" : "-", expire, reason));
+ 
+ 	return gline_add(cptr, sptr, mask, reason, expire, lastmod,
+@@ -239,8 +249,9 @@
+ 
+       /* Let's now destroy the G-line */;
+       Debug((DEBUG_DEBUG, "I am destroying a local G-line here; target %s, "
+-	     "mask %s, operforce %s, action %s", target, mask,
++	     "mask %s, operforce %s, auto %s, action %s", target, mask,
+ 	     flags & GLINE_OPERFORCE ? "YES" : "NO",
++	     flags & GLINE_AUTO ? "YES" : "NO",
+ 	     action == GLINE_ACTIVATE ? "+" : "-"));
+ 
+       return gline_destroy(cptr, sptr, agline);
+@@ -255,14 +266,17 @@
+     assert(!IsMe(acptr));
+ 
+     Debug((DEBUG_DEBUG, "I am forwarding a local G-line to a remote server; "
+-	   "target %s, mask %s, operforce %s, action %c, expire %Tu, "
++	   "target %s, mask %s, operforce %s, auto %s, action %c, expire %Tu, "
+ 	   "lastmod %Tu, reason: %s", target, mask,
+ 	   flags & GLINE_OPERFORCE ? "YES" : "NO",
++	   flags & GLINE_AUTO ? "YES" : "NO",
+ 	   action == GLINE_ACTIVATE ? '+' :  '-', expire, CurrentTime,
+ 	   reason));
+ 
+-    sendcmdto_one(sptr, CMD_GLINE, acptr, "%C %s%c%s %Tu %Tu :%s",
+-		  acptr, flags & GLINE_OPERFORCE ? "!" : "",
++    sendcmdto_one(sptr, CMD_GLINE, acptr, "%C %s%s%c%s %Tu %Tu :%s",
++		  acptr,
++		  flags & GLINE_AUTO ? "=" : "",
++		  flags & GLINE_OPERFORCE ? "!" : "",
+ 		  action == GLINE_ACTIVATE ? '+' : '-', mask,
+ 		  expire - CurrentTime, CurrentTime, reason);
+ 
+@@ -323,10 +337,11 @@
+     return need_more_params(sptr, "GLINE");
+ 
+   Debug((DEBUG_DEBUG, "I have a global G-line I am acting upon now; "
+-	 "target %s, mask %s, operforce %s, action %s, expire %Tu, "
++	 "target %s, mask %s, operforce %s, auto %s, action %s, expire %Tu, "
+ 	 "lastmod %Tu, lifetime %Tu, reason: %s; gline %s!  (fields "
+ 	 "present: %s %s %s)", target, mask,
+ 	 flags & GLINE_OPERFORCE ? "YES" : "NO",
++	 flags & GLINE_AUTO ? "YES" : "NO",
+ 	 action == GLINE_ACTIVATE ? "+" :
+ 	 (action == GLINE_DEACTIVATE ? "-" :
+ 	  (action == GLINE_LOCAL_ACTIVATE ? ">" :
+@@ -353,7 +368,8 @@
+ 	   action == GLINE_ACTIVATE ? "activation" : "deactivation"));
+ 
+     /* propagate the G-line, even though we don't have it */
+-    sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %c%s %Tu",
++    sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %s%c%s %Tu",
++			  flags & GLINE_AUTO ? "=" : "",
+ 			  action == GLINE_ACTIVATE ? '+' : '-',
+ 			  mask, lastmod);
+ 
+@@ -387,6 +403,10 @@
+       return send_reply(sptr, ERR_NOPRIVILEGES);
+     else
+       return gline_list(sptr, 0);
++  }
++
++  if (*mask == '=') { /* ignore auto prefix from oper */ 
++    mask++;
+   }
+ 
+   if (*mask == '!') {
+@@ -506,11 +526,14 @@
+       return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
+     Debug((DEBUG_DEBUG, "I am forwarding a local change to a global gline "
+-	   "to a remote server; target %s, mask %s, operforce %s, action %c",
+-	   cli_name(acptr), mask, flags & GLINE_OPERFORCE ? "YES" : "NO",
++	   "to a remote server; target %s, mask %s, operforce %s, auto %s, action %c",
++	   cli_name(acptr), mask,
++	   flags & GLINE_OPERFORCE ? "YES" : "NO",
++	   flags & GLINE_AUTO ? "YES" : "NO",
+ 	   action == GLINE_LOCAL_ACTIVATE ? '>' : '<'));
+ 
+     sendcmdto_one(sptr, CMD_GLINE, acptr, "%C %s%c%s", acptr,
++                  flags & GLINE_AUTO ? "=" : "",
+                   flags & GLINE_OPERFORCE ? "!" : "",
+                   action == GLINE_LOCAL_ACTIVATE ? '>' : '<', mask);
+ 
+@@ -544,13 +567,16 @@
+ 	return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
+       Debug((DEBUG_DEBUG, "I am forwarding a local G-line to a remote "
+-	     "server; target %s, mask %s, operforce %s, action %c, "
++	     "server; target %s, mask %s, operforce %s, auto %s, action %c, "
+ 	     "expire %Tu, reason %s", target, mask,
+ 	     flags & GLINE_OPERFORCE ? "YES" : "NO",
++	     flags & GLINE_AUTO ? "YES" : "NO",
+ 	     action == GLINE_ACTIVATE ? '+' : '-', expire, reason));
+ 
+-      sendcmdto_one(sptr, CMD_GLINE, acptr, "%C %s%c%s %Tu %Tu :%s",
+-		    acptr, flags & GLINE_OPERFORCE ? "!" : "",
++      sendcmdto_one(sptr, CMD_GLINE, acptr, "%C %s%s%c%s %Tu %Tu :%s",
++		    acptr,
++		    flags & GLINE_AUTO ? "=" : "",
++		    flags & GLINE_OPERFORCE ? "!" : "",
+ 		    action == GLINE_ACTIVATE ? '+' : '-', mask,
+ 		    expire - CurrentTime, CurrentTime, reason);
+ 
+@@ -568,8 +594,10 @@
+ 
+       /* OK, create the local G-line */
+       Debug((DEBUG_DEBUG, "I am creating a local G-line here; target %s, "
+-	     "mask %s, operforce %s, action  %s, expire %Tu, reason: %s",
+-	     target, mask, flags & GLINE_OPERFORCE ? "YES" : "NO",
++	     "mask %s, operforce %s, auto %s, action  %s, expire %Tu, reason: %s",
++	     target, mask,
++	     flags & GLINE_OPERFORCE ? "YES" : "NO",
++	     flags & GLINE_AUTO ? "YES" : "NO",
+ 	     action == GLINE_ACTIVATE ? "+" : "-", expire, reason));
+ 
+       return gline_add(cptr, sptr, mask, reason, expire, 0, 0,
+@@ -580,8 +608,9 @@
+ 
+       /* Let's now destroy the G-line */
+       Debug((DEBUG_DEBUG, "I am destroying a local G-line here; target %s, "
+-	     "mask %s, operforce %s, action %s", target, mask,
++	     "mask %s, operforce %s, auto %s, action %s", target, mask,
+ 	     flags & GLINE_OPERFORCE ? "YES" : "NO",
++	     flags & GLINE_AUTO ? "YES" : "NO",
+ 	     action == GLINE_ACTIVATE ? "+" : "-"));
+ 
+       return gline_destroy(cptr, sptr, agline);
+@@ -615,9 +644,11 @@
+   }
+ 
+   Debug((DEBUG_DEBUG, "I have a global G-line I am acting upon now; "
+-	 "target %s, mask %s, operforce %s, action %s, expire %Tu, "
++	 "target %s, mask %s, operforce %s, auto %s, action %s, expire %Tu, "
+ 	 "reason: %s; gline %s!  (fields present: %s %s)", target, 
+-	 mask, flags & GLINE_OPERFORCE ? "YES" : "NO",
++	 mask,
++	 flags & GLINE_OPERFORCE ? "YES" : "NO",
++	 flags & GLINE_AUTO ? "YES" : "NO",
+ 	 action == GLINE_ACTIVATE ? "+" :
+ 	 (action == GLINE_DEACTIVATE ? "-" :
+ 	  (action == GLINE_LOCAL_ACTIVATE ? ">" :
+diff -r a4507a57b7cd ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jan 18 21:11:24 2009 +0100
++++ b/ircd/s_err.c	Sun Jan 18 23:19:35 2009 +0100
+@@ -526,7 +526,7 @@
+ /* 246 */
+   { RPL_STATSTLINE, "%c %s %s", "246" },
+ /* 247 */
+-  { RPL_STATSGLINE, "%c %s%s%s%s%s %Tu %Tu %Tu %s%c :%s", "247" },
++  { RPL_STATSGLINE, "%c %s%s%s%s%s %Tu %Tu %Tu %s%s%c :%s", "247" },
+ /* 248 */
+   { RPL_STATSULINE, "U %s", "248" },
+ /* 249 */
+@@ -592,7 +592,7 @@
+ /* 279 */
+   { 0 },
+ /* 280 */
+-  { RPL_GLIST, "%s%s%s%s%s %Tu %Tu %Tu %s %s%c :%s", "280" },
++  { RPL_GLIST, "%s%s%s%s%s %Tu %Tu %Tu %s %s%s%c :%s", "280" },
+ /* 281 */
+   { RPL_ENDOFGLIST, ":End of G-line List", "281" },
+ /* 282 */
