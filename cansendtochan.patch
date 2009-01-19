@@ -1,0 +1,556 @@
+attempt to move checks for chanmodes c C N T u into
+the *_can_send_to_channel() functions in channel.c where ircu by default has its chanmode checks
+
+instead of having them in each of the places used (m_wallchops, m_wallvoices, ircd_relay.c, etc.)
+not tested completely
+
+client_can_send_to_channel()
+and
+member_can_send_to_channel()
+do have some of the exact same code - should maybe add a new function and move those there.
+
+possible problem discovered:
+in some places *_can_send_to_channel() is first called with reveal delayedjoin user ON
+but the code then proceeds to check target limits, which upon refusal means the delayedjoin
+user is revealed (locally) without actually sending anything to the channel... that's ugly
+must find a way around that
+
+
+diff -r f6d476f109e2 include/channel.h
+--- a/include/channel.h	Mon Jan 19 15:32:18 2009 +0100
++++ b/include/channel.h	Mon Jan 19 22:10:14 2009 +0100
+@@ -103,9 +103,9 @@
+ #define MODE_DELJOINS   0x1000  	/**< New join messages are delayed */
+ #define MODE_REGISTERED 0x2000          /**< Channel marked as registered
+                                          * (for future semantic expansion) */
+-#define MODE_NOCOLOUR   0x4000          /**< No mIRC/ANSI colors/bold */
+-#define MODE_NOCTCP     0x8000          /**< No channel CTCPs */
+-#define MODE_NONOTICE   0x10000          /**< No channel notices */
++#define MODE_NOCOLOUR   0x4000          /**< +c No mIRC/ANSI colors/bold */
++#define MODE_NOCTCP     0x8000          /**< +C No channel CTCPs */
++#define MODE_NONOTICE   0x10000          /**< +N No channel notices */
+ #define MODE_SAVE	0x20000		/**< save this mode-with-arg 'til 
+ 					 * later */
+ #define MODE_FREE	0x40000 	/**< string needs to be passed to 
+@@ -115,7 +115,7 @@
+ #define MODE_APASS	0x200000
+ #define MODE_WASDELJOINS 0x400000 	/**< Not DELJOINS, but some joins 
+ 					 * pending */
+-#define MODE_NOQUITPARTS 0x800000
++#define MODE_NOQUITPARTS 0x800000       /**< +u No user defined quit or part messages */
+ 
+ #define MODE_NOMULTITARGET 0x1000000    /**< +T No multiple targets */
+ #define MODE_MODERATENOREG 0x2000000    /**< +M Moderate unauthed users */
+@@ -396,8 +396,10 @@
+ 
+ extern const char* find_no_nickchange_channel(struct Client* cptr);
+ extern struct Membership* find_channel_member(struct Client* cptr, struct Channel* chptr);
+-extern int member_can_send_to_channel(struct Membership* member, int reveal);
+-extern int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal);
++extern int member_can_send_to_channel(struct Membership* member, int reveal,
++  unsigned int flags, const char *text, const int target);
++extern int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr,
++  int reveal, unsigned int flags, const char *text, const int target);
+ 
+ extern void remove_user_from_channel(struct Client *sptr, struct Channel *chptr);
+ extern void remove_user_from_all_channels(struct Client* cptr);
+diff -r f6d476f109e2 ircd/channel.c
+--- a/ircd/channel.c	Mon Jan 19 15:32:18 2009 +0100
++++ b/ircd/channel.c	Mon Jan 19 22:10:14 2009 +0100
+@@ -681,53 +681,102 @@
+  * @param member	The membership of the user
+  * @param reveal	If true, the user will be "revealed" on a delayed
+  * 			joined channel.
++ * @param flags The bitmask of additional modes to check (besides +n +m +r +M +b)
++ * @param text The message from the user, needed for modes +c and +C
++ * @param target The number of targets the message is sent to, for +T
+  *
+  * @returns True if the client can speak on the channel.
+  */
+-int member_can_send_to_channel(struct Membership* member, int reveal)
++int member_can_send_to_channel(struct Membership* member, int reveal,
++  unsigned int flags, const char *text, const int target)
+ {
++  const char *ch;
++  unsigned int modes;
++  int controlcodes = 0;
++
+   assert(0 != member);
++  
++  modes = member->channel->mode.mode;
+ 
+   /* Do not check for users on other servers: This should be a
+    * temporary desynch, or maybe they are on an older server, but
+    * we do not want to send ERR_CANNOTSENDTOCHAN more than once.
+    */
+-  if (!MyUser(member->user))
+-  {
+-    if (IsDelayedJoin(member) && reveal)
+-      RevealDelayedJoin(member);
+-    return 1;
+-  }
+-  
+-  /* +X user can always speak on the channel */
+-  if (IsXtraOp(member->user)) {
++  /* client on service server (+s) - let it through */
++  if (IsService(cli_user(member->user)->server)) {
+     if (IsDelayedJoin(member) && reveal)
+       RevealDelayedJoin(member);
+     return 1;
+   }
+ 
+-  /* Discourage using the Apass to get op.  They should use the Upass. */
++  /* +A   Discourage using the Apass to get op.  They should use the Upass. */
++  /* TODO: exclude +X from this? */
+   if (IsChannelManager(member) && member->channel->mode.apass[0])
+     return 0;
+ 
+-  /* If you have voice or ops, you can speak. */
+-  if (IsVoicedOrOpped(member))
+-    return 1;
++  /* If you have voice or ops, you can speak,
++   *   else we need do some more checks
++   *     but allow umode +X to bypass modes +m +r +M and bans 
++   */
++  if (!IsVoicedOrOpped(member) && !IsXtraOp(member->user)) {
+ 
+-  /*
+-   * If it's moderated, and you aren't a privileged user, you can't
+-   * speak.
+-   */
+-  if (member->channel->mode.mode & MODE_MODERATED)
+-    return 0;
++    /*
++     * +m   If it's moderated, and you aren't a privileged user, you can't
++     * speak.
++     */
++    if (modes & MODE_MODERATED)
++      return 0;
+ 
+-  /* If only logged in users may join and you're not one, you can't speak. */
+-  if (member->channel->mode.mode & (MODE_MODERATENOREG|MODE_REGONLY) && !IsAccount(member->user))
+-    return 0;
++    /* +r and +M   If only logged in users may join and you're not one, you can't speak. */
++    if (modes & (MODE_MODERATENOREG|MODE_REGONLY) && !IsAccount(member->user))
++      return 0;
+ 
+-  /* If you're banned then you can't speak either. */
+-  if (is_banned(member))
+-    return 0;
++    /* +b   If you're banned then you can't speak either. */
++    if (is_banned(member))
++      return 0;
++  }
++
++  /* check these only for local users */
++  if (MyUser(member->user)) {
++
++    /* +T   check for multi target message and they are not allowed */
++    if ((flags & MODE_NOMULTITARGET) && (modes & MODE_NOMULTITARGET) &&
++      target > 1) 
++      return 0;
++
++    /* +N   check for channel wide notice and they are not allowed */
++    if ((flags & MODE_NONOTICE) && (modes & MODE_NONOTICE))
++      return 0;
++    
++    /* +u   check for user defined quit and part messages, and they are not allowed */
++    if ((flags & MODE_NOQUITPARTS) && (modes & MODE_NOQUITPARTS))
++      return 0;
++
++    /* these last two checks should always be last
++     * as they loop over the entire message in search for
++     * CTCP char and control codes 
++     */
++    /* +C   check for CTCP and CTCPs are not allowed */
++    if ((flags & MODE_NOCTCP) && (modes & MODE_NOCTCP) && (text != NULL) &&
++      ircd_strncmp(text,"\001ACTION ",8)) {
++      for (ch=text;*ch;) {
++        if (*ch++==1)
++          return 0;
++        if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31)
++          controlcodes = 1;
++      }
++    }
++
++    /* +c   check for control codes and they are not allowed */
++    if ((flags & MODE_NOCOLOUR) && (modes & MODE_NOCOLOUR) && (text != NULL)) {
++      if (controlcodes) /* already found control codes */
++        return 0;
++      for (ch=text;*ch;ch++) {
++        if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31)
++          return 0;
++      }
++    }
++  }
+ 
+   if (IsDelayedJoin(member) && reveal)
+     RevealDelayedJoin(member);
+@@ -744,38 +793,95 @@
+  * @param chptr	The channel to check
+  * @param reveal If the user should be revealed (see 
+  * 		member_can_send_to_channel())
++ * @param flags The bitmask of additional modes to check (besides +n +m +r +M +b)
++ * @param text  The message needed to check for +c and +C
++ * @param target The number of targets the message is sent to, for +T
+  *
+  * @returns true if the client is allowed to speak on the channel, false 
+  * 		otherwise
+  *
+  * @see member_can_send_to_channel()
+  */
+-int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal)
++int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal,
++  unsigned int flags, const char *text, const int target)
+ {
+   struct Membership *member;
+-  assert(0 != cptr); 
++  const char *ch;
++  unsigned int modes;
++  int controlcodes = 0;  
++  
++  assert(0 != cptr);
++  
+   /*
+    * Servers can always speak on channels.
+    */
+   if (IsServer(cptr))
+     return 1;
+ 
++  modes = chptr->mode.mode;
+   member = find_channel_member(cptr, chptr);
+ 
+-  /*
++  /* 
+    * You can't speak if you're off channel, and it is +n (no external messages)
+    * or +m (moderated).
++   *   (moderated also includes +r and +M when you do not have an account set)
++   *   exempt clients with umode +X and service clients (clients on +s server)
+    */
+   if (!member) {
+-    if (IsXtraOp(cptr))
++    /* client on service server (+s) - let it through */
++    if (IsService(cli_user(cptr)->server))
+       return 1;
+-    else if ((chptr->mode.mode & (MODE_NOPRIVMSGS|MODE_MODERATED)) ||
+-	((chptr->mode.mode & (MODE_REGONLY|MODE_MODERATENOREG)) && !IsAccount(cptr)))
++    /* client with umode +X exempt from modes +n +m +r +M +b */
++    if (!IsXtraOp(cptr)) {
++      if ((modes & (MODE_NOPRIVMSGS|MODE_MODERATED)) ||
++	     ((modes & (MODE_REGONLY|MODE_MODERATENOREG)) && !IsAccount(cptr)))
++         return 0;
++      if (find_ban(cptr, chptr->banlist))
++        return 0;
++    }
++
++    /* argh..., now we still have this duplicate code, although closer together
++     * maybe move the checks below into its own function to be used here
++     * from client_can_send_to_channel() and
++     *  member_can_send_to_channel() ?
++     */
++
++    /* +T   check for multi target message and they are not allowed */
++    if ((flags & MODE_NOMULTITARGET) && (modes & MODE_NOMULTITARGET) &&
++      target > 1) 
+       return 0;
+-    else
+-      return !find_ban(cptr, chptr->banlist);
++
++    /* +N   check for channel wide notice and they are not allowed */
++    if ((flags & MODE_NONOTICE) && (modes & MODE_NONOTICE))
++      return 0;
++
++    /* these last two checks should always be last
++     * as they loop over the entire message in search for
++     * CTCP char and control codes
++     */
++    /* +C   check for CTCP and CTCPs are not allowed */
++    if ((flags & MODE_NOCTCP) && (modes & MODE_NOCTCP) && (text != NULL) &&
++      ircd_strncmp(text,"\001ACTION ",8)) {
++      for (ch=text;*ch;) {
++        if (*ch++==1)
++          return 0;
++        if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31)
++          controlcodes = 1;
++      }
++    }
++
++    /* +c   check for control codes and they are not allowed */
++    if ((flags & MODE_NOCOLOUR) && (modes & MODE_NOCOLOUR) && (text != NULL)) {
++      if (controlcodes) /* already found control codes */
++        return 0;
++      for (ch=text;*ch;ch++) {
++        if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31)
++          return 0;
++      }
++    }
++    return 1;
+   }
+-  return member_can_send_to_channel(member, reveal);
++  return member_can_send_to_channel(member, reveal, flags, text, target);
+ }
+ 
+ /** Returns the name of a channel that prevents the user from changing nick.
+@@ -3625,13 +3731,11 @@
+     /* Send notification to channel */
+     if (!(flags & (CHFL_ZOMBIE | CHFL_DELAYED)))
+       sendcmdto_channel_butserv_butone(jbuf->jb_source, CMD_PART, chan, NULL, 0,
+-		    ((flags & CHFL_BANNED) || ((chan->mode.mode & MODE_NOQUITPARTS)
+-		     && !IsChannelService(member->user)) || !jbuf->jb_comment) ?
++		    ((flags & CHFL_BANNED) || !jbuf->jb_comment) ?
+ 		    "%H" : "%H :%s", chan, jbuf->jb_comment);
+     else if (MyUser(jbuf->jb_source))
+       sendcmdto_one(jbuf->jb_source, CMD_PART, jbuf->jb_source,
+-		    ((flags & CHFL_BANNED) || (chan->mode.mode & MODE_NOQUITPARTS)
+-		     || !jbuf->jb_comment) ?
++		    ((flags & CHFL_BANNED) || !jbuf->jb_comment) ?
+ 		    ":%H" : "%H :%s", chan, jbuf->jb_comment);
+     /* XXX: Shouldn't we send a PART here anyway? */
+     /* to users on the channel?  Why?  From their POV, the user isn't on
+diff -r f6d476f109e2 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Mon Jan 19 15:32:18 2009 +0100
++++ b/ircd/ircd_relay.c	Mon Jan 19 22:10:14 2009 +0100
+@@ -87,7 +87,6 @@
+ void relay_channel_message(struct Client* sptr, const char* name, const char* text, const int targetc)
+ {
+   struct Channel* chptr;
+-  const char *ch;
+   assert(0 != sptr);
+   assert(0 != name);
+   assert(0 != text);
+@@ -99,35 +98,19 @@
+   /*
+    * This first: Almost never a server/service
+    */
+-  if (!client_can_send_to_channel(sptr, chptr, 1)) {
++  if (!client_can_send_to_channel(sptr, chptr, 1,
++    (MODE_NOCOLOUR | MODE_NOCTCP | MODE_NOMULTITARGET), text, targetc)) {
+     send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
+     return;
+   }
++  /* TODO: what is this again?
++   * clinet_can_send_to_channel already reveals delayed join user
++   * locally anyway, and now the message gets denied?
++   * hmm...
++   */
+   if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
+       check_target_limit(sptr, chptr, chptr->chname, 0))
+     return;
+-
+-  /* +T check */
+-  if ((chptr->mode.mode & MODE_NOMULTITARGET) && (targetc > 1)) {
+-    send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
+-    return;
+-  }
+-
+-  /* +cC checks */
+-  if (chptr->mode.mode & MODE_NOCOLOUR)
+-    for (ch=text;*ch;ch++)
+-      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
+-        send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
+-        return;
+-      }
+-
+-  if ((chptr->mode.mode & MODE_NOCTCP) && ircd_strncmp(text,"\001ACTION ",8))
+-    for (ch=text;*ch;)
+-      if (*ch++==1) { 
+-        send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
+-        return;
+-      }
+-
+   
+   sendcmdto_channel_butone(sptr, CMD_PRIVATE, chptr, cli_from(sptr),
+ 			   SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
+@@ -143,7 +126,6 @@
+ void relay_channel_notice(struct Client* sptr, const char* name, const char* text, const int targetc)
+ {
+   struct Channel* chptr;
+-  const char *ch;
+   assert(0 != sptr);
+   assert(0 != name);
+   assert(0 != text);
+@@ -153,30 +135,14 @@
+   /*
+    * This first: Almost never a server/service
+    */
+-  if (!client_can_send_to_channel(sptr, chptr, 1))
++  if (!client_can_send_to_channel(sptr, chptr, 1,
++    (MODE_NONOTICE | MODE_NOCOLOUR | MODE_NOCTCP | MODE_NOMULTITARGET), text, targetc))
+     return;
+ 
++  /* TODO: idem as in previous function */
+   if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
+       check_target_limit(sptr, chptr, chptr->chname, 0))
+     return;
+-
+-  if ((chptr->mode.mode & MODE_NONOTICE))
+-    return;
+-
+-  /* +T check */
+-  if ((chptr->mode.mode & MODE_NOMULTITARGET) && (targetc > 1))
+-    return;
+-
+-  /* +cC checks */
+-  if (chptr->mode.mode & MODE_NOCOLOUR)
+-    for (ch=text;*ch;ch++)
+-      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31)
+-        return;
+-
+-  if (chptr->mode.mode & MODE_NOCTCP)
+-    for (ch=text;*ch;)
+-      if (*ch++==1)
+-        return;
+ 
+   sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
+ 			   SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
+@@ -204,7 +170,7 @@
+    * This first: Almost never a server/service
+    * Servers may have channel services, need to check for it here
+    */
+-  if (client_can_send_to_channel(sptr, chptr, 1) || IsChannelService(sptr)) {
++  if (client_can_send_to_channel(sptr, chptr, 1, 0, NULL, 1)) {
+     sendcmdto_channel_butone(sptr, CMD_PRIVATE, chptr, cli_from(sptr),
+ 			     SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
+   }
+@@ -232,7 +198,8 @@
+    * This first: Almost never a server/service
+    * Servers may have channel services, need to check for it here
+    */
+-  if (client_can_send_to_channel(sptr, chptr, 1) || IsChannelService(sptr)) {
++  /* TODO: check how we get here */
++  if (client_can_send_to_channel(sptr, chptr, 1, 0, NULL, 1)) {
+     sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
+ 			     SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
+   }
+diff -r f6d476f109e2 ircd/m_part.c
+--- a/ircd/m_part.c	Mon Jan 19 15:32:18 2009 +0100
++++ b/ircd/m_part.c	Mon Jan 19 22:10:14 2009 +0100
+@@ -140,7 +140,8 @@
+ 
+     assert(!IsZombie(member)); /* Local users should never zombie */
+ 
+-    if (!member_can_send_to_channel(member, 0))
++    /* check +u here or later somewhere in channel.c ? */
++    if (!member_can_send_to_channel(member, 0, MODE_NOQUITPARTS, NULL, 1))
+     {
+       flags |= CHFL_BANNED;
+       /* Remote clients don't want to see a comment either. */
+diff -r f6d476f109e2 ircd/m_quit.c
+--- a/ircd/m_quit.c	Mon Jan 19 15:32:18 2009 +0100
++++ b/ircd/m_quit.c	Mon Jan 19 22:10:14 2009 +0100
+@@ -109,8 +109,8 @@
+     struct Membership* chan;
+     /* (slug for +u) removed !IsDelayedJoin(chan) as splidge said to */
+     for (chan = cli_user(sptr)->channel; chan; chan = chan->next_channel) {
+-        if (!IsZombie(chan) && (!member_can_send_to_channel(chan, 0)
+-           || (chan->channel->mode.mode & MODE_NOQUITPARTS)))
++        if (!IsZombie(chan) && (!member_can_send_to_channel(chan, 0,
++          MODE_NOQUITPARTS, NULL, 1)))
+           return exit_client(cptr, sptr, sptr, "Signed off");
+     }
+   }
+diff -r f6d476f109e2 ircd/m_topic.c
+--- a/ircd/m_topic.c	Mon Jan 19 15:32:18 2009 +0100
++++ b/ircd/m_topic.c	Mon Jan 19 22:10:14 2009 +0100
+@@ -144,7 +144,7 @@
+     }
+     else if ((chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_op(sptr, chptr))
+       send_reply(sptr, ERR_CHANOPRIVSNEEDED, chptr->chname);
+-    else if (!client_can_send_to_channel(sptr, chptr, 1))
++    else if (!client_can_send_to_channel(sptr, chptr, 1, 0, NULL, 1))
+       send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
+     else
+       do_settopic(sptr,cptr,chptr,topic,0);
+diff -r f6d476f109e2 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Mon Jan 19 15:32:18 2009 +0100
++++ b/ircd/m_wallchops.c	Mon Jan 19 22:10:14 2009 +0100
+@@ -103,7 +103,6 @@
+ {
+   struct Channel *chptr;
+   struct Membership* member;
+-  const char *ch;
+ 
+   assert(0 != cptr);
+   assert(cptr == sptr);
+@@ -117,23 +116,12 @@
+     return send_reply(sptr, ERR_NOTEXTTOSEND);
+ 
+   if (IsChannelName(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
++    /* check also for modes +N +c and +C */
++    if (client_can_send_to_channel(sptr, chptr, 0,
++      (MODE_NONOTICE | MODE_NOCOLOUR | MODE_NOCTCP), parv[parc - 1], 1)) {
+       if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
+           check_target_limit(sptr, chptr, chptr->chname, 0))
+         return 0;
+-
+-      /* +cC checks */
+-      if (chptr->mode.mode & MODE_NOCOLOUR)
+-        for (ch=parv[parc - 1];*ch;ch++)
+-          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
+-            return 0;
+-          }
+-
+-      if ((chptr->mode.mode & MODE_NOCTCP) && ircd_strncmp(parv[parc - 1],"\001ACTION ",8))
+-        for (ch=parv[parc - 1];*ch;)
+-          if (*ch++==1) {
+-            return 0;
+-          }
+ 
+       /* Reveal delayedjoin user */
+      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
+@@ -165,7 +153,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 1)) {
++    if (client_can_send_to_channel(sptr, chptr, 1, 0, NULL, 1)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
+ 			       "%H :%s", chptr, parv[parc - 1]);
+diff -r f6d476f109e2 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Mon Jan 19 15:32:18 2009 +0100
++++ b/ircd/m_wallvoices.c	Mon Jan 19 22:10:14 2009 +0100
+@@ -102,7 +102,6 @@
+ {
+   struct Channel *chptr;
+   struct Membership* member;
+-  const char *ch;
+ 
+   assert(0 != cptr);
+   assert(cptr == sptr);
+@@ -116,23 +115,11 @@
+     return send_reply(sptr, ERR_NOTEXTTOSEND);
+ 
+   if (IsChannelName(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
++    if (client_can_send_to_channel(sptr, chptr, 0,
++      (MODE_NONOTICE | MODE_NOCOLOUR | MODE_NOCTCP), parv[parc - 1], 1)) {
+       if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
+           check_target_limit(sptr, chptr, chptr->chname, 0))
+         return 0;
+-
+-      /* +cC checks */
+-      if (chptr->mode.mode & MODE_NOCOLOUR)
+-        for (ch=parv[parc - 1];*ch;ch++)
+-          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
+-            return 0;
+-          }
+-
+-      if ((chptr->mode.mode & MODE_NOCTCP) && ircd_strncmp(parv[parc - 1],"\001ACTION ",8))
+-        for (ch=parv[parc - 1];*ch;)
+-          if (*ch++==1) {
+-            return 0;
+-          }
+ 
+       /* Reveal delayedjoin user */
+      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
+@@ -164,7 +151,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 1)) {
++    if (client_can_send_to_channel(sptr, chptr, 1, 0, NULL, 1)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
+ 			       "%H :%s", chptr, parv[parc - 1]);

@@ -4,6 +4,7 @@ addnickchasetomodenick.patch #+nickchase
 chanopaccountabilityforkickdelayedjoin.patch
 addopkickcmd.patch #+opkick
 addhacktypetohackkick.patch
+cansendtochan.patch
 hidebanowner.patch #+hidebanowner
 hisadmin.patch
 hisversionremote.patch
