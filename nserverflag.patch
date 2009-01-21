@@ -1,0 +1,20 @@
+When we introduce a new server we got from our uplink to our downlinks,
+check the IsSendOpername() against this new server
+and not on the client (thus the server link) that sent us this message.
+
+Now the IRCd has the correct info on remote servers whether they accepted
+opernames or not.
+
+
+diff -r 0ef8d9c66131 ircd/s_serv.c
+--- a/ircd/s_serv.c	Wed Jan 21 18:00:00 2009 +0100
++++ b/ircd/s_serv.c	Wed Jan 21 18:25:34 2009 +0100
+@@ -231,7 +231,7 @@
+ 		    cli_hopcount(acptr) + 1, cli_serv(acptr)->timestamp,
+ 		    protocol_str, Protocol(acptr), NumServCap(acptr),
+ 		    IsHub(acptr) ? "h" : "", IsService(acptr) ? "s" : "",
+-		    IsIPv6(acptr) ? "6" : "", IsSendOperName(cptr) ? "n" : "", cli_info(acptr));
++		    IsIPv6(acptr) ? "6" : "", IsSendOperName(acptr) ? "n" : "", cli_info(acptr));
+     }
+   }
+ 

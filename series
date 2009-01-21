@@ -1,9 +1,11 @@
 who-accountid.patch
 statsheader.patch
+nserverflag.patch
 addnickchasetomodenick.patch #+nickchase
 chanopaccountabilityforkickdelayedjoin.patch
 addopkickcmd.patch #+opkick
 addhacktypetohackkick.patch
+ulined.patch
 cansendtochan.patch
 hidebanowner.patch #+hidebanowner
 hisadmin.patch

@@ -1,4 +1,6 @@
-topic by info is either 'nick' or '*account'
+Topic by info is either 'nick' or '*account'
+
+See info in whoban.patch
 
 diff -r cf06941d928b include/channel.h
 --- a/include/channel.h	Mon Jan 12 15:14:47 2009 +0100

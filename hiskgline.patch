@@ -1,5 +1,8 @@
 tidy up HIS G-line/K-line reasons, instead of examing the quit reason, set a flag and use that to determine whether or not the quit reason shown to other users should be altered.
 
+make clean etc. otherwise you may find that this patch breaks remote sethosts and possibly other things
+but it is fine - just make sure all is compiled again
+
 diff -r b737284f4c26 include/client.h
 --- a/include/client.h	Sun Jan 11 22:38:41 2009 +0000
 +++ b/include/client.h	Sun Jan 11 22:38:41 2009 +0000

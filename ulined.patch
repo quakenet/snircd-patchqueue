@@ -1,0 +1,46 @@
+m_sethost.c
+change requirement that remote sethost comes from U:lined server
+to require that it comes from a service server (+s flag)
+
+m_mode.c
+change that mode changes by service server (+s flag) goes to HACK4
+other server mode changes to HACK3
+(was U:lined server to HACK4, else HACK3)
+
+U:lined - we need learn what this does nowadays.
+
+Other than the HACK4 or HACK3 choice, there seems to be something with
+server introduction (a U:lined server is not allowed to introduce a new server
+when that leads to a loop?) and also, any downlinks a U:lined server has
+are also marked as U:lined.
+
+No other differences found for U:lined vs. non-U:lined servers.
+
+diff -r f1b5d42273f5 ircd/m_mode.c
+--- a/ircd/m_mode.c	Tue Jan 20 16:58:13 2009 +0100
++++ b/ircd/m_mode.c	Tue Jan 20 17:20:10 2009 +0100
+@@ -212,7 +212,7 @@
+   ClrFlag(sptr, FLAG_TS8);
+ 
+   if (IsServer(sptr)) {
+-    if (find_conf_byhost(cli_confs(cptr), cli_name(sptr), CONF_UWORLD))
++    if (IsService(sptr)) /* server is a service so HACK4 */
+       modebuf_init(&mbuf, sptr, cptr, chptr,
+ 		   (MODEBUF_DEST_CHANNEL | /* Send mode to clients */
+ 		    MODEBUF_DEST_SERVER  | /* Send mode to servers */
+diff -r f1b5d42273f5 ircd/m_sethost.c
+--- a/ircd/m_sethost.c	Tue Jan 20 16:58:13 2009 +0100
++++ b/ircd/m_sethost.c	Tue Jan 20 17:20:10 2009 +0100
+@@ -193,8 +193,10 @@
+     return 0;
+ 
+   /* Fake host assignments must be from services */
+-  if (!find_conf_byhost(cli_confs(sptr), cli_name(sptr), CONF_UWORLD))
+-    return protocol_violation(cptr, "Non-U:lined server %s set fake host on user %s", cli_name(sptr), cli_name(target));
++  if (!IsService(sptr))
++    return protocol_violation(cptr,
++      "Non-service server %C tried to set fake host on user %C (%s@%s)",
++      sptr, target, parv[2], parv[3]);
+ 
+   if (!MyConnect(target)) {
+     sendcmdto_one(sptr, CMD_SETHOST, cli_user(target)->server, "%C %s %s", target,

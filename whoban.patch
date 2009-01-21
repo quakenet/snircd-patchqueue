@@ -1,4 +1,18 @@
-add account into ban owner info
+Add account into ban owner info
+
+When an unauthed client sets a ban, nick is saved as owner of the ban,
+when the client is authed, account.users.quakenet.org is saved.
+
+This should not break clients as servernames can (and did appear there
+in asuka) and probably appear there in other IRCDs. Forcing a nick!user@host
+format seems odd, *!*@account.users.quakenet.org seems a bit ugly, and saving
+the nick and user part too costs even more and adds little, acocunt is the most
+significant piece of info there already.
+
+What about a channel service like Q:
+Should we then save Q.users.quakenet.org, or simply stick to Q
+Q, or rather in general, a channel service normally does not change nicks?
+and since Q does set quite a lot of bans (and topics), this might save a bit on bandwidth.
 
 diff -r bde54f5247bf include/channel.h
 --- a/include/channel.h	Mon Jan 12 18:28:44 2009 +0100

@@ -1,4 +1,8 @@
-Add opername to snomask, remote connect wallops, and logging
+Add opername to snomask and remote connect wallops
+
+in form of nick(opername)
+new function get_client_name_and_opername() add in s_misc.c
+mirrored after get_client_name() which can return either nick/server or nick[ident@ip]
 
 diff -r dffb1fdabb12 include/client.h
 --- a/include/client.h	Wed Jan 14 14:19:42 2009 +0100

@@ -1,3 +1,8 @@
+oper doing some lccal gline/jupe action on a remote server
+never gets a reply in case of succes
+
+this patch sends a copy of the snomask message shown to local opers to the remote source oper
+
 diff -r 31a4a0514c74 ircd/gline.c
 --- a/ircd/gline.c	Mon Jan 12 18:14:17 2009 +0100
 +++ b/ircd/gline.c	Mon Jan 12 18:18:57 2009 +0100
