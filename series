@@ -23,4 +23,5 @@ whomatch.patch
 privlocalchan.patch
 burstwhotopic.patch
 opernowildbadchan.patch
+operglinenick.patch
 split.patch
