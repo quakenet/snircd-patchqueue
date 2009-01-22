@@ -1,0 +1,33 @@
+Since support for +channels (modeless channels) was pulled from
+ircu a while ago, and thus they are not advertised to clients etc.
+
+It should be safe to allow /notice +#channel (calls wallvoices)
+just like /notice @#channel works (calls wallchops).
+
+diff -r c3782eba48b9 ircd/m_notice.c
+--- a/ircd/m_notice.c	Wed Jan 21 23:46:00 2009 +0100
++++ b/ircd/m_notice.c	Wed Jan 21 23:48:40 2009 +0100
+@@ -127,6 +127,11 @@
+     return m_wallchops(cptr, sptr, parc, parv);
+   }
+ 
++  if (parv[1][0] == '+' && IsChannelPrefix(parv[1][1])) {
++    parv[1]++;                        /* Get rid of '+' */
++    return m_wallvoices(cptr, sptr, parc, parv);
++  }
++
+   count = unique_name_vector(parv[1], ',', vector, MAXTARGETS);
+ 
+   chancount = 0;
+@@ -226,6 +231,11 @@
+     return m_wallchops(cptr, sptr, parc, parv);
+   }
+ 
++  if (parv[1][0] == '+' && IsChannelPrefix(parv[1][1])) {
++    parv[1]++;                        /* Get rid of '+' */
++    return m_wallvoices(cptr, sptr, parc, parv);
++  }
++
+   count = unique_name_vector(parv[1], ',', vector, MAXTARGETS);
+ 
+   chancount = 0;

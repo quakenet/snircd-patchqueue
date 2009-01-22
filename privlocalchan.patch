@@ -1,0 +1,25 @@
+Do not list privileges in /PRIVS related to local channels when local channels are disabled
+by feature LOCAL_CHANNELS.
+
+diff -r 081319e0fbcc ircd/client.c
+--- a/ircd/client.c	Thu Jan 22 16:29:29 2009 +0100
++++ b/ircd/client.c	Thu Jan 22 17:39:47 2009 +0100
+@@ -264,9 +264,17 @@
+   mb = msgq_make(to, rpl_str(RPL_PRIVS), cli_name(&me), cli_name(to),
+ 		 cli_name(client));
+ 
+-  for (i = 0; privtab[i].name; i++)
++  for (i = 0; privtab[i].name; i++) {
++    /* dont report privs related to local channels when local channels are not enabled */
++    /* TODO: this works.. but does not seem clean, there must be a better way.. */
++    if ((!feature_bool(FEAT_LOCAL_CHANNELS)) &&
++      (privtab[i].priv == PRIV_WALK_LCHAN || privtab[i].priv == PRIV_MODE_LCHAN ||
++       privtab[i].priv == PRIV_DEOP_LCHAN || privtab[i].priv == PRIV_LOCAL_OPMODE ||
++       privtab[i].priv == PRIV_FORCE_LOCAL_OPMODE))
++      continue;
+     if (HasPriv(client, privtab[i].priv))
+       msgq_append(0, mb, "%s%s", found1++ ? " " : "", privtab[i].name);
++   }
+ 
+   send_buffer(to, mb, 0); /* send response */
+   msgq_clean(mb);

@@ -18,4 +18,8 @@ remoteglinejupe.patch
 whoban.patch
 opername.patch
 cmdhelp.patch
+noticepluschan.patch
+whomatch.patch
+privlocalchan.patch
+burstwhotopic.patch
 split.patch

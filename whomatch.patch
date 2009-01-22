@@ -1,0 +1,24 @@
+Only match nicks and channels when told to, and not when not told to.
+
+Previously things like /who account a%.. would be matched against a nick too
+and /who realname r% would be matched against nicks and channels
+(eg. when searching for users with a realname that's also a valid channel name,
+or happens to be also a nick that is in use).
+
+diff -r ebda89dbc5c9 ircd/m_who.c
+--- a/ircd/m_who.c	Thu Jan 22 16:05:40 2009 +0100
++++ b/ircd/m_who.c	Thu Jan 22 16:29:28 2009 +0100
+@@ -300,8 +300,11 @@
+   who_marker = get_client_marker();
+   commas = (mask && strchr(mask, ','));
+ 
+-  /* First treat mask as a list of plain nicks/channels */
+-  if (mask)
++  /* First treat mask as a list of plain nicks/channels
++   *  but only when told to match nicks (and channels)
++   *   with WHO_FIELD_NIC or when we got a mask with commas
++   */
++  if (mask && (matchsel & WHO_FIELD_NIC || commas))
+   {
+     strcpy(mymask, mask);
+     for (p = 0, nick = ircd_strtok(&p, mymask, ","); nick;
