@@ -24,4 +24,5 @@ privlocalchan.patch
 burstwhotopic.patch
 opernowildbadchan.patch
 operglinenick.patch
+operping.patch
 split.patch

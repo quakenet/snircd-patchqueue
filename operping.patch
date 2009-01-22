@@ -1,0 +1,16 @@
+mo_ping is a mess with legacy remote stuff that does not even work, besides
+there is /RPING to ping a remote server anyway. Simplest change is to let the ircd
+use m_ping for opers as well.
+
+diff -r 6903896e559f ircd/parse.c
+--- a/ircd/parse.c	Fri Jan 23 00:33:01 2009 +0100
++++ b/ircd/parse.c	Fri Jan 23 00:34:19 2009 +0100
+@@ -252,7 +252,7 @@
+     TOK_PING,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+     /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_ping, ms_ping, mo_ping, m_ignore }
++    { m_unregistered, m_ping, ms_ping, m_ping, m_ignore }
+   },
+   {
+     MSG_PONG,
