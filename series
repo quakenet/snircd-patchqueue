@@ -22,4 +22,5 @@ noticepluschan.patch
 whomatch.patch
 privlocalchan.patch
 burstwhotopic.patch
+opernowildbadchan.patch
 split.patch
