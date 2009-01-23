@@ -1,0 +1,72 @@
+Fix for enforcing the min oplevel we added to snircd.
+
+Previously, only oplevels between 0 and MINOPLEVEL (value 100) were accepted from
+services server (+s flag) or from a service client (umode +k) on them.
+
+1. Servers bouncing modes with such an oplevel would be set back to MINOPLEVEL,
+instead of the original level, leading to desynch. Locally the server that bounces the mode
+would keep the original oplevel, and bounce it back upstream, were the servers would correct
+it with MINOPLEVEL.
+
+2. If we would ever dicide to change this hardcoded value for MINOPLEVEL, there would be
+desynchs for the oplevels chanops would have between old and new servers.
+
+3. The original oplevel received (either by client or over a server link)
+was propagated (further) and not the oplevel the ircd set locally
+(and which may have been changed for the MINOPLEVEL value).
+
+All of these issues are fixed in this patch.
+
+1. MINOPLEVEL is only enforced on local clients, that is, local clients
+using /MODE (for more detail, see comment in code).
+2. if we ever change the value, there would be no desynch, just different local
+enforcement of the value between old and new servers.
+3. in case the oplevel is corrected for MINOPLEVEL, the correct oplevel goes upstream.
+
+NOTE: previously MINOPLEVEL was also enforced on /OPMODE - it is no longer in this patch (should it?)
+
+diff -r 8beb89412410 ircd/channel.c
+--- a/ircd/channel.c	Fri Jan 23 15:27:21 2009 +0100
++++ b/ircd/channel.c	Fri Jan 23 17:08:56 2009 +0100
+@@ -3367,18 +3367,34 @@
+        * Otherwise, get state->member's oplevel+1.
+        */
+       if (state->cli_change[i].oplevel <= MAXOPLEVEL) {
+-        if ((IsChannelService(state->sptr) && IsService(cli_user(state->sptr)->server)) || (IsService(state->sptr))) {
+-          SetOpLevel(member, state->cli_change[i].oplevel);
+-        } else {
+-          SetOpLevel(member, state->cli_change[i].oplevel > MINOPLEVEL ? state->cli_change[i].oplevel : MINOPLEVEL);
+-        }
++        /* MINOPLEVEL - snircd
++         * accept oplevels as given when forced - modes are forced when:
++         *   MODE &chan by oper with MODE_LCHAN PRIV
++         *   OPMODE, MODE with server as source,  MODE from remote user
++         *
++         * we need to change state->cli_change[i].oplevel so that
++         * the oplevel we set goes upstream (including any change we make to it),
++         * and not the oplevel specified by the client
++         *   we do not want to set one thing locally, and send upstream another
++         */
++        if (!(state->flags & MODE_PARSE_FORCE) && state->cli_change[i].oplevel < MINOPLEVEL)
++          state->cli_change[i].oplevel = MINOPLEVEL;
++        SetOpLevel(member, state->cli_change[i].oplevel);
+       }
+       else if (!state->member)
+         SetOpLevel(member, MAXOPLEVEL);
+       else if (OpLevel(state->member) >= MAXOPLEVEL)
+           SetOpLevel(member, OpLevel(state->member));
+-      else
+-        SetOpLevel(member, OpLevel(state->member) >= MINOPLEVEL ? OpLevel(state->member) + 1 : MINOPLEVEL);
++      else {
++        /* MINOPLEVEL - snircd
++         * change state->cli_change[i].oplevel - see above.
++         */
++        if (!(state->flags & MODE_PARSE_FORCE) && OpLevel(state->member) <= MINOPLEVEL)
++          state->cli_change[i].oplevel = MINOPLEVEL;
++        else
++          state->cli_change[i].oplevel = OpLevel(state->member) + 1;
++        SetOpLevel(member, state->cli_change[i].oplevel);
++      }
+     }
+ 
+     /* actually effect the change */
