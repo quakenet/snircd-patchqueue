@@ -1,4 +1,4 @@
-Disallow wildcards in badchan set by local oper, and if local badchan by remote oper.
+Disallow wildcards in badchan set by local oper, and for local badchan by remote oper.
 
 diff -r 5eee2151f0b1 ircd/gline.c
 --- a/ircd/gline.c	Thu Jan 22 21:50:34 2009 +0100
