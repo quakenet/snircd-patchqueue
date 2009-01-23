@@ -1,0 +1,14 @@
+Fix forwarding by hub of oplevels for non Apass channels.
+
+diff -r 42f001ab6955 ircd/m_burst.c
+--- a/ircd/m_burst.c	Fri Jan 23 23:59:20 2009 +0100
++++ b/ircd/m_burst.c	Sat Jan 24 00:22:42 2009 +0100
+@@ -544,7 +544,7 @@
+ 	      nickstr[nickpos++] = 'v';
+ 	    if (current_mode & CHFL_CHANOP)
+             {
+-              if (chptr->mode.apass[0])
++              if (oplevel < MAXOPLEVEL) /* forward as oplevel, else as o */
+ 	        nickpos += ircd_snprintf(0, nickstr + nickpos, sizeof(nickstr) - nickpos, "%u", oplevel);
+               else
+                 nickstr[nickpos++] = 'o';
