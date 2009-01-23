@@ -25,4 +25,5 @@ burstwhotopic.patch
 opernowildbadchan.patch
 operglinenick.patch
 operping.patch
+accountcollision.patch
 split.patch
