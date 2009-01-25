@@ -1,26 +1,2066 @@
 make /HELP <command> work - oper only feature?
 need to make small test case to see how hard/easy this would be to add.
 
-diff -r ce13b0a1253e ircd/m_help.c
---- a/ircd/m_help.c	Wed Jan 14 14:19:43 2009 +0100
-+++ b/ircd/m_help.c	Wed Jan 14 15:01:46 2009 +0100
-@@ -100,7 +100,7 @@
+diff -r 7fa4708bac45 include/handlers.h
+--- a/include/handlers.h	Sun Jan 25 12:48:01 2009 +0100
++++ b/include/handlers.h	Sun Jan 25 23:52:18 2009 +0100
+@@ -244,5 +244,77 @@
+ extern int ms_wallvoices(struct Client*, struct Client*, int, char*[]);
+ extern int ms_whois(struct Client*, struct Client*, int, char*[]);
+ 
++extern int mh_nohelp(struct Client*, struct Client*, int, char*[]);
++extern int mh_not_oper(struct Client*, struct Client*, int, char*[]);
++extern int mh_not_server(struct Client*, struct Client*, int, char*[]);
++extern int mh_admin(struct Client*, struct Client*, int, char*[]);
++extern int mh_asll(struct Client*, struct Client*, int, char*[]);
++extern int mh_away(struct Client*, struct Client*, int, char*[]);
++extern int mh_check(struct Client*, struct Client*, int, char*[]);
++extern int mh_clearmode(struct Client*, struct Client*, int, char*[]);
++extern int mh_close(struct Client*, struct Client*, int, char*[]);
++extern int mh_cnotice(struct Client*, struct Client*, int, char*[]);
++extern int mh_connect(struct Client*, struct Client*, int, char*[]);
++extern int mh_cprivmsg(struct Client*, struct Client*, int, char*[]);
++extern int mh_die(struct Client*, struct Client*, int, char*[]);
++extern int mh_get(struct Client*, struct Client*, int, char*[]);
++extern int mh_gline(struct Client*, struct Client*, int, char*[]);
++extern int mh_hash(struct Client*, struct Client*, int, char*[]);
++extern int mh_help(struct Client*, struct Client*, int, char*[]);
++extern int mh_info(struct Client*, struct Client*, int, char*[]);
++extern int mh_invite(struct Client*, struct Client*, int, char*[]);
++extern int mh_ison(struct Client*, struct Client*, int, char*[]);
++extern int mh_join(struct Client*, struct Client*, int, char*[]);
++extern int mh_jupe(struct Client*, struct Client*, int, char*[]);
++extern int mh_kick(struct Client*, struct Client*, int, char*[]);
++extern int mh_kill(struct Client*, struct Client*, int, char*[]);
++extern int mh_links(struct Client*, struct Client*, int, char*[]);
++extern int mh_list(struct Client*, struct Client*, int, char*[]);
++extern int mh_lusers(struct Client*, struct Client*, int, char*[]);
++extern int mh_map(struct Client*, struct Client*, int, char*[]);
++extern int mh_mode(struct Client*, struct Client*, int, char*[]);
++extern int mh_motd(struct Client*, struct Client*, int, char*[]);
++extern int mh_names(struct Client*, struct Client*, int, char*[]);
++extern int mh_nick(struct Client*, struct Client*, int, char*[]);
++extern int mh_notice(struct Client*, struct Client*, int, char*[]);
++extern int mh_oper(struct Client*, struct Client*, int, char*[]);
++extern int mh_opmode(struct Client*, struct Client*, int, char*[]);
++extern int mh_part(struct Client*, struct Client*, int, char*[]);
++extern int mh_pass(struct Client*, struct Client*, int, char*[]);
++extern int mh_ping(struct Client*, struct Client*, int, char*[]);
++extern int mh_pong(struct Client*, struct Client*, int, char*[]);
++extern int mh_privmsg(struct Client*, struct Client*, int, char*[]);
++extern int mh_privs(struct Client*, struct Client*, int, char*[]);
++extern int mh_quit(struct Client*, struct Client*, int, char*[]);
++extern int mh_rehash(struct Client*, struct Client*, int, char*[]);
++extern int mh_reset(struct Client*, struct Client*, int, char*[]);
++extern int mh_restart(struct Client*, struct Client*, int, char*[]);
++extern int mh_rping(struct Client*, struct Client*, int, char*[]);
++extern int mh_set(struct Client*, struct Client*, int, char*[]);
++extern int mh_sethost(struct Client*, struct Client*, int, char*[]);
++extern int mh_settime(struct Client*, struct Client*, int, char*[]);
++extern int mh_silence(struct Client*, struct Client*, int, char*[]);
++extern int mh_squit(struct Client*, struct Client*, int, char*[]);
++extern int mh_stats(struct Client*, struct Client*, int, char*[]);
++extern int mh_time(struct Client*, struct Client*, int, char*[]);
++extern int mh_topic(struct Client*, struct Client*, int, char*[]);
++extern int mh_trace(struct Client*, struct Client*, int, char*[]);
++extern int mh_uping(struct Client*, struct Client*, int, char*[]);
++extern int mh_user(struct Client*, struct Client*, int, char*[]);
++extern int mh_userhost(struct Client*, struct Client*, int, char*[]);
++extern int mh_userip(struct Client*, struct Client*, int, char*[]);
++extern int mh_version(struct Client*, struct Client*, int, char*[]);
++extern int mh_wallchops(struct Client*, struct Client*, int, char*[]);
++extern int mh_wallops(struct Client*, struct Client*, int, char*[]);
++extern int mh_wallusers(struct Client*, struct Client*, int, char*[]);
++extern int mh_wallvoices(struct Client*, struct Client*, int, char*[]);
++extern int mh_who(struct Client*, struct Client*, int, char*[]);
++extern int mh_whois(struct Client*, struct Client*, int, char*[]);
++extern int mh_whowas(struct Client*, struct Client*, int, char*[]);
++
++
++
++
++
+ #endif /* INCLUDED_handlers_h */
+ 
+diff -r 7fa4708bac45 include/ircd_handler.h
+--- a/include/ircd_handler.h	Sun Jan 25 12:48:01 2009 +0100
++++ b/include/ircd_handler.h	Sun Jan 25 23:52:18 2009 +0100
+@@ -36,6 +36,7 @@
+   SERVER_HANDLER,       /**< Used for server conections. */
+   OPER_HANDLER,         /**< Used for IRC operators. */
+   SERVICE_HANDLER,      /**< Used for services connections. */
++  HELP_HANDLER,         /**< Used for /HELP <command> */
+   LAST_HANDLER_TYPE     /**< NUmber of handler types. */
+ } HandlerType;
+ 
+diff -r 7fa4708bac45 include/msg.h
+--- a/include/msg.h	Sun Jan 25 12:48:01 2009 +0100
++++ b/include/msg.h	Sun Jan 25 23:52:18 2009 +0100
+@@ -410,7 +410,7 @@
+    * parv = parameter variable array
+    */
+   /* handlers:
+-   * UNREGISTERED, CLIENT, SERVER, OPER, SERVICE, LAST
++   * UNREGISTERED, CLIENT, SERVER, OPER, SERVICE, HELP, LAST
+    */
+   MessageHandler handlers[LAST_HANDLER_TYPE];
+ };
+diff -r 7fa4708bac45 include/numeric.h
+--- a/include/numeric.h	Sun Jan 25 12:48:01 2009 +0100
++++ b/include/numeric.h	Sun Jan 25 23:52:18 2009 +0100
+@@ -475,7 +475,6 @@
+ /*      ERR_NOMANAGER_LONG   565	no longer used */
+ #define ERR_NOMANAGER        566	/* Undernet extension */
+ #define ERR_UPASS_SAME_APASS 567        /* Undernet extension */
+-#define ERR_LASTERROR        568
+ 
+ /*	RPL_LOGON	     600	dalnet,unreal
+ 	RPL_LOGOFF           601	dalnet,unreal
+@@ -499,4 +498,10 @@
+ 	RPL_DUMPRPL	     641	unreal
+ 	RPL_EODUMP	     642	unreal
+ */
++#define RPL_HELP             601  /* QuakeNet extension */
++#define RPL_ENDOFHELP        602  /* QuakeNet extension */
++#define ERR_NOHELP           603  /* QuakeNet extension */
++
++#define ERR_LASTERROR        604
++
+ #endif /* INCLUDED_numeric_h */
+diff -r 7fa4708bac45 include/parse.h
+--- a/include/parse.h	Sun Jan 25 12:48:01 2009 +0100
++++ b/include/parse.h	Sun Jan 25 23:52:18 2009 +0100
+@@ -15,6 +15,7 @@
+ extern int parse_client(struct Client *cptr, char *buffer, char *bufend);
+ extern int parse_server(struct Client *cptr, char *buffer, char *bufend);
+ extern void initmsgtree(void);
++extern struct Message *find_message_by_cmd(char *cmd);
+ 
+ extern int register_mapping(struct s_map *map);
+ extern int unregister_mapping(struct s_map *map);
+diff -r 7fa4708bac45 ircd/m_defaults.c
+--- a/ircd/m_defaults.c	Sun Jan 25 12:48:01 2009 +0100
++++ b/ircd/m_defaults.c	Sun Jan 25 23:52:18 2009 +0100
+@@ -119,3 +119,18 @@
+ {
+   return 0;
+ }
++
++int mh_nohelp(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  return send_reply(sptr, ERR_NOHELP, parv[1]);
++}
++
++int mh_not_oper(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  return send_reply(sptr, SND_EXPLICIT | RPL_HELP, "%s :This command is for IRC Operators only.", parv[1]);
++}
++
++int mh_not_server(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  return send_reply(sptr, SND_EXPLICIT | RPL_HELP, "%s :This command is for servers only.", parv[1]);
++}
+\ No newline at end of file
+diff -r 7fa4708bac45 ircd/m_help.c
+--- a/ircd/m_help.c	Sun Jan 25 12:48:01 2009 +0100
++++ b/ircd/m_help.c	Sun Jan 25 23:52:18 2009 +0100
+@@ -90,6 +90,7 @@
+ #include "msg.h"
+ #include "numeric.h"
+ #include "numnicks.h"
++#include "parse.h"
+ #include "send.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+@@ -100,9 +101,1124 @@
  int m_help(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
  {
    int i;
--
-+/* check here for param and find command, then call the function set for that entry? */
-   for (i = 0; msgtab[i].cmd; i++)
-     sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s", sptr, msgtab[i].cmd);
-   return 0;
-diff -r ce13b0a1253e ircd/parse.c
---- a/ircd/parse.c	Wed Jan 14 14:19:43 2009 +0100
-+++ b/ircd/parse.c	Wed Jan 14 15:01:46 2009 +0100
-@@ -105,6 +105,7 @@
- static struct MessageTree tok_tree;
++  struct Message* mptr;
++  MessageHandler handler = 0;
++  char *command;
  
- /** Array of all supported commands. */
-+/* add mh_<command> here? mh = message help */
- struct Message msgtab[] = {
-   {
+-  for (i = 0; msgtab[i].cmd; i++)
+-    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s", sptr, msgtab[i].cmd);
++  /* list all commands */
++  if (parc < 2) {
++    for (i = 0; msgtab[i].cmd; i++)
++      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s", sptr, msgtab[i].cmd);
++    return 0;
++  }
++  command = parv[1];
++
++  /* nothing found */
++  if ((mptr = find_message_by_cmd(command)) == NULL)
++    return send_reply(sptr, ERR_NOHELP, command);
++
++  /* found a help handler function */
++  handler = mptr->handlers[HELP_HANDLER];
++
++  assert(0 != handler);
++  
++  /* call the help handler function */
++  (*handler) (cptr, sptr, parc, parv);
++  return send_reply(sptr, RPL_ENDOFHELP, command);
++}
++
++
++/*
++ * mh_help - help message handler
++ */
++int mh_help(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "HELP :HELP [<command>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "HELP :Lists all server commands or info on the given command.");
+   return 0;
+ }
+ 
++
++/*
++ * TODO: move all the mh_ functions into the files of the commands they belong to
++ */
++
++
++/*
++ * mh_admin - help message handler
++ * TODO: check HIS remote
++ */
++int mh_admin(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "ADMIN :ADMIN");
++  else
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "ADMIN :ADMIN [<server>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "ADMIN :Shows administrative contact for the server.");
++  return 0;
++}
++
++
++/*
++ * mh_asll - help message handler
++ */
++int mh_asll(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "ASLL :ASLL <mask> [<server>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "ASLL :Shows Asymmetric Link Latency information.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "ASLL :Parameter <mask> is matched against directly linked servers, and may have more than one match.");
++  return 0;
++}
++
++
++/*
++ * mh_away - help message handler
++ */
++int mh_away(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "AWAY :AWAY [<message>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "AWAY :Sets or clears the away message.");
++  return 0;
++}
++
++
++/*
++ * mh_check - help message handler
++ */
++int mh_check(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CHECK :CHECK [<server>] <mask> [<flags>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CHECK :Shows detailed information about a user, a channel, a hostmask, or a server.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CHECK :Flags are: -C show clones, -c show channels, -s show servernames, -e show more, "
++    "-i show IPs, -I show hostnames and IPs, -u do not show users, -o show only channel operators.");
++  return 0;
++}
++
++
++/*
++ * mh_clearmode - help message handler
++ */
++int mh_clearmode(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CLEARMODE :CLEARMODE [!]<channel> [<modes>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CLEARMODE :Clears modes on a channel.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CLEARMODE :Default modes are ovpsmikbl - o deops all channel operators, "
++    "v devoices all channel voices, and b removes all channel bans.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CLEARMODE :The ! prefix may be used to override a channel quarantine.");
++  return 0;
++}
++
++
++/*
++ * mh_close - help message handler
++ */
++int mh_close(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CLOSE :CLOSE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CLOSE :Closes unregistered connections to the server.");
++  return 0;
++}
++
++
++/*
++ * mh_cnotice - help message handler
++ */
++int mh_cnotice(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CNOTICE :CNOTICE <nick> <channel> :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CNOTICE :Sends a private notice to a user.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CNOTICE :A channel voice or operator can use this to bypass the target flood limit "
++    "(target change too fast error) when the user is on the channel.");
++  return 0;
++}
++
++
++/*
++ * mh_connect - help message handler
++ */
++int mh_connect(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CONNECT :CONNECT <server> [<port> [<remote server>]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CONNECT :Connects the server to another server.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CONNECT :Special port 0 can be used to let the remote server workout the port to use.");
++  return 0;
++}
++
++
++/*
++ * mh_cprivmsg - help message handler
++ */
++int mh_cprivmsg(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CPRIVMSG :CPRIVMSG <nick> <channel> :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CPRIVMSG :Sends a private message to a user.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "CPRIVMSG :A channel voice or operator can use this to bypass the target flood limit "
++    "(target change too fast error) when the user is on the channel.");
++  return 0;
++}
++
++
++/*
++ * mh_die - help message handler
++ */
++int mh_die(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "DIE :DIE <server>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "DIE :Terminates the server. The servername needs to be given as sanity check.");
++  return 0;
++}
++
++
++/*
++ * mh_get - help message handler
++ * TODO: check HIS
++ */
++int mh_get(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "GET :GET <feature> [<parameters>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "GET :Returns the value of a feature.");
++  return 0;
++}
++
++
++/*
++ * mh_gline - help message handler
++ * TODO: check HIS
++ */
++int mh_gline(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "GLINE :GLINE [[!][+|-|>|<]<mask> [<target>] [<duration> [:<reason>]]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "GLINE :Views, sets or changes a gline.");
++  return 0;
++}
++
++
++/*
++ * mh_hash - help message handler
++ * TODO: check HIS
++ */
++int mh_hash(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "HASH :HASH");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "HASH :Shows hash table statistics.");
++  return 0;
++}
++
++
++/*
++ * mh_info - help message handler
++ * TODO: check HIS remote
++ */
++int mh_info(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP, "INFO :INFO");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP, "INFO :Shows info about the IRCd.");
++    return mh_not_oper(cptr, sptr, parc, parv);
++  } else {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP, "INFO :INFO [<server>]");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "INFO :Show info about the IRCd. Lists a file hash and version number for its source files.");
++  }
++  return 0;
++}
++
++
++/*
++ * mh_invite - help message handler
++ */
++int mh_invite(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "INVITE :INVITE <nick> <channel>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "INVITE :Invites a user to a channel.");
++  return 0;
++}
++
++
++/*
++ * mh_ison - help message handler
++ * TODO: check that syntax is clear - no limit on number of nicks
++ */
++int mh_ison(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "ISON :ISON <nick> [<nick> [..]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "ISON :Returns the nicks that are on the network.");
++  return 0;
++}
++
++
++/*
++ * mh_join - help message handler
++ */
++int mh_join(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "JOIN :JOIN <channel> [<key>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "JOIN :Joins a channel, where <channel> and <key> are a comma separated list of one or more elements.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "JOIN :Joining channel 0 can be used to leave all channels.");
++  return 0;
++}
++
++
++/*
++ * mh_jupe - help message handler
++ * TODO: check HIS?
++ */
++int mh_jupe(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "JUPE :JUPE [[+|-]<server> [[<target>] <duration> :<reason>]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "JUPE :Views or manipulates server jupes.");
++  return 0;
++}
++
++
++/*
++ * mh_kick - help message handler
++ */
++int mh_kick(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "KICK :KICK <channel> <nick> [:<reason>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "KICK :Kicks a user from a channel.");
++  return 0;
++}
++
++
++/*
++ * mh_kill - help message handler
++ */
++int mh_kill(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "KILL :KILL <nick> :<reason>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "KILL :Disconnects a user from the network.");
++  return 0;
++}
++
++
++/*
++ * mh_links - help message handler
++ * TODO: check HIS feature
++ */
++int mh_links(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "LINKS :LINKS [[<remote server>] <mask>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "LINKS :Shows server links on the network.");
++  return 0;
++}
++
++
++/*
++ * mh_list - help message handler
++ */
++int mh_list(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "LIST :LIST :[<channel>|<parameters>|STOP]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "LIST :Lists channels on the network. See \"/QUOTE LIST :\" for more info.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "LIST :Parameter <channel> is a comma separated list of one or more channels.");
++  return 0;
++}
++
++
++/*
++ * mh_lusers - help message handler
++ * TODO: check HIS remote feature
++ */
++int mh_lusers(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "LUSERS :LUSERS");
++  else
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "LUSERS :LUSERS [<dummy> [<remote server>]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "LUSERS :Shows information about the number of users on the network.");
++  return 0;
++}
++
++
++/*
++ * mh_map - help message handler
++ * TODO: check HIS feature
++ */
++int mh_map(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "MAP :MAP [<mask>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "MAP :Shows a map of the servers on the network.");
++  return 0;
++}
++
++
++/*
++ * mh_mode - help message handler
++ * TODO: check syntax is clear
++ */
++int mh_mode(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "MODE :MODE <channel>|<nick> [<modes>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "MODE :Views or changes modes of a channel or user.");
++  return 0;
++}
++
++
++/*
++ * mh_motd - help message handler
++ * TODO: check HIS remote feature
++ */
++int mh_motd(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "MOTD :MOTD");
++  else
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "MOTD :MOTD [<server>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "MOTD :Shows the Message Of The Day.");
++  return 0;
++}
++
++
++/*
++ * mh_names - help message handler
++ * TODO: check HIS remote feature
++ */
++int mh_names(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "NAMES :NAMES [[-D] <channel>]");
++  else
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "NAMES :NAMES [[[-D] [channel]] [<server>]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NAMES :Shows the names of users on the channel.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NAMES :Parameter <channel> is a comma separated list of one or more channels,"
++    " and the -D option is for listing delayedjoin users.");
++  return 0;
++}
++
++
++/*
++ * mh_nick - help message handler
++ */
++int mh_nick(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NICK :NICK <newnick>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NICK :Changes nickname.");
++  return 0;
++}
++
++
++/*
++ * mh_notice - help message handler
++ */
++int mh_notice(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NOTICE :NOTICE <target> :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NOTICE :Sends a notice to a target, where <target> can be a comma separated list of one or more nicks or channels.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NOTICE :Parameter <target> can be @<channel> to send a message to all channel operators (same as WALLCHOPS).");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "NOTICE :Parameter <target> can be in the form of <nick>@<server> to send to a service.");
++  if (IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "NOTICE :Parameter <target> can be a $<servername> to broadcast a message to all users on a server.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "NOTICE :Parameter <target> can be a $@<hostmask> to broadcast a message to all users with a matching host.");
++  }
++  return 0;
++}
++
++
++/*
++ * mh_oper - help message handler
++ */
++int mh_oper(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "OPER :OPER <username> <password>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "OPER :Logs in as IRC Operator.");
++  return 0;
++}
++
++
++/*
++ * mh_opmode - help message handler
++ */
++int mh_opmode(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "OPMODE :OPMODE [!]<channel> <modes>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "OPMODE :Changes modes on a channel.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "OPMODE :The ! prefix may be used to override a channel quarantine.");
++  return 0;
++}
++
++/*
++ * mh_part - help message handler
++ */
++int mh_part(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PART :PART <channel> [:<message>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PART :Parts a channel with an optional message.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PART :Parameter <channel> is a comma separated list of one or more channels.");
++  return 0;
++}
++
++
++/*
++ * mh_pass - help message handler
++ */
++int mh_pass(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PASS :PASS :<password>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PASS :Provides the password required to connect to the server.");
++  return 0;
++}
++
++
++/*
++ * mh_ping - help message handler
++ * TODO: <text> ?
++ */
++int mh_ping(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PING :PING :<text>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PING :Sends a ping to the server.");
++  return 0;
++}
++
++
++/*
++ * mh_pong - help message handler
++ * TODO: <text> ?
++ */
++int mh_pong(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PONG :PONG :<text>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PONG :Sends a pong as reply to a PING from the server.");
++  return 0;
++}
++
++
++/*
++ * mh_privmsg - help message handler
++ */
++int mh_privmsg(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVMSG :PRIVMSG <target> :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVMSG :Sends a message to a target, where <target> can be a comma separated list of one or more nicks or channels.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVMSG :Parameter <target> can be @<channel> to send a message to all channel operators (same as WALLCHOPS).");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVMSG :Parameter <target> can be in the form of <nick>@<server> to send to a service.");
++  if (IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "PRIVMSG :Parameter <target> can be a $<servername> to broadcast a message to all users on a server.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "PRIVMSG :Parameter <target> can be a $@<hostmask> to broadcast a message to all users with a matching host.");
++  }
++  return 0;
++}
++
++
++/*
++ * mh_privs - help message handler
++ */
++int mh_privs(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :PRIVS <nick> [<nick> [..]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :Shows the privileges an IRC Operator has.");
++  return 0;
++}
++
++
++/*
++ * mh_quit - help message handler
++ * TODO: Disconnect or Disconnects?
++ */
++int mh_quit(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "QUIT :QUIT :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "QUIT :Disconnect from the network with an optional message.");
++  return 0;
++}
++
++
++/*
++ * mh_rehash - help message handler
++ * TODO: check the options, etc.
++ */
++int mh_rehash(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "REHASH :REHASH [L|M|Q]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "REHASH :Reloads the server conf file, MOTD, and log files.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "REHASH :Where L reopens the log files, M flushes the MOTD cache, Q the DNS resolver is not restarted.");
++  return 0;
++}
++
++
++/*
++ * mh_reset - help message handler
++ */
++int mh_reset(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "RESET :RESET <feature> [<parameters>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "RESET :Resets a feature to its default hardcoded value.");
++  return 0;
++}
++
++
++/*
++ * mh_restart - help message handler
++ */
++int mh_restart(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "RESTART :RESTART <server>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "RESTART :Restarts the server. The servername needs to be given as sanity check.");
++  return 0;
++}
++
++
++/*
++ * mh_rping - help message handler
++ * TODO: <text> ?
++ */
++int mh_rping(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "RPING :RPING <server> [<remote server>] [:<text>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "RPING :Pings a remote server and returns the Round Trip Time in milliseconds.");
++  return 0;
++}
++
++
++/*
++ * mh_set - help message handler
++ */
++int mh_set(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SET :SET <feature> [<parameters>] :<value>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SET :Changes the value of a feature.");
++  return 0;
++}
++
++
++/*
++ * mh_sethost - help message handler
++ */
++int mh_sethost(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "SETHOST :SETHOST <spoofhost> <password>");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "SETHOST :Sets a spoof host.");
++  } else {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "SETHOST :SETHOST <user> <host>");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "SETHOST :Sets a spoof user@host.");
++  }
++  return 0;
++}
++
++
++/*
++ * mh_settime - help message handler
++ */
++int mh_settime(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SETTIME :SETTIME <timestamp> [<server>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SETTIME :Changes the time on a server."
++    "When parameter <timestamp> is 0 the local server "
++    "uses its own timestamp before sending it to the remote server.");
++  return 0;
++}
++
++
++/*
++ * mh_silence - help message handler
++ * TODO: mention ~ exempt mask prefix
++ */
++int mh_silence(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SILENCE :SILENCE [[+|-]<mask>|<nick>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SILENCE :Views or changes the silence list.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SILENCE :Parameter <mask> is a comma separated list of one or more masks.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SILENCE :Silence is a server side ignore -"
++    " any message sent privately or invites from a user matching a silence mask is dropped.");
++  return 0;
++}
++
++
++/*
++ * mh_squit - help message handler
++ */
++int mh_squit(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SQUIT :SQUIT <server> [:<reason>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "SQUIT :Disconnects a server from the network.");
++  return 0;
++}
++
++
++/*
++ * mh_stats - help message handler
++ * TODO: check HIS (too many per stats type) / HIS remote?
++ */
++int mh_stats(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "STATS :STATS [<type> [[<server>] [<mask>]]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "STATS :Shows server configuration and statistics.");
++  return 0;
++}
++
++
++/*
++ * mh_time - help message handler
++ * TODO: check HIS remote feature
++ */
++int mh_time(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "TIME :TIME");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "TIME :Shows the time on the server.");
++  }
++  else {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "TIME :TIME [<server>]");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "TIME :Shows the time on the server.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "TIME :Parameter <server> can be a * to view the time from all servers.");
++  }
++
++  return 0;
++}
++
++
++/*
++ * mh_topic - help message handler
++ */
++int mh_topic(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "TOPIC :TOPIC <channel> [:<text>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "TOPIC :Views or changes the topic on a channel.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "TOPIC :Parameter <channel> is a comma separated list of one or more channels.");
++  return 0;
++}
++
++
++/*
++ * mh_trace - help message handler
++ * TODO: check HIS / HIS remote?
++ * TODO: check <to server> parameter
++ */
++int mh_trace(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "TRACE :TRACE [<nick>|<server> <to server>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "TRACE :Shows the route to a user or server.");
++  return 0;
++}
++
++
++/*
++ * mh_uping - help message handler
++ * TODO: default port 7007, define UDP_PORT
++ */
++int mh_uping(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "UPING :UPING <server> [<port>] [<remote server>] [<number of packets>]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "UPING :Pings the host of the server with UDP packets - server does not have to be linked.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "UPING :By default port 7007 is used, and 5 packets are sent (maximum is 20).");
++  return 0;
++}
++
++
++/*
++ * mh_user - help message handler
++ */
++int mh_user(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "USER :USER <username> <hostname> <servername> :<realname>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "USER :Registers a new client connection. Parameters <hostname> and <servername> are ignored.");
++  return 0;
++}
++
++
++/*
++ * mh_userhost - help message handler
++ * TODO: syntax clear?
++ * TODO: max 5
++ */
++int mh_userhost(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "USERHOST :USERHOST <nick> [<nick> [..]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "USERHOST :Returns the user@host for a user.");
++  return 0;
++}
++
++
++/*
++ * mh_userip - help message handler
++ * TODO: syntax clear?
++ * TODO: max 5
++ */
++int mh_userip(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "USERIP :USERIP <nick> [<nick> [..]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "USERIP :Returns the user@ip for a user.");
++  return 0;
++}
++
++
++/*
++ * mh_version - help message handler
++ * TODO: check HIS remote feature
++ */
++int mh_version(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "VERSION :VERSION");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "VERSION :Shows information about the server, and the supported features and settings.");
++  }
++  else {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "VERSION :VERSION [<server>]");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "VERSION :Shows information about the server, and the supported features and settings.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "VERSION :Parameter <server> can be a * to view the version info from all servers.");
++  }
++  return 0;
++}
++
++
++/*
++ * mh_wallchops - help message handler
++ * TODO: mention NOTICE @#channel?
++ */
++int mh_wallchops(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLCHOPS :WALLCHOPS <channel> :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLCHOPS :Sends a channel notice to the operators on a channel.");
++  return 0;
++}
++
++
++/*
++ * mh_wallops - help message handler
++ * TODO: check HIS ?
++ */
++int mh_wallops(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLOPS :WALLOPS :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLOPS :Sends a message to all IRC Operators with usermode +w set.");
++  return 0;
++}
++
++
++/*
++ * mh_wallusers - help message handler
++ */
++int mh_wallusers(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr))
++    return mh_not_oper(cptr, sptr, parc, parv);
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLUSERS :WALLUSERS :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLUSERS :Sends a message to all users with usermode +w set.");
++  return 0;
++}
++
++
++/*
++ * mh_wallvoices - help message handler
++ */
++int mh_wallvoices(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLVOICES :WALLVOICES <channel> :<message>");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WALLVOICES :Sends a channel notice to the voices and operators on a channel.");
++  return 0;
++}
++
++
++/*
++ * mh_who - help message handler
++ * TODO: this is all way too much to add here.. :(
++ * TODO: mention <mask> - chan, nick, user, host, ip, server, realname
++ * TODO: filter
++d   Join-delayed channel members
++o   IRC Operator (specifying this one means only opers are matched)
++
++ * TODO: x for operators
++ 
++ * TODO: match
++n   Nick, u   Username, h   Hostname, i   Numeric IP,
++s   Servername, r   Realname, a   Account name
++
++
++ * TODO: return
++t   Include the querytype in the reply
++c   Include (first) channel name (* when none can be shown)
++u   Include userID with eventual ~
++i   Include IP
++h   Include hostname
++s   Include server name
++n   Include nick
++f   Include flags
++d   Include "distance" in hops
++l   Include idle time (0 for remote users)
++a   Include account name (0 when the user has no account set)
++o   Include oplevel
++r   Include real name
++b   Include account ID
++
++ * TODO: HIS settings
++ */
++int mh_who(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WHO :WHO <mask> [[<match>][%<fields>[,<querytype>]] [:<mask>]]");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WHO :Returns information on a user.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "WHO :Parameter <mask> can be a comma separated list of one or more nicks and channels.");
++  return 0;
++}
++
++
++/*
++ * mh_whois - help message handler
++ * TODO: check HIS / HIS remote
++ */
++int mh_whois(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOIS :WHOIS [<dummy>] <nick>");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOIS :Shows who someone is.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOIS :Parameter <nick> is a comma separated list of one or more nicks,"
++      " <dummy> can be specified to get a reply from the user's server to show idle and signon time");
++  }
++  else {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOIS :WHOIS [<server>] <nick>");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOIS :Shows who someone is.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOIS :Parameter <nick> is a comma separated list of one or more nicks,"
++      " the same nick can be specified as <server> to get a reply from the user's server to show idle and signon time");
++  }
++  return 0;
++}
++
++
++/*
++ * mh_whowas - help message handler
++ * TODO: check HIS / HIS remote
++ * TODO: see if 20 is a define
++ */
++int mh_whowas(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOWAS :WHOWAS <nick> [<max>]");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOWAS :Shows who someone was.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOWAS :Parameter <nick> is a comma separated list of one or more nicks,"
++      " <max> is 0 by default (unlimited).");
++  }
++  else {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOWAS :WHOIS <nick> [<max> [<server>]]");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOWAS :Shows who someone was.");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WHOWAS :Parameter <nick> is a comma separated list of one or more nicks,"
++      " <max> is 0 by default (unlimited),"
++      " maximum number of results from a remote server is 20.");
++  }
++  return 0;
++}
+\ No newline at end of file
+diff -r 7fa4708bac45 ircd/parse.c
+--- a/ircd/parse.c	Sun Jan 25 12:48:01 2009 +0100
++++ b/ircd/parse.c	Sun Jan 25 23:52:18 2009 +0100
+@@ -110,534 +110,534 @@
      MSG_PRIVATE,
+     TOK_PRIVATE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_privmsg, ms_privmsg, mo_privmsg, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_privmsg, ms_privmsg, mo_privmsg, m_ignore, mh_privmsg }
+   },
+   {
+     MSG_NICK,
+     TOK_NICK,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_nick, m_nick, ms_nick, m_nick, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_nick, m_nick, ms_nick, m_nick, m_ignore, mh_nick }
+   },
+   {
+     MSG_NOTICE,
+     TOK_NOTICE,
+     0, MAXPARA, MFLG_SLOW | MFLG_IGNORE, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_notice, ms_notice, mo_notice, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_notice, ms_notice, mo_notice, m_ignore, mh_notice }
+   },
+   {
+     MSG_WALLCHOPS,
+     TOK_WALLCHOPS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_wallchops, ms_wallchops, m_wallchops, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_wallchops, ms_wallchops, m_wallchops, m_ignore, mh_wallchops }
+   },
+   {
+     MSG_WALLVOICES,
+     TOK_WALLVOICES,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_wallvoices, ms_wallvoices, m_wallvoices, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_wallvoices, ms_wallvoices, m_wallvoices, m_ignore, mh_wallvoices }
+   },
+   {
+     MSG_CPRIVMSG,
+     TOK_CPRIVMSG,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_cprivmsg, m_ignore, m_cprivmsg, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_cprivmsg, m_ignore, m_cprivmsg, m_ignore, mh_cprivmsg }
+   },
+   {
+     MSG_CNOTICE,
+     TOK_CNOTICE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_cnotice, m_ignore, m_cnotice, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_cnotice, m_ignore, m_cnotice, m_ignore, mh_cnotice }
+   },
+   {
+     MSG_JOIN,
+     TOK_JOIN,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_join, ms_join, m_join, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_join, ms_join, m_join, m_ignore, mh_join }
+   },
+   {
+     MSG_MODE,
+     TOK_MODE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_mode, ms_mode, m_mode, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_mode, ms_mode, m_mode, m_ignore, mh_mode }
+   },
+   {
+     MSG_BURST,
+     TOK_BURST,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_burst, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_burst, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_CREATE,
+     TOK_CREATE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_create, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_create, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_DESTRUCT,
+     TOK_DESTRUCT,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_destruct, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_destruct, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_QUIT,
+     TOK_QUIT,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_quit, m_quit, ms_quit, m_quit, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_quit, m_quit, ms_quit, m_quit, m_ignore, mh_quit }
+   },
+   {
+     MSG_PART,
+     TOK_PART,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_part, ms_part, m_part, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_part, ms_part, m_part, m_ignore, mh_part }
+   },
+   {
+     MSG_TOPIC,
+     TOK_TOPIC,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_topic, ms_topic, m_topic, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_topic, ms_topic, m_topic, m_ignore, mh_topic }
+   },
+   {
+     MSG_INVITE,
+     TOK_INVITE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_invite, ms_invite, m_invite, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_invite, ms_invite, m_invite, m_ignore, mh_invite }
+   },
+   {
+     MSG_KICK,
+     TOK_KICK,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_kick, ms_kick, m_kick, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_kick, ms_kick, m_kick, m_ignore, mh_kick }
+   },
+   {
+     MSG_WALLOPS,
+     TOK_WALLOPS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_wallops, mo_wallops, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_wallops, mo_wallops, m_ignore, mh_wallops }
+   },
+   {
+     MSG_WALLUSERS,
+     TOK_WALLUSERS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_wallusers, mo_wallusers, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_wallusers, mo_wallusers, m_ignore, mh_wallusers }
+   },
+   {
+     MSG_DESYNCH,
+     TOK_DESYNCH,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_desynch, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_desynch, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_PING,
+     TOK_PING,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_ping, ms_ping, mo_ping, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_ping, ms_ping, mo_ping, m_ignore, mh_ping }
+   },
+   {
+     MSG_PONG,
+     TOK_PONG,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { mr_pong, m_pong, ms_pong, m_pong, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { mr_pong, m_pong, ms_pong, m_pong, m_ignore, mh_pong }
+   },
+   {
+     MSG_ERROR,
+     TOK_ERROR,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { mr_error, m_ignore, ms_error, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { mr_error, m_ignore, ms_error, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_KILL,
+     TOK_KILL,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_kill, mo_kill, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_kill, mo_kill, m_ignore, mh_kill }
+   },
+   {
+     MSG_USER,
+     TOK_USER,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_user, m_registered, m_ignore, m_registered, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_user, m_registered, m_ignore, m_registered, m_ignore, mh_user }
+   },
+   {
+     MSG_AWAY,
+     TOK_AWAY,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_away, ms_away, m_away, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_away, ms_away, m_away, m_ignore, mh_away }
+   },
+   {
+     MSG_ISON,
+     TOK_ISON,
+     0, 1, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_ison, m_ignore, m_ison, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_ison, m_ignore, m_ison, m_ignore, mh_ison }
+   },
+   {
+     MSG_SERVER,
+     TOK_SERVER,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { mr_server, m_registered, ms_server, m_registered, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { mr_server, m_registered, ms_server, m_registered, m_ignore, mh_not_server }
+   },
+   {
+     MSG_SQUIT,
+     TOK_SQUIT,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_squit, mo_squit, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_squit, mo_squit, m_ignore, mh_squit }
+   },
+   {
+     MSG_WHOIS,
+     TOK_WHOIS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_whois, ms_whois, m_whois, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_whois, ms_whois, m_whois, m_ignore, mh_whois }
+   },
+   {
+     MSG_WHO,
+     TOK_WHO,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_who, m_ignore, m_who, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_who, m_ignore, m_who, m_ignore, mh_who }
+   },
+   {
+     MSG_WHOWAS,
+     TOK_WHOWAS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_whowas, m_whowas, m_whowas, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_whowas, m_whowas, m_whowas, m_ignore, mh_whowas }
+   },
+   {
+     MSG_LIST,
+     TOK_LIST,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_list, m_ignore, m_list, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_list, m_ignore, m_list, m_ignore, mh_list }
+   },
+   {
+     MSG_NAMES,
+     TOK_NAMES,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_names, m_names, m_names, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_names, m_names, m_names, m_ignore, mh_names }
+   },
+   {
+     MSG_USERHOST,
+     TOK_USERHOST,
+     0, 1, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_userhost, m_ignore, m_userhost, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_userhost, m_ignore, m_userhost, m_ignore, mh_userhost }
+   },
+   {
+     MSG_USERIP,
+     TOK_USERIP,
+     0, 1, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_userip, m_ignore, m_userip, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_userip, m_ignore, m_userip, m_ignore, mh_userip }
+   },
+   {
+     MSG_TRACE,
+     TOK_TRACE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_trace, ms_trace, mo_trace, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_trace, ms_trace, mo_trace, m_ignore, mh_trace }
+   },
+   {
+     MSG_PASS,
+     TOK_PASS,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { mr_pass, m_registered, m_ignore, m_registered, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { mr_pass, m_registered, m_ignore, m_registered, m_ignore, mh_pass }
+   },
+   {
+     MSG_LUSERS,
+     TOK_LUSERS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_lusers, ms_lusers, m_lusers, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_lusers, ms_lusers, m_lusers, m_ignore, mh_lusers }
+   },
+   {
+     MSG_TIME,
+     TOK_TIME,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_time, m_time, m_time, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_time, m_time, m_time, m_ignore, mh_time }
+   },
+   {
+     MSG_SETTIME,
+     TOK_SETTIME,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_settime, mo_settime, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_settime, mo_settime, m_ignore, mh_settime }
+   },
+   {
+     MSG_RPING,
+     TOK_RPING,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_rping, mo_rping, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_rping, mo_rping, m_ignore, mh_rping }
+   },
+   {
+     MSG_RPONG,
+     TOK_RPONG,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_ignore, ms_rpong, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_ignore, ms_rpong, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_OPER,
+     TOK_OPER,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_oper, ms_oper, mo_oper, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_oper, ms_oper, mo_oper, m_ignore, mh_oper }
+   },
+   {
+     MSG_CONNECT,
+     TOK_CONNECT,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_connect, mo_connect, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_connect, mo_connect, m_ignore, mh_connect }
+   },
+   {
+     MSG_MAP,
+     TOK_MAP,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_map, m_ignore, m_map, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_map, m_ignore, m_map, m_ignore, mh_map }
+   },
+   {
+     MSG_VERSION,
+     TOK_VERSION,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_version, m_version, ms_version, mo_version, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_version, m_version, ms_version, mo_version, m_ignore, mh_version }
+   },
+   {
+     MSG_STATS,
+     TOK_STATS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_stats, m_stats, m_stats, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_stats, m_stats, m_stats, m_ignore, mh_stats }
+   },
+   {
+     MSG_LINKS,
+     TOK_LINKS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_links, ms_links, m_links, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_links, ms_links, m_links, m_ignore, mh_links }
+   },
+   {
+     MSG_ADMIN,
+     TOK_ADMIN,
+     0, MAXPARA, MFLG_SLOW | MFLG_UNREG, 0,  NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_admin, m_admin, ms_admin, mo_admin, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_admin, m_admin, ms_admin, mo_admin, m_ignore, mh_admin }
+   },
+   {
+     MSG_HELP,
+     TOK_HELP,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_help, m_ignore, m_help, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_help, m_ignore, m_help, m_ignore, mh_help }
+   },
+   {
+     MSG_INFO,
+     TOK_INFO,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_info, ms_info, mo_info, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_info, ms_info, mo_info, m_ignore, mh_info }
+   },
+   {
+     MSG_MOTD,
+     TOK_MOTD,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_motd, m_motd, m_motd, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_motd, m_motd, m_motd, m_ignore, mh_motd }
+   },
+   {
+     MSG_CLOSE,
+     TOK_CLOSE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_ignore, mo_close, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_ignore, mo_close, m_ignore, mh_close }
+   },
+   {
+     MSG_SILENCE,
+     TOK_SILENCE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_silence, ms_silence, m_silence, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_silence, ms_silence, m_silence, m_ignore, mh_silence }
+   },
+   {
+     MSG_GLINE,
+     TOK_GLINE,
+     0, MAXPARA,         0, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_gline, ms_gline, mo_gline, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_gline, ms_gline, mo_gline, m_ignore, mh_gline }
+   },
+   {
+     MSG_JUPE,
+     TOK_JUPE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_jupe, mo_jupe, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_jupe, mo_jupe, m_ignore, mh_jupe }
+   },
+   {
+     MSG_OPMODE,
+     TOK_OPMODE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_opmode, mo_opmode, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_opmode, mo_opmode, m_ignore, mh_opmode }
+   },
+   {
+     MSG_CLEARMODE,
+     TOK_CLEARMODE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_clearmode, mo_clearmode, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_clearmode, mo_clearmode, m_ignore, mh_clearmode }
+   },
+   {
+     MSG_UPING,
+     TOK_UPING,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_uping, mo_uping, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_uping, mo_uping, m_ignore, mh_uping }
+   },
+   {
+     MSG_END_OF_BURST,
+     TOK_END_OF_BURST,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_end_of_burst, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_end_of_burst, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_END_OF_BURST_ACK,
+     TOK_END_OF_BURST_ACK,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_end_of_burst_ack, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_end_of_burst_ack, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_REBURST,
+     TOK_REBURST,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_reburst, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_reburst, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_HASH,
+     TOK_HASH,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_hash, m_hash, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_hash, m_hash, m_ignore, mh_hash }
+   },
+   {
+     MSG_REHASH,
+     TOK_REHASH,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_ignore, mo_rehash, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_ignore, mo_rehash, m_ignore, mh_rehash }
+   },
+   {
+     MSG_RESTART,
+     TOK_RESTART,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_ignore, mo_restart, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_ignore, mo_restart, m_ignore, mh_restart }
+   },
+   {
+     MSG_DIE,
+     TOK_DIE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_ignore, mo_die, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_ignore, mo_die, m_ignore, mh_die }
+   },
+   {
+     MSG_PROTO,
+     TOK_PROTO,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_proto, m_proto, m_proto, m_proto, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_proto, m_proto, m_proto, m_proto, m_ignore, mh_nohelp }
+   },
+   {
+     MSG_SET,
+     TOK_SET,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_ignore, mo_set, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_ignore, mo_set, m_ignore, mh_set }
+   },
+   {
+     MSG_RESET,
+     TOK_RESET,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_ignore, mo_reset, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_ignore, mo_reset, m_ignore, mh_reset }
+   },
+   {
+     MSG_GET,
+     TOK_GET,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, m_ignore, mo_get, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, m_ignore, mo_get, m_ignore, mh_get }
+   },
+   {
+     MSG_PRIVS,
+     TOK_PRIVS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_privs, mo_privs, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_privs, mo_privs, m_ignore, mh_privs }
+   },
+   {
+     MSG_ACCOUNT,
+     TOK_ACCOUNT,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_ignore, ms_account, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_ignore, ms_account, m_ignore, m_ignore, mh_not_server }
+   },
+   {
+     MSG_ASLL,
+     TOK_ASLL,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_ignore, m_not_oper, ms_asll, mo_asll, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_ignore, m_not_oper, ms_asll, mo_asll, m_ignore, mh_asll }
+    },
+   {
+     MSG_SETHOST,
+     TOK_SETHOST,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_sethost, ms_sethost, m_sethost, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_sethost, ms_sethost, m_sethost, m_ignore, mh_sethost }
+   },
+ #if WE_HAVE_A_REAL_CAPABILITY_NOW
+   {
+     MSG_CAP,
+     TOK_CAP,
+     0, MAXPARA, 0, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_cap, m_cap, m_ignore, m_cap, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_cap, m_cap, m_ignore, m_cap, m_ignore, mh_nohelp }
+   },
+ #endif
+ 
+@@ -654,7 +654,7 @@
+     MSG_CHECK,
+     TOK_CHECK,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    { m_unregistered, m_not_oper, m_check, m_check, m_ignore }
++    { m_unregistered, m_not_oper, m_check, m_check, m_ignore, mh_check }
+   },
+   
+   /*
+@@ -664,8 +664,8 @@
+     MSG_OPKICK,
+     TOK_OPKICK,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore, mh_nohelp }
+   },
+ 
+   /* This command is an alias for QUIT during the unregistered part of
+@@ -678,8 +678,8 @@
+     MSG_POST,
+     TOK_POST,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_quit, m_ignore, m_ignore, m_ignore, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_quit, m_ignore, m_ignore, m_ignore, m_ignore, mh_nohelp }
+   },
+   { 0 }
+ };
+@@ -779,6 +779,14 @@
+   return NULL;
+ }
+ 
++/** Look up a command in the message trie.
++ * @param cmd Text of command to look up.
++ * @return Pointer to matching message, or NULL if non exists.
++ */
++struct Message *find_message_by_cmd(char *cmd) {
++  return msg_tree_parse(cmd, &msg_tree);
++}
++
+ /** Registers a service mapping to the pseudocommand handler.
+  * @param[in] map Service mapping to add.
+  * @return Non-zero on success; zero if a command already used the name.
+@@ -806,6 +814,7 @@
+   msg->handlers[SERVER_HANDLER] = m_ignore;
+   msg->handlers[OPER_HANDLER]   = m_pseudo;
+   msg->handlers[SERVICE_HANDLER] = m_ignore;
++  msg->handlers[HELP_HANDLER] = mh_nohelp;
+ 
+   add_msg_element(&msg_tree, msg, msg->cmd);
+   map->msg = msg;
+diff -r 7fa4708bac45 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jan 25 12:48:01 2009 +0100
++++ b/ircd/s_err.c	Sun Jan 25 23:52:18 2009 +0100
+@@ -1230,6 +1230,16 @@
+ /* 598 */
+   { 0 },
+ /* 599 */
++  { 0 },
++/* 600 */
++  { 0 },
++/* 601 */
++  { RPL_HELP, 0, "601" },
++/* 602 */
++  { RPL_ENDOFHELP, "%s :End of /HELP report.", "602" },
++/* 603 */
++  { ERR_NOHELP, "%s :No help found.", "603" },
++/* 604 */
+   { 0 }
+ };
+ 

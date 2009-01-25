@@ -17,7 +17,7 @@ commonchansumode.patch
 remoteglinejupe.patch
 whoban.patch
 opername.patch
-cmdhelp.patch
+cmdhelp.patch #+help
 noticepluschan.patch
 whomatch.patch
 privlocalchan.patch
@@ -27,5 +27,6 @@ operglinenick.patch
 operping.patch
 minoplevel.patch
 oplevelforward.patch
+welcome.patch
 accountcollision.patch
 split.patch
