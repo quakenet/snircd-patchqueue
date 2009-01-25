@@ -1,6 +1,6 @@
 diff -r 2b442008e1b7 ircd/match.c
 --- a/ircd/match.c	Sun Jan 25 21:58:36 2009 +0000
-+++ b/ircd/match.c	Sun Jan 25 21:59:17 2009 +0000
++++ b/ircd/match.c	Sun Jan 25 23:57:06 2009 +0000
 @@ -27,6 +27,9 @@
  #include "ircd_string.h"
  #include "ircd_snprintf.h"
@@ -11,7 +11,7 @@ diff -r 2b442008e1b7 ircd/match.c
  /*
   * mmatch()
   *
-@@ -62,53 +65,79 @@
+@@ -62,53 +65,73 @@
   *
   * @param[in] old_mask One wildcard mask.
   * @param[in] new_mask Another wildcard mask.
@@ -19,12 +19,6 @@ diff -r 2b442008e1b7 ircd/match.c
   * @return Zero if \a old_mask is a superset of \a new_mask, non-zero otherwise.
   */
 -int mmatch(const char *old_mask, const char *new_mask)
-+int _mmatch(const char *old_mask, const char *new_mask, int rfcmatch);
-+
-+int mmatch(const char *old_mask, const char *new_mask) {
-+  return _mmatch(old_mask, new_mask, 1);
-+}
-+
 +__inline__ int _mmatch(const char *old_mask, const char *new_mask, int rfcmatch)
  {
    const char *m = old_mask;
@@ -34,7 +28,7 @@ diff -r 2b442008e1b7 ircd/match.c
 -  int wild = 0;
 -  int mq = 0, nq = 0;
 +  /* Note that ma / na never point to a character escaped by a backslash. */
-+  const char *ma = NULL; // Remembered m for backtracking.
++  const char *ma = NULL; /* Remembered m for backtracking. */
 +  const char *na = NULL;
 +  int mq = 0, nq = 0; // Is *m / *n escaped?
 +  int match;
@@ -110,7 +104,7 @@ diff -r 2b442008e1b7 ircd/match.c
      {
        m++;
        mq = 1;
-@@ -116,8 +145,7 @@
+@@ -116,8 +139,7 @@
      else
        mq = 0;
  
@@ -120,7 +114,7 @@ diff -r 2b442008e1b7 ircd/match.c
      {
        n++;
        nq = 1;
-@@ -126,24 +154,24 @@
+@@ -126,45 +148,47 @@
        nq = 0;
  
  /*
@@ -146,7 +140,7 @@ diff -r 2b442008e1b7 ircd/match.c
 -        ((!mq || nq) && ToLower(*m) == ToLower(*n)) ||
 -        (*m == '?' && !mq && (*n != '*' || nq)))
 +    if (unlikely(mq))   {          /* m is quoted, match the exact same, or the
-+                          * same character if quoting is irrelevant.  */
++                                    * same character if quoting is irrelevant.  */
 +      match = (*m == *n && (nq ||
 +                (*n != '*' && *n != '?' && ToUpper(*n) == ToLower(*n))));
 +    } else if (unlikely(*m == '?')) { /* m is '?', match anything but unquoted '*' */
@@ -162,11 +156,12 @@ diff -r 2b442008e1b7 ircd/match.c
      {
        if (*m)
          m++;
-@@ -151,15 +179,12 @@
+       if (*n)
          n++;
      }
-     else
--    {
+-    else
++    else 
+     {
 -      if (!wild)
 +      if (unlikely(!ma))
          return 1;
@@ -181,23 +176,25 @@ diff -r 2b442008e1b7 ircd/match.c
        n = ++na;
      }
    }
-@@ -186,8 +211,15 @@
+ }
+ 
++int mmatch(const char *old_mask, const char *new_mask) {
++  return _mmatch(old_mask, new_mask, 1);
++}
++
+ /*
+  * Compare if a given string (name) matches the given
+  * mask (which can contain wild cards: '*' - match any
+@@ -186,7 +210,7 @@
   * @param[in] name String to check against \a mask.
   * @return Zero if \a mask matches \a name, non-zero if no match.
   */
-+int _match(const char *mask, const char *name, int rfcmatch);
-+
- int match(const char *mask, const char *name)
+-int match(const char *mask, const char *name)
++__inline__ int _match(const char *mask, const char *name, int rfcmatch)
  {
-+  return _match(mask, name, 1);
-+}
-+
-+int _match(const char *mask, const char *name, int rfcmatch)
-+{
    const char *m = mask, *n = name;
    const char *m_tmp = mask, *n_tmp = name;
-   int star_p;
-@@ -205,10 +237,14 @@
+@@ -205,10 +229,14 @@
        return 1;
      break;
    case '\\':
@@ -215,7 +212,7 @@ diff -r 2b442008e1b7 ircd/match.c
      break;
    case '*': case '?':
      for (star_p = 0; ; m++) {
-@@ -234,6 +270,7 @@
+@@ -234,6 +262,7 @@
      }
      /* and fall through */
    default:
@@ -223,3 +220,15 @@ diff -r 2b442008e1b7 ircd/match.c
      if (!*n)
        return *m != '\0';
      if (ToLower(*m) != ToLower(*n))
+@@ -244,6 +273,11 @@
+   }
+ }
+ 
++int match(const char *mask, const char *name)
++{
++  return _match(mask, name, 1);
++}
++
+ /*
+  * collapse()
+  * Collapse a pattern string into minimal components.
