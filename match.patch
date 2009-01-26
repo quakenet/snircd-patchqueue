@@ -1,6 +1,6 @@
-diff -r 2b442008e1b7 ircd/match.c
---- a/ircd/match.c	Sun Jan 25 21:58:36 2009 +0000
-+++ b/ircd/match.c	Sun Jan 25 23:57:06 2009 +0000
+diff -r 19854df2b7c2 ircd/match.c
+--- a/ircd/match.c	Mon Jan 26 18:42:26 2009 +0000
++++ b/ircd/match.c	Mon Jan 26 18:48:52 2009 +0000
 @@ -27,6 +27,9 @@
  #include "ircd_string.h"
  #include "ircd_snprintf.h"
@@ -30,7 +30,7 @@ diff -r 2b442008e1b7 ircd/match.c
 +  /* Note that ma / na never point to a character escaped by a backslash. */
 +  const char *ma = NULL; /* Remembered m for backtracking. */
 +  const char *na = NULL;
-+  int mq = 0, nq = 0; // Is *m / *n escaped?
++  int mq = 0, nq = 0; /* Is *m / *n escaped? */
 +  int match;
 +
 +  if ( m[0] == '*' && m[1] == '\0' ) {
