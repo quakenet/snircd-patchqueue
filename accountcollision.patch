@@ -11,9 +11,9 @@ ircd/s_err.c
 ircd/m_account.c
   add the account collision kills
 
-diff -r b193092040a9 include/ircd_features.h
---- a/include/ircd_features.h	Fri Jan 23 12:53:22 2009 +0100
-+++ b/include/ircd_features.h	Fri Jan 23 15:08:41 2009 +0100
+diff -r 981169e4fc94 include/ircd_features.h
+--- a/include/ircd_features.h	Sat Jan 24 12:58:40 2009 +0100
++++ b/include/ircd_features.h	Sat Jan 24 19:16:22 2009 +0100
 @@ -101,6 +101,7 @@
    FEAT_IRCD_RES_TIMEOUT,
    FEAT_AUTH_TIMEOUT,
@@ -22,9 +22,9 @@ diff -r b193092040a9 include/ircd_features.h
  
    /* features that affect all operators */
    FEAT_EXTENDED_CHECKCMD,
-diff -r b193092040a9 include/numeric.h
---- a/include/numeric.h	Fri Jan 23 12:53:22 2009 +0100
-+++ b/include/numeric.h	Fri Jan 23 15:08:41 2009 +0100
+diff -r 981169e4fc94 include/numeric.h
+--- a/include/numeric.h	Sat Jan 24 12:58:40 2009 +0100
++++ b/include/numeric.h	Sat Jan 24 19:16:22 2009 +0100
 @@ -357,6 +357,7 @@
  /*	ERR_NORULES	     434   unreal */
  /*      ERR_SERVICECONFUSED  435 ? */
@@ -33,9 +33,9 @@ diff -r b193092040a9 include/numeric.h
  #define ERR_NICKCOLLISION    436
  #define ERR_BANNICKCHANGE    437        /* Undernet extension */
       /* ERR_UNAVAILRESOURCE  437           IRCnet extension */
-diff -r b193092040a9 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Fri Jan 23 12:53:22 2009 +0100
-+++ b/ircd/ircd_features.c	Fri Jan 23 15:08:41 2009 +0100
+diff -r 981169e4fc94 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sat Jan 24 12:58:40 2009 +0100
++++ b/ircd/ircd_features.c	Sat Jan 24 19:16:22 2009 +0100
 @@ -355,6 +355,7 @@
    F_I(IRCD_RES_TIMEOUT, 0, 4, 0),
    F_I(AUTH_TIMEOUT, 0, 9, 0),
@@ -44,9 +44,9 @@ diff -r b193092040a9 ircd/ircd_features.c
  
    /* features that affect all operators */
    F_B(EXTENDED_CHECKCMD, 0, 0, 0),
-diff -r b193092040a9 ircd/m_account.c
---- a/ircd/m_account.c	Fri Jan 23 12:53:22 2009 +0100
-+++ b/ircd/m_account.c	Fri Jan 23 15:08:41 2009 +0100
+diff -r 981169e4fc94 ircd/m_account.c
+--- a/ircd/m_account.c	Sat Jan 24 12:58:40 2009 +0100
++++ b/ircd/m_account.c	Sat Jan 24 19:16:22 2009 +0100
 @@ -82,10 +82,12 @@
  
  #include "client.h"
@@ -60,7 +60,7 @@ diff -r b193092040a9 ircd/m_account.c
  #include "numnicks.h"
  #include "s_debug.h"
  #include "s_user.h"
-@@ -138,10 +140,34 @@
+@@ -138,10 +140,45 @@
    if (IsAccount(acptr)) {
      if (strcmp(cli_user(acptr)->account, parv[2]) || 
          (cli_user(acptr)->acc_create != acc_create) ||
@@ -72,17 +72,28 @@ diff -r b193092040a9 ircd/m_account.c
 +
 +      /* license to KILL for account collisions */
 +      /* TODO: what if just the timestamp differs?
-+       * account and ID are the same
-+       * could we not resolve the conflict without KILL?
++       *       account and ID are the same
++       *       could we not resolve the conflict without KILL?
++       *       ie. oldest timestamp overrules?
 +       */
 +      if (feature_bool(FEAT_ACCOUNT_COLLISION_KILLS)) {
 +        /* inform ops */
-+        sendto_opmask_butone(0, SNO_OLDSNO,
-+          "Account collision from %C on %C (%s:%Tu:%lu <- %C %s:%Tu:%lu)", sptr, acptr,
-+          cli_user(acptr)->account, cli_user(acptr)->acc_create, cli_user(acptr)->acc_id,
-+          cptr, parv[2], acc_create, acc_id);
++        if (strcmp(cli_user(acptr)->account, parv[2]))
++          sendto_opmask_butone(0, SNO_OLDSNO,
++            "Account collision from %C on %C (%s <- %C %s (Different account))",
++            sptr, acptr, cli_user(acptr)->account, cptr, parv[2]);
++        else if (cli_user(acptr)->acc_id != acc_id)
++          sendto_opmask_butone(0, SNO_OLDSNO,
++            "Account collision from %C on %C (%lu <- %C %lu (Different ID))",
++            sptr, acptr,cli_user(acptr)->acc_id, cptr, acc_id);
++        else
++          sendto_opmask_butone(0, SNO_OLDSNO,
++            "Account collision from %C on %C (%Tu <- %C %Tu (Different timestamp))",
++            sptr, acptr, cli_user(acptr)->acc_create, cptr, acc_create);
++
 +        /* tell victim why we kill them */
-+        send_reply(acptr, ERR_ACCOUNTCOLLISION, parv[2]);
++        /* TODO: send the account we got here (parv[2]) or just a *? */
++        send_reply(acptr, ERR_ACCOUNTCOLLISION, "*");
 +        /* Inform the rest of the net... */
 +        ServerStats->is_kill++;
 +        sendcmdto_serv_butone(&me, CMD_KILL, 0, "%C :%s (account collision)",
@@ -99,9 +110,9 @@ diff -r b193092040a9 ircd/m_account.c
  
      cli_user(acptr)->acc_flags = acc_flags;
  
-diff -r b193092040a9 ircd/s_err.c
---- a/ircd/s_err.c	Fri Jan 23 12:53:22 2009 +0100
-+++ b/ircd/s_err.c	Fri Jan 23 15:08:41 2009 +0100
+diff -r 981169e4fc94 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jan 24 12:58:40 2009 +0100
++++ b/ircd/s_err.c	Sat Jan 24 19:16:22 2009 +0100
 @@ -902,7 +902,7 @@
  /* 434 */
    { 0 },
