@@ -1,9 +1,9 @@
 make /HELP <command> work - oper only feature?
 need to make small test case to see how hard/easy this would be to add.
 
-diff -r 7fa4708bac45 include/handlers.h
---- a/include/handlers.h	Sun Jan 25 12:48:01 2009 +0100
-+++ b/include/handlers.h	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d include/handlers.h
+--- a/include/handlers.h	Mon Jan 26 12:47:49 2009 +0100
++++ b/include/handlers.h	Mon Jan 26 13:29:19 2009 +0100
 @@ -244,5 +244,77 @@
  extern int ms_wallvoices(struct Client*, struct Client*, int, char*[]);
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
@@ -82,9 +82,9 @@ diff -r 7fa4708bac45 include/handlers.h
 +
  #endif /* INCLUDED_handlers_h */
  
-diff -r 7fa4708bac45 include/ircd_handler.h
---- a/include/ircd_handler.h	Sun Jan 25 12:48:01 2009 +0100
-+++ b/include/ircd_handler.h	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d include/ircd_handler.h
+--- a/include/ircd_handler.h	Mon Jan 26 12:47:49 2009 +0100
++++ b/include/ircd_handler.h	Mon Jan 26 13:29:19 2009 +0100
 @@ -36,6 +36,7 @@
    SERVER_HANDLER,       /**< Used for server conections. */
    OPER_HANDLER,         /**< Used for IRC operators. */
@@ -93,9 +93,9 @@ diff -r 7fa4708bac45 include/ircd_handler.h
    LAST_HANDLER_TYPE     /**< NUmber of handler types. */
  } HandlerType;
  
-diff -r 7fa4708bac45 include/msg.h
---- a/include/msg.h	Sun Jan 25 12:48:01 2009 +0100
-+++ b/include/msg.h	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d include/msg.h
+--- a/include/msg.h	Mon Jan 26 12:47:49 2009 +0100
++++ b/include/msg.h	Mon Jan 26 13:29:19 2009 +0100
 @@ -410,7 +410,7 @@
     * parv = parameter variable array
     */
@@ -105,9 +105,9 @@ diff -r 7fa4708bac45 include/msg.h
     */
    MessageHandler handlers[LAST_HANDLER_TYPE];
  };
-diff -r 7fa4708bac45 include/numeric.h
---- a/include/numeric.h	Sun Jan 25 12:48:01 2009 +0100
-+++ b/include/numeric.h	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d include/numeric.h
+--- a/include/numeric.h	Mon Jan 26 12:47:49 2009 +0100
++++ b/include/numeric.h	Mon Jan 26 13:29:19 2009 +0100
 @@ -475,7 +475,6 @@
  /*      ERR_NOMANAGER_LONG   565	no longer used */
  #define ERR_NOMANAGER        566	/* Undernet extension */
@@ -127,9 +127,9 @@ diff -r 7fa4708bac45 include/numeric.h
 +#define ERR_LASTERROR        604
 +
  #endif /* INCLUDED_numeric_h */
-diff -r 7fa4708bac45 include/parse.h
---- a/include/parse.h	Sun Jan 25 12:48:01 2009 +0100
-+++ b/include/parse.h	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d include/parse.h
+--- a/include/parse.h	Mon Jan 26 12:47:49 2009 +0100
++++ b/include/parse.h	Mon Jan 26 13:29:19 2009 +0100
 @@ -15,6 +15,7 @@
  extern int parse_client(struct Client *cptr, char *buffer, char *bufend);
  extern int parse_server(struct Client *cptr, char *buffer, char *bufend);
@@ -138,9 +138,9 @@ diff -r 7fa4708bac45 include/parse.h
  
  extern int register_mapping(struct s_map *map);
  extern int unregister_mapping(struct s_map *map);
-diff -r 7fa4708bac45 ircd/m_defaults.c
---- a/ircd/m_defaults.c	Sun Jan 25 12:48:01 2009 +0100
-+++ b/ircd/m_defaults.c	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d ircd/m_defaults.c
+--- a/ircd/m_defaults.c	Mon Jan 26 12:47:49 2009 +0100
++++ b/ircd/m_defaults.c	Mon Jan 26 13:29:19 2009 +0100
 @@ -119,3 +119,18 @@
  {
    return 0;
@@ -161,9 +161,9 @@ diff -r 7fa4708bac45 ircd/m_defaults.c
 +  return send_reply(sptr, SND_EXPLICIT | RPL_HELP, "%s :This command is for servers only.", parv[1]);
 +}
 \ No newline at end of file
-diff -r 7fa4708bac45 ircd/m_help.c
---- a/ircd/m_help.c	Sun Jan 25 12:48:01 2009 +0100
-+++ b/ircd/m_help.c	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d ircd/m_help.c
+--- a/ircd/m_help.c	Mon Jan 26 12:47:49 2009 +0100
++++ b/ircd/m_help.c	Mon Jan 26 13:29:19 2009 +0100
 @@ -90,6 +90,7 @@
  #include "msg.h"
  #include "numeric.h"
@@ -172,7 +172,7 @@ diff -r 7fa4708bac45 ircd/m_help.c
  #include "send.h"
  
  /* #include <assert.h> -- Now using assert in ircd_log.h */
-@@ -100,9 +101,1124 @@
+@@ -100,9 +101,1212 @@
  int m_help(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
  {
    int i;
@@ -284,7 +284,7 @@ diff -r 7fa4708bac45 ircd/m_help.c
 +    "CHECK :Shows detailed information about a user, a channel, a hostmask, or a server.");
 +  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
 +    "CHECK :Flags are: -C show clones, -c show channels, -s show servernames, -e show more, "
-+    "-i show IPs, -I show hostnames and IPs, -u do not show users, -o show only channel operators.");
++    "-i show IPs, -I show hostnames and IPs, -u do not show users, -o show only channel operators, -l show oplevels.");
 +  return 0;
 +}
 +
@@ -814,6 +814,94 @@ diff -r 7fa4708bac45 ircd/m_help.c
 +    "PRIVS :PRIVS <nick> [<nick> [..]]");
 +  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
 +    "PRIVS :Shows the privileges an IRC Operator has.");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :CHAN_LIMIT            oper has no channel limit (JOIN)");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :MODE_LCHAN            oper can mode local chans without channel operator status");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :WALK_LCHAN            oper can walk through local modes (JOIN &chan override)");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :DEOP_LCHAN            oper cannot be deoped on local chans");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :SHOW_INVIS            show local invisible users");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :SHOW_ALL_INVIS        show all invisible users");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :UNLIMIT_QUERY         unlimited results in WHO");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :KILL                  oper can KILL");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :LOCAL_KILL            oper can local KILL");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :REHASH                oper can REHASH");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :RESTART               oper can RESTART");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :DIE                   oper can DIE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :GLINE                 oper can GLINE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :LOCAL_GLINE           oper can local GLINE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :JUPE                  oper can JUPE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :LOCAL_JUPE            oper can local JUPE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :OPMODE                oper can OPMODE and CLEARMODE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :LOCAL_OPMODE          oper can local OPMODE and CLEARMODE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :SET                   oper can SET");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :WHOX                  log oper's usage of WHO x");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :BADCHAN               oper can BADCHAN (GLINE)");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :LOCAL_BADCHAN         oper can local BADCHAN (GLINE)");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :SEE_CHAN              oper can see in secret chans");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :PROPAGATE             propagate oper status");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :DISPLAY               oper status is displayed");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :SEE_OPERS             oper can see hidden opers");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :WIDE_GLINE            oper can set wider GLINE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :LIST_CHAN             oper can LIST secret channels");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :FORCE_OPMODE          can hack modes on quarantined channels");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :FORCE_LOCAL_OPMODE    can hack modes on quarantined local channels");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :APASS_OPMODE          can hack modes +A/-A/+U/-U");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :CHANSERV              oper can set usermode +k");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :XTRA_OPER             oper can set usermode +X");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :NOIDLE                oper can set usermode +I");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :FREEFORM              oper can use freeform SETHOST");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :PARANOID              oper can set usermode +P");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :CHECK                 oper can use CHECK");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :WALL                  oper can use WALLOPS and WALLUSERS");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :CLOSE                 oper can use CLOSE");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :ROUTE                 oper can use CONNECT and SQUIT");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :ROUTEINFO             oper can use MAP, TRACE, ASLL, LINKS, and view JUPE list");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :USER_PRIVACY          oper can bypass user privacy (see through usermode +x)");
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :CHANNEL_PRIVACY       oper can bypass channel privacy (see info on channels they are not on)"); 
++  send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++    "PRIVS :SERVERINFO            oper can use GET, STATS, HASH, and retrieve remote information");
 +  return 0;
 +}
 +
@@ -1300,9 +1388,9 @@ diff -r 7fa4708bac45 ircd/m_help.c
 +  return 0;
 +}
 \ No newline at end of file
-diff -r 7fa4708bac45 ircd/parse.c
---- a/ircd/parse.c	Sun Jan 25 12:48:01 2009 +0100
-+++ b/ircd/parse.c	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d ircd/parse.c
+--- a/ircd/parse.c	Mon Jan 26 12:47:49 2009 +0100
++++ b/ircd/parse.c	Mon Jan 26 13:29:19 2009 +0100
 @@ -110,534 +110,534 @@
      MSG_PRIVATE,
      TOK_PRIVATE,
@@ -2044,9 +2132,9 @@ diff -r 7fa4708bac45 ircd/parse.c
  
    add_msg_element(&msg_tree, msg, msg->cmd);
    map->msg = msg;
-diff -r 7fa4708bac45 ircd/s_err.c
---- a/ircd/s_err.c	Sun Jan 25 12:48:01 2009 +0100
-+++ b/ircd/s_err.c	Sun Jan 25 23:52:18 2009 +0100
+diff -r 329d644daf7d ircd/s_err.c
+--- a/ircd/s_err.c	Mon Jan 26 12:47:49 2009 +0100
++++ b/ircd/s_err.c	Mon Jan 26 13:29:19 2009 +0100
 @@ -1230,6 +1230,16 @@
  /* 598 */
    { 0 },

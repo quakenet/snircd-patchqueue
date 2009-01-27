@@ -6,7 +6,7 @@ when the client is authed, account.users.quakenet.org is saved.
 This should not break clients as servernames can (and did appear there
 in asuka) and probably appear there in other IRCDs. Forcing a nick!user@host
 format seems odd, *!*@account.users.quakenet.org seems a bit ugly, and saving
-the nick and user part too costs even more and adds little, acocunt is the most
+the nick and user part too costs even more and adds little, account is the most
 significant piece of info there already.
 
 What about a channel service like Q:

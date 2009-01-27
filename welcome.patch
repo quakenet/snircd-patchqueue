@@ -1,6 +1,85 @@
-diff -r a662d02e9a76 include/handlers.h
---- a/include/handlers.h	Sat Jan 24 21:39:56 2009 +0100
-+++ b/include/handlers.h	Sat Jan 24 22:38:10 2009 +0100
+Add welcome message functionality.
+
+client commands:
+user:
+/WELCOME
+shows welcome messages set, same is shown on connect
+
+oper:
+/WELCOME [<target>] [[!]<name> :<message>]
+to view welcome messages from a remote server
+to set a local welcome message on this server or a remote server
+set a global welcome message (target *)
+the ! prefix makes the server annouce the welcome message to its clients when setting
+
+server:
+<source> WE <target> [[!]<name> <timestamp> <who> :<text>]
+who is who set the message, the server puts in the opername when a client sets it.
+<name> is a number 1 to WELCOME_MAX_ENTRIES - currently set at 10 (should be more than we ever need)
+that means there is room for 10 local and 10 global entries
+local entries are cleared from memory when unset, global entries are kept with no text for conflict resolving.
+
+
+
+/STATS W/welcome (/STATS w/userload made case sensitive)
+:server 230 nick W Name Target Who Timestamp :Message
+:server 227 nick W 1 * opername 1233072583 :Latest news: testing this welcome patch :)
+:server 227 nick W 2 * opername 1233072583 :
+:server 227 nick W 1 servername opername 1233072590 :This is a test server, expect restarts.
+:server 219 nick W :End of /STATS report
+
+listing welcomes or on connect:
+:server NOTICE nick :[QuakeNet] Latest news: testing this welcome patch :)
+:server NOTICE nick :[server] This is a test server, expect restarts.
+
+announcement is done by a notice by the local server to $* with the same message
+format as for listing welcome messages.
+:server NOTICE $* :[QuakeNet] Latest news: testing this welcome patch :)
+:server NOTICE $* :[server] This is a test server, expect restarts.
+
+
+Files:
+
+include/handlers.h
+add m_welcome mo_welcome ms_welcome mh_welcome functions
+
+include/features.h
+ircd/features.c
+add features FEAT_WELCOME and FEAT_HIS_STATS_W
+
+include/msg.h
+add MSG_WELCOME TOK_WELCOME CMD_WELCOME
+
+ircd/parse.c
+add welcome message functions
+
+include/numeric.h
+ircd/s_err.c
+add RPL_STATSWELCOME ERR_NOSUCHWELCOME
+
+include/welcome.h
+ircd/welcome.c
+ircd/m_welcome.c
+new
+
+ircd/Makefile.in
+add welcome.c and m_welcome.c files
+
+ircd/s_debug.c
+add welcome count and memory usage to /STATS z
+
+ircd/s_serv.c
+add burst welcome message
+
+ircd/s_stats.c
+add /STATS W/welcome
+
+ircd/s_user.c
+add showing of welcome messages on connect
+
+diff -r 4fae9d979552 include/handlers.h
+--- a/include/handlers.h	Tue Jan 27 13:19:27 2009 +0100
++++ b/include/handlers.h	Tue Jan 27 17:31:03 2009 +0100
 @@ -151,6 +151,7 @@
  extern int m_version(struct Client*, struct Client*, int, char*[]);
  extern int m_wallchops(struct Client*, struct Client*, int, char*[]);
@@ -24,10 +103,37 @@ diff -r a662d02e9a76 include/handlers.h
 +extern int ms_welcome(struct Client*, struct Client*, int, char*[]);
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
  
- #endif /* INCLUDED_handlers_h */
-diff -r a662d02e9a76 include/msg.h
---- a/include/msg.h	Sat Jan 24 21:39:56 2009 +0100
-+++ b/include/msg.h	Sat Jan 24 22:38:10 2009 +0100
+ extern int mh_nohelp(struct Client*, struct Client*, int, char*[]);
+@@ -308,6 +311,7 @@
+ extern int mh_wallops(struct Client*, struct Client*, int, char*[]);
+ extern int mh_wallusers(struct Client*, struct Client*, int, char*[]);
+ extern int mh_wallvoices(struct Client*, struct Client*, int, char*[]);
++extern int mh_welcome(struct Client*, struct Client*, int, char*[]);
+ extern int mh_who(struct Client*, struct Client*, int, char*[]);
+ extern int mh_whois(struct Client*, struct Client*, int, char*[]);
+ extern int mh_whowas(struct Client*, struct Client*, int, char*[]);
+diff -r 4fae9d979552 include/ircd_features.h
+--- a/include/ircd_features.h	Tue Jan 27 13:19:27 2009 +0100
++++ b/include/ircd_features.h	Tue Jan 27 17:31:03 2009 +0100
+@@ -101,6 +101,7 @@
+   FEAT_IRCD_RES_TIMEOUT,
+   FEAT_AUTH_TIMEOUT,
+   FEAT_ANNOUNCE_INVITES,
++  FEAT_WELCOME,
+ 
+   /* features that affect all operators */
+   FEAT_EXTENDED_CHECKCMD,
+@@ -143,6 +144,7 @@
+   FEAT_HIS_STATS_u,
+   FEAT_HIS_STATS_U,
+   FEAT_HIS_STATS_v,
++  FEAT_HIS_STATS_W,
+   FEAT_HIS_STATS_w,
+   FEAT_HIS_STATS_x,
+   FEAT_HIS_STATS_y,
+diff -r 4fae9d979552 include/msg.h
+--- a/include/msg.h	Tue Jan 27 13:19:27 2009 +0100
++++ b/include/msg.h	Tue Jan 27 17:31:03 2009 +0100
 @@ -195,6 +195,10 @@
  #define MSG_NOTICE              "NOTICE"        /* NOTI */
  #define TOK_NOTICE              "O"
@@ -39,10 +145,30 @@ diff -r a662d02e9a76 include/msg.h
  
  #define MSG_WALLCHOPS           "WALLCHOPS"     /* WC */
  #define TOK_WALLCHOPS           "WC"
-diff -r a662d02e9a76 include/welcome.h
+diff -r 4fae9d979552 include/numeric.h
+--- a/include/numeric.h	Tue Jan 27 13:19:27 2009 +0100
++++ b/include/numeric.h	Tue Jan 27 17:31:03 2009 +0100
+@@ -116,6 +116,7 @@
+ 	RPL_STATSGLINE	     227	   Dalnet 
+ 	RPL_STATSVLINE	     227	   unreal */
+ #define RPL_STATSALINE       226        /* Hybrid, Undernet */
++#define RPL_STATSWELCOME     227        /* QuakeNet extension */
+ #define RPL_STATSQLINE       228        /* Undernet extension */
+ #define RPL_STATSHEADER      230        /* QuakeNet extension */
+ 
+@@ -441,6 +442,8 @@
+ /*      ERR_GHOSTEDCLIENT    503           efnet */
+ /*	ERR_VWORLDWARN	     503	   austnet */
+ 
++#define ERR_NOSUCHWELCOME    509        /* QuakeNet extension */
++
+ #define ERR_SILELISTFULL     511        /* Undernet extension */
+ /*      ERR_NOTIFYFULL       512           aircd */
+ /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
+diff -r 4fae9d979552 include/welcome.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/include/welcome.h	Sat Jan 24 22:38:10 2009 +0100
-@@ -0,0 +1,43 @@
++++ b/include/welcome.h	Tue Jan 27 17:31:03 2009 +0100
+@@ -0,0 +1,74 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -66,31 +192,126 @@ diff -r a662d02e9a76 include/welcome.h
 + * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 + */
 +/** @file
-+ * @brief  Interface and declarations for welcome server handling.
-+ * @version $Id: jupe.h 1208 2004-10-03 14:12:35Z entrope $
++ * @brief  Interface and declarations for welcome message handling.
 + */
 +#ifndef INCLUDED_sys_types_h
 +#include <sys/types.h>
 +#define INCLUDED_sys_types_h
 +#endif
 +
++struct Client;
++struct StatDesc;
++
++/* TODO: no limit on local messages? */
++/* TODO: make feature? */
++#define WELCOME_MAX_ENTRIES  10 /* Maximum number of welcome entries
++                                 * (per type; 5 global, 5 local)
++                                 */
++/* TODO: use TOPICLEN? */
++#define WELCOMELEN          300 /* Maximum length of a welcome message */
++
++/* Describes a Welcome message entry. */
++struct Welcome {
++  struct Welcome*   we_next;      /**< Pointer to next Welcome. */
++  struct Welcome**  we_prev_p;    /**< Pointer to previous next pointer. */
++  int               we_name;      /**< Name of message. */
++  char*             we_text;      /**< Message */
++  char*             we_who;       /**< Who set it */
++  time_t            we_timestamp; /**< Timestamp of the welcome */
++  unsigned int      we_flags;     /**< Status flags. */
++};
++
++/** Welcome state flags */
++#define WELCOME_LOCAL    0x01 /**< welcome is local */
++/** Welcome action flags */
++#define WELCOME_ANNOUNCE 0x02 /**< announce change to users */
++
++/* test whether a Welcome is local */
++#define WelcomeIsLocal(x)  ((x)->we_flags & WELCOME_LOCAL)
++/* test whether a Welcome has a none-empty message */
++#define WelcomeIsSet(x)    ((x)->we_text[0] != '\0')
 +
 +
-+
-+
-+extern int welcome_set(struct Client *cptr, struct Client *sptr,
-+  char *reason, time_t lastmod);
++extern int welcome_do(struct Client *cptr, struct Client *sptr, char *name, char *text,
++  char *who, time_t timestamp, unsigned int flags);
++extern void welcome_announce(struct Welcome* welcome);
++extern struct Welcome *welcome_find(int name, int local);
++extern void welcome_free(struct Welcome* welcome);
 +extern void welcome_burst(struct Client *cptr);
-+extern int welcome_resend(struct Client *cptr);
-+extern int welcome_list(struct Client *sptr);
-+extern int welcome_memory_count(size_t *ju_size);
++extern int welcome_list(struct Client *sptr, int connect);
++extern void welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param);
++extern int welcome_memory_count(size_t *we_size);
 +
 +#endif /* INCLUDED_welcome_h */
 \ No newline at end of file
-diff -r a662d02e9a76 ircd/m_welcome.c
+diff -r 4fae9d979552 ircd/Makefile.in
+--- a/ircd/Makefile.in	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/Makefile.in	Tue Jan 27 17:31:03 2009 +0100
+@@ -187,6 +187,7 @@
+ 	m_wallops.c \
+ 	m_wallusers.c \
+ 	m_wallvoices.c \
++	m_welcome.c \
+ 	m_who.c \
+ 	m_whois.c \
+ 	m_whowas.c \
+@@ -214,6 +215,7 @@
+ 	send.c \
+ 	uping.c \
+ 	userload.c \
++	welcome.c \
+ 	whocmds.c \
+ 	whowas.c \
+ 	y.tab.c
+@@ -1168,6 +1170,11 @@
+   ../include/ircd_reply.h ../include/ircd_string.h \
+   ../include/ircd_chattr.h ../include/msg.h ../include/numeric.h \
+   ../include/numnicks.h ../include/s_user.h ../include/send.h
++m_welcome.o: m_welcome.c ../config.h ../include/channel.h \
++  ../include/client.h ../include/hash.h ../include/ircd.h ../include/ircd_log.h \
++  ../include/ircd_reply.h ../include/ircd_string.h ../include/msg.h \
++  ../include/numeric.h ../include/numnicks.h ../include/s_user.h \
++  ../include/send.h ../include/welcome.h
+ m_who.o: m_who.c ../config.h ../include/channel.h ../include/ircd_defs.h \
+   ../include/res.h ../config.h ../include/client.h ../include/dbuf.h \
+   ../include/msgq.h ../include/ircd_events.h ../include/ircd_handler.h \
+@@ -1429,6 +1436,13 @@
+   ../include/numnicks.h ../include/querycmds.h ../include/ircd_features.h \
+   ../include/s_misc.h ../include/s_stats.h ../include/send.h \
+   ../include/struct.h ../include/sys.h
++welcome.o: welcome.c ../config.h ../include/client.h \
++  ../include/hash.h ../include/ircd.h ../include/ircd_alloc.h \
++  ../include/ircd_features.h ../include/ircd_log.h ../include/ircd_reply.h \
++  ../include/match.h ../include/msg.h ../include/numeric.h \
++  ../include/numnicks.h ../include/s_debug.h ../include/s_bsd.h \
++  ../include/s_misc.h ../include/send.h ../include/struct.h \
++  ../include/sys.h ../include/welcome.h
+ whocmds.o: whocmds.c ../config.h ../include/whocmds.h \
+   ../include/channel.h ../include/ircd_defs.h ../include/res.h \
+   ../config.h ../include/client.h ../include/dbuf.h ../include/msgq.h \
+diff -r 4fae9d979552 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/ircd_features.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -355,6 +355,7 @@
+   F_I(IRCD_RES_TIMEOUT, 0, 4, 0),
+   F_I(AUTH_TIMEOUT, 0, 9, 0),
+   F_B(ANNOUNCE_INVITES, 0, 0, 0),
++  F_B(WELCOME, 0, 1, 0),
+ 
+   /* features that affect all operators */
+   F_B(EXTENDED_CHECKCMD, 0, 0, 0),
+@@ -397,6 +398,7 @@
+   F_B(HIS_STATS_u, 0, 1, 0),
+   F_B(HIS_STATS_U, 0, 1, 0),
+   F_B(HIS_STATS_v, 0, 1, 0),
++  F_B(HIS_STATS_W, 0, 1, 0),
+   F_B(HIS_STATS_w, 0, 1, 0),
+   F_B(HIS_STATS_x, 0, 1, 0),
+   F_B(HIS_STATS_y, 0, 1, 0),
+diff -r 4fae9d979552 ircd/m_welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_welcome.c	Sat Jan 24 22:38:10 2009 +0100
-@@ -0,0 +1,142 @@
++++ b/ircd/m_welcome.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -0,0 +1,271 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -113,7 +334,6 @@ diff -r a662d02e9a76 ircd/m_welcome.c
 + * along with this program; if not, write to the Free Software
 + * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 + *
-+ * $Id: m_welcome.c 1903 2009-01-13 03:54:45Z entrope $
 + */
 +
 +/*
@@ -178,6 +398,7 @@ diff -r a662d02e9a76 ircd/m_welcome.c
 +#include "client.h"
 +#include "hash.h"
 +#include "ircd.h"
++#include "ircd_features.h"
 +#include "ircd_log.h"
 +#include "ircd_reply.h"
 +#include "ircd_string.h"
@@ -186,6 +407,7 @@ diff -r a662d02e9a76 ircd/m_welcome.c
 +#include "numnicks.h"
 +#include "s_user.h"
 +#include "send.h"
++#include "welcome.h"
 +
 +/* #include <assert.h> -- Now using assert in ircd_log.h */
 +
@@ -196,7 +418,10 @@ diff -r a662d02e9a76 ircd/m_welcome.c
 + */
 +int m_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
-+  return 0;
++  /* feature disabled */
++  if (!feature_bool(FEAT_WELCOME))
++    return send_reply(sptr, ERR_DISABLED, "WELCOME");
++  return welcome_list(sptr, 0);
 +}
 +
 +
@@ -213,11 +438,71 @@ diff -r a662d02e9a76 ircd/m_welcome.c
 + * set global or on remote server:
 + * parv[0] = Send prefix
 + * parv[1] = Target: server or * for global
-+ * parv[2] = Text
++ * parv[2] = Name
++ * parv[3] = Text
 + */
 +int mo_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
-+  return 0;
++  char *target;
++  char *name;
++  char *who;
++  char *text;
++  time_t timestamp;
++  unsigned int flags = 0;
++  int local = 0; /* 1 when it is for me */
++  char pattern[BUFSIZE]; /* pattern for hunt_server_cmd */
++
++  /* feature disabled */
++  if (!feature_bool(FEAT_WELCOME))
++    return send_reply(sptr, ERR_DISABLED, "WELCOME");
++
++  /* listing */
++  if (parc < 2)
++    return welcome_list(sptr, 0);
++
++  /* check PRIVS */
++  if (!HasPriv(sptr,PRIV_SERVERINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
++  /* remote listing request, see if it is for me or a remote server */
++  if (parc == 2) {
++    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C", 1, parc, parv) != HUNTED_ISME)
++      return 0;
++    return welcome_list(sptr, 0);
++  }
++  
++  /* set the parameters */
++  /* less than 4 parameters, assume target was left out, making it local for me */
++  if (parc < 4) {
++    local++;
++    target = cli_name(&me);
++    name = parv[1];
++    flags |= WELCOME_LOCAL;
++  } else { /* otherwise set as it should */
++    target = parv[1];
++    name = parv[2];
++  }
++  timestamp = TStime();
++  who = cli_user(sptr)->opername;
++  text = parv[parc - 1];
++
++  /* target is not global */
++  if (!(target[0] == '*' && target[1] == '\0') && !local) {
++    /* build a pattern for hunt_server_cmd since we do not have all we need in parv */
++    ircd_snprintf(0, pattern, sizeof(pattern), "%s %s %Tu %s :%s", "%C", name, timestamp, who, text);
++    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, pattern, 1, 2, parv) != HUNTED_ISME)
++      return 0;
++    flags |= WELCOME_LOCAL; /* local welcome, for me */
++  }
++
++  /* check for anounce prefix */
++  if (*name == '!') {
++     name++;
++     flags |= WELCOME_ANNOUNCE;
++  }
++  
++  /* and do it */
++  return welcome_do(cptr, sptr, name, text, who, timestamp, flags);
 +}
 +
 +
@@ -226,19 +511,84 @@ diff -r a662d02e9a76 ircd/m_welcome.c
 + *
 + * parv[0] = Send prefix
 + * parv[1] = Target: server numeric or * for global
-+ * parv[2] = Timestamp
-+ * parv[3] = Text
++ * parv[2] = Name
++ * parv[3] = Timestamp
++ * parv[4] = Who
++ * parv[5] = Text
 + */
 +int ms_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
++  char *target;
++  char *name;
++  char *who;
++  char *text;
++  time_t timestamp;
++  unsigned int flags = 0;
++  
++  /* not enough */
++  if (parc < 2)
++    return need_more_params(sptr, "WELCOME");
++
++  /* remote listing request, see if it is for me or a remote server */
++  if (parc == 2) {
++    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C", 1, parc, parv) == HUNTED_ISME)
++      return welcome_list(sptr, 0);
++  }
++
++  /* we need at least 6 parameters to continue */  
++  if (parc < 6)
++    return need_more_params(sptr, "WELCOME");
++
++  /* set the parameters */
++  target = parv[1];
++  name = parv[2];
++  timestamp = atoi(parv[3]);
++  who = parv[4];
++  text = parv[parc - 1];
++
++  /* target is not global */
++  if (!(target[0] == '*' && target[1] == '\0')) {
++    /* not for me, and forward it */
++    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C %s %s %s :%s", 1, parc, parv) != HUNTED_ISME)
++      return 0;
++    flags |= WELCOME_LOCAL; /* local welcome, for me */
++  }
++
++  /* check for anounce prefix */
++  if (*name == '!') {
++     name++;
++     flags |= WELCOME_ANNOUNCE;
++  }
++
++  /* and do it */
++  return welcome_do(cptr, sptr, name, text, who, timestamp, flags);
++}
++
++
++/*
++ * mh_welcome - help message handler
++ */
++int mh_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  if (!IsAnOper(sptr)) {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WELCOME :WELCOME");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WELCOME :Shows welcome messages set on the server.");  
++  } else {
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WELCOME :WELCOME [<target>] [[!]<name> :<message>]");
++    send_reply(sptr, SND_EXPLICIT | RPL_HELP,
++      "WELCOME :Shows or sets welcome messages on a server.");
++  }
 +  return 0;
 +}
-diff -r a662d02e9a76 ircd/parse.c
---- a/ircd/parse.c	Sat Jan 24 21:39:56 2009 +0100
-+++ b/ircd/parse.c	Sat Jan 24 22:38:10 2009 +0100
-@@ -668,6 +668,15 @@
-     /* UNREG, CLIENT, SERVER, OPER, SERVICE */
-     { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore }
+diff -r 4fae9d979552 ircd/parse.c
+--- a/ircd/parse.c	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/parse.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -667,6 +667,15 @@
+     /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
+     { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore, mh_nohelp }
    },
 +  
 +  /* add command for WELCOME */
@@ -246,18 +596,145 @@ diff -r a662d02e9a76 ircd/parse.c
 +    MSG_WELCOME,
 +    TOK_WELCOME,
 +    0, MAXPARA, MFLG_SLOW, 0, NULL,
-+    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
-+    { m_unregistered, m_welcome, ms_welcome, mo_welcome, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_welcome, ms_welcome, mo_welcome, m_ignore, mh_welcome }
 +  },
  
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
-diff -r a662d02e9a76 ircd/welcome.c
+diff -r 4fae9d979552 ircd/s_debug.c
+--- a/ircd/s_debug.c	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/s_debug.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -50,6 +50,7 @@
+ #include "send.h"
+ #include "struct.h"
+ #include "sys.h"
++#include "welcome.h"
+ #include "whowas.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+@@ -231,7 +232,8 @@
+       aw = 0,                   /* aways set */
+       wwa = 0,                  /* whowas aways */
+       gl = 0,                   /* glines */
+-      ju = 0;                   /* jupes */
++      ju = 0,                   /* jupes */
++      we = 0;                   /* welcome messages */
+ 
+   size_t chm = 0,               /* memory used by channels */
+       chbm = 0,                 /* memory used by channel bans */
+@@ -244,6 +246,7 @@
+       wwm = 0,                  /* whowas array memory used */
+       glm = 0,                  /* memory used by glines */
+       jum = 0,                  /* memory used by jupes */
++      wem = 0,                  /* memory used by welcome messages */
+       com = 0,                  /* memory used by conf lines */
+       dbufs_allocated = 0,      /* memory used by dbufs */
+       dbufs_used = 0,           /* memory used by dbufs */
+@@ -348,8 +351,10 @@
+ 
+   gl = gline_memory_count(&glm);
+   ju = jupe_memory_count(&jum);
++  we = welcome_memory_count(&wem);
+   send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
+-	     ":Glines %d(%zu) Jupes %d(%zu)", gl, glm, ju, jum);
++	     ":Glines %d(%zu) Jupes %d(%zu) WelcomeMessages %d(%zu)",
++	     gl, glm, ju, jum, we, wem);
+ 
+   send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
+ 	     ":Hash: client %d(%zu), chan is the same", HASHSIZE,
+diff -r 4fae9d979552 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/s_err.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -486,7 +486,7 @@
+ /* 226 */
+   { RPL_STATSALINE, "%s", "226" },
+ /* 227 */
+-  { 0 },
++  { RPL_STATSWELCOME, "W %d %s %s %Tu :%s", "227" },
+ /* 228 */
+   { RPL_STATSQLINE, "Q %s :%s", "228" },
+ /* 229 */
+@@ -1050,7 +1050,7 @@
+ /* 508 */
+   { 0 },
+ /* 509 */
+-  { 0 },
++  { ERR_NOSUCHWELCOME, "%s :No such welcome", "509" },
+ /* 510 */
+   { 0 },
+ /* 511 */
+diff -r 4fae9d979552 ircd/s_serv.c
+--- a/ircd/s_serv.c	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/s_serv.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -57,6 +57,7 @@
+ #include "struct.h"
+ #include "sys.h"
+ #include "userload.h"
++#include "welcome.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+ #include <stdlib.h>
+@@ -196,6 +197,7 @@
+    */
+   gline_burst(cptr);
+   jupe_burst(cptr);
++  welcome_burst(cptr);
+ 
+   /*
+    * Pass on my client information to the new server
+diff -r 4fae9d979552 ircd/s_stats.c
+--- a/ircd/s_stats.c	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/s_stats.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -54,6 +54,7 @@
+ #include "send.h"
+ #include "struct.h"
+ #include "userload.h"
++#include "welcome.h"
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -689,9 +690,12 @@
+   { 'V', "vserversmach", (STAT_FLAG_OPERFEAT | STAT_FLAG_VARPARAM | STAT_FLAG_CASESENS), FEAT_HIS_STATS_v,
+     stats_servers_verbose, 0,
+     "Verbose server information." },
+-  { 'w', "userload", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_w,
++  { 'w', "userload", STAT_FLAG_OPERFEAT | STAT_FLAG_CASESENS, FEAT_HIS_STATS_w,
+     calc_load, 0,
+     "Userload statistics." },
++  { 'W', "welcome", STAT_FLAG_OPERFEAT | STAT_FLAG_CASESENS, FEAT_HIS_STATS_W,
++    welcome_stats, 0,
++    "Welcome messages." },
+   { 'x', "memusage", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_x,
+     stats_meminfo, 0,
+     "List usage information." },
+diff -r 4fae9d979552 ircd/s_user.c
+--- a/ircd/s_user.c	Tue Jan 27 13:19:27 2009 +0100
++++ b/ircd/s_user.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -63,6 +63,7 @@
+ #include "userload.h"
+ #include "version.h"
+ #include "whowas.h"
++#include "welcome.h"
+ 
+ #include "handlers.h" /* m_motd and m_lusers */
+ 
+@@ -411,6 +412,9 @@
+                            cli_info(sptr), NumNick(cptr) /* two %s's */);
+ 
+     IPcheck_connect_succeeded(sptr);
++
++    if (feature_bool(FEAT_WELCOME))
++      welcome_list(sptr, 1);
+   }
+   else {
+     struct Client *acptr = user->server;
+diff -r 4fae9d979552 ircd/welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/welcome.c	Sat Jan 24 22:38:10 2009 +0100
-@@ -0,0 +1,430 @@
++++ b/ircd/welcome.c	Tue Jan 27 17:31:03 2009 +0100
+@@ -0,0 +1,435 @@
 +/*
-+ * IRC - Internet Relay Chat, ircd/jupe.c
++ * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
 + *                    University of Oulu, Finland
 + * Copyright (C) 2000 Kevin L. Mitchell <klmitch@mit.edu>
@@ -277,8 +754,7 @@ diff -r a662d02e9a76 ircd/welcome.c
 + * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 + */
 +/** @file
-+ * @brief Implementation of juped server handling functions.
-+ * @version $Id: jupe.c 1633 2006-03-25 03:46:56Z entrope $
++ * @brief Implementation of welcome message handling functions.
 + */
 +#include "config.h"
 +
@@ -295,6 +771,7 @@ diff -r a662d02e9a76 ircd/welcome.c
 +#include "numeric.h"
 +#include "numnicks.h"
 +#include "s_bsd.h"
++#include "s_debug.h"
 +#include "s_misc.h"
 +#include "send.h"
 +#include "struct.h"
@@ -304,386 +781,391 @@ diff -r a662d02e9a76 ircd/welcome.c
 +/* #include <assert.h> -- Now using assert in ircd_log.h */
 +#include <string.h>
 +
-+/** List of jupes. */
-+static struct Jupe *GlobalJupeList = 0;
 +
-+/** Allocate a new jupe with the given parameters.
-+ * @param[in] server Server name to jupe.
-+ * @param[in] reason Reason for jupe.
-+ * @param[in] expire Expiration time for jupe.
-+ * @param[in] lastmod Last modification time for jupe.
-+ * @param[in] flags Flags to set for the jupe.
++/** List of welcome messages. */
++static struct Welcome *GlobalWelcomeList = 0;
++
++
++/** Allocate a new welcome with the given parameters.
++ * @param[in] name Name of the welcome message.
++ * @param[in] text The welcome message.
++ * @param[in] who Who set it.
++ * @param[in] timestamp When it was set.
++ * @return
 + */
-+static struct Jupe *
-+make_jupe(char *server, char *reason, time_t expire, time_t lastmod,
-+	  unsigned int flags)
++static struct Welcome *
++welcome_make(int name, char *text, char *who, time_t timestamp, unsigned int flags)
 +{
-+  struct Jupe *ajupe;
++  struct Welcome *awelcome;
 +
-+  ajupe = (struct Jupe*) MyMalloc(sizeof(struct Jupe)); /* alloc memory */
-+  assert(0 != ajupe);
++  awelcome = (struct Welcome*) MyMalloc(sizeof(struct Welcome)); /* alloc memory */
++  assert(0 != awelcome);
 +
-+  memset(ajupe, 0, sizeof(*ajupe));
-+  DupString(ajupe->ju_server, server); /* copy vital information */
-+  DupString(ajupe->ju_reason, reason);
-+  ajupe->ju_expire = expire;
-+  ajupe->ju_lastmod = lastmod;
-+  ajupe->ju_flags = flags & JUPE_MASK; /* set jupe flags */
++  memset(awelcome, 0, sizeof(*awelcome));
++  awelcome->we_name = name;
++  DupString(awelcome->we_text, text);
++  ircd_strncpy(who, who, HOSTLEN);
++  DupString(awelcome->we_who, who);
++  awelcome->we_timestamp = timestamp;
++  awelcome->we_flags = flags & WELCOME_LOCAL;
 +
-+  ajupe->ju_next = GlobalJupeList; /* link it into the list */
-+  ajupe->ju_prev_p = &GlobalJupeList;
-+  if (GlobalJupeList)
-+    GlobalJupeList->ju_prev_p = &ajupe->ju_next;
-+  GlobalJupeList = ajupe;
++  awelcome->we_next = GlobalWelcomeList; /* link it into the list */
++  awelcome->we_prev_p = &GlobalWelcomeList;
++  if (GlobalWelcomeList)
++    GlobalWelcomeList->we_prev_p = &awelcome->we_next;
++  GlobalWelcomeList = awelcome;
 +
-+  return ajupe;
++  return awelcome;
 +}
 +
-+/** Apply a jupe.
-+ * @param[in] cptr Local client that sent us the jupe.
-+ * @param[in] sptr Originator of the jupe.
-+ * @param[in] jupe Jupe to check.
++
++/** Change a welcome message.
++ * @param[in] cptr Local client that sent us the welcome.
++ * @param[in] sptr Originator of the welcome.
++ * @param[in] name Name of the message.
++ * @param[in] text The welcome message.
++ * @param[in] timestamp Timestamp of when the message was set.
++ * @param[in] flags Flags to set on welcome.
++ * @return Zero
 + */
-+static int
-+do_jupe(struct Client *cptr, struct Client *sptr, struct Jupe *jupe)
++int
++welcome_do(struct Client *cptr, struct Client *sptr, char *name, char *text,
++  char *who, time_t timestamp, unsigned int flags)
++{
++  struct Welcome *welcome;
++  int namenr = atoi(name);
++  char *action;
++  int notext = (text[0] == '\0') ? 1 : 0;
++
++  assert(0 != cptr);
++  assert(0 != sptr);
++  assert(0 != name);
++
++  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", \"%s\" \"%s\", %Tu, 0x%04x)",
++   cli_name(cptr), cli_name(sptr), name, text, who, timestamp, flags));
++
++  /* check name */
++  if (namenr < 1 || namenr > WELCOME_MAX_ENTRIES) {
++    if (IsUser(sptr))
++      sendcmdto_one(&me, CMD_NOTICE, sptr,
++        "%C :WELCOME: Invalid message number %s - should between 1 and %d",
++        sptr, name, WELCOME_MAX_ENTRIES); 
++    return 0;
++  }
++
++  /* find the entry */
++  welcome = welcome_find(namenr, (flags & WELCOME_LOCAL) ? 1 : 0);
++
++  /* cannot unset welcome that is not set */
++  if (!welcome && notext) {
++    /* from user, throw error */
++    if (IsUser(sptr))
++      return send_reply(sptr, ERR_NOSUCHWELCOME, name);
++     /* new local welcome from server, but empty - ignore */
++    if (flags & WELCOME_LOCAL)
++      return 0;
++    /* new global welcome message, but empty, accept from server
++     * otherwise we do not have the same state as them
++     */
++  }
++
++  /* truncate the message - do this here so what we see is what we get */
++  if (!notext)
++    ircd_strncpy(text, text, WELCOMELEN);
++
++  /* check if there is something to change */
++  if (welcome) {
++    if (!WelcomeIsLocal(welcome)) {
++      if (timestamp == welcome->we_timestamp) /* we got this version already */
++        return 0;
++      if (timestamp < welcome->we_timestamp) { /* we got a later version */
++        if (IsBurstOrBurstAck(cptr)) /* middle of a burst, it will resync on its own */
++          return 0;
++        return welcome_resend(cptr, welcome); /* resync the server */
++      }
++    } else /* local welcome, set timestamp to nettime, accept any change */
++      timestamp = TStime();
++    /* compare new message with old message */
++    if (ircd_strcmp(text, welcome->we_text) == 0) {
++      if (IsUser(sptr))
++        sendcmdto_one(&me, CMD_NOTICE, sptr,
++          "%C :WELCOME: Cannot change message for %s - nothing to change.", sptr, name); 
++      return 0;
++    }
++  }
++
++  /* set action */
++  if (flags & WELCOME_LOCAL)
++    action = notext ? "removing local" : "changing local";
++  else
++    action = notext ? "unsetting" : "changing";
++
++  /* TODO: WALLOPS for local welcome messages, so that all operators know about it? */
++  /* Inform ops */
++  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s WELCOME for %s%s%s",
++    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
++    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
++    action, name, notext ? "" : " to :", notext ? "" : text);
++
++  /* log it */
++  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s WELCOME for %s%s%s [%Tu]",
++    sptr, who, action, name, notext ? "" : " to :", notext ? "" : text, timestamp);
++
++  /* welcome set by remote user, inform oper of success */
++  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr))
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s WELCOME for %s%s%s",
++      sptr, get_client_name_and_opername(sptr), action, name,
++      notext ? "" : " to :", notext ? "" : text);
++
++  /* free old */
++  if (welcome)
++    welcome_free(welcome);
++  
++  /* local and empty */
++  if ((flags & WELCOME_LOCAL) && notext)
++    return 0;
++
++  /* make it */
++  welcome = welcome_make(namenr, text, who, timestamp, flags);
++
++  /* got to have it by now */
++  assert(0 != welcome);
++
++  /* propagate */
++  if (!(flags & WELCOME_LOCAL))
++    sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%d %Tu %s :%s",
++      (flags & WELCOME_ANNOUNCE) ? "!" : "", welcome->we_name, welcome->we_timestamp,
++      welcome->we_who, welcome->we_text);
++
++  /* announce it */
++  if ((flags & WELCOME_ANNOUNCE) && !notext)
++    welcome_announce(welcome);
++
++  return 0;
++}
++
++
++/** Announce a welcome message to local clients.
++ * @param[in] welcome Welcome message to announce.
++ */
++void
++welcome_announce(struct Welcome* welcome)
 +{
 +  struct Client *acptr;
++  struct MsgBuf *msgbuf;
 +
-+  if (!JupeIsActive(jupe)) /* no action to be taken on inactive jupes */
-+    return 0;
++  assert(0 != welcome);
 +
-+  acptr = FindServer(jupe->ju_server);
++  /* build msgbuf */
++  msgbuf = msgq_make(0, ":%C %s $* :[%s] %s", &me, MSG_NOTICE,
++    WelcomeIsLocal(welcome) ? cli_name(&me) : feature_str(FEAT_NETWORK),
++    welcome->we_text);
 +
-+  /* server isn't online or isn't local or is me */
-+  if (!acptr || !MyConnect(acptr) || IsMe(acptr))
-+    return 0;
-+
-+  return exit_client_msg(cptr, acptr, &me, "Juped: %s", jupe->ju_reason);
++  /* go over clients */
++  for (acptr = GlobalClientList; acptr; acptr = cli_next(acptr)) {
++    /* skip remote users
++     * skip unregistered clients - they see the message upon login
++     */
++    if (!MyUser(acptr) || !IsRegistered(acptr))
++      continue;
++    /* send it away */
++    send_buffer(acptr, msgbuf, 0);
++  }
 +}
 +
-+/** Forward a jupe to another server.
-+ * @param[in] cptr Local client that sent us the jupe.
-+ * @param[in] sptr Originator of the jupe.
-+ * @param[in] jupe Jupe to forward.
++
++/** Find a welcome by name.
++ * @param[in] name Welcome name to search for.
++ * @param[in] local Consider local entries.
++ * @return Matching welcome (or NULL if none match).
 + */
-+static void
-+propagate_jupe(struct Client *cptr, struct Client *sptr, struct Jupe *jupe)
++struct Welcome *
++welcome_find(int name, int local)
 +{
-+  if (JupeIsLocal(jupe)) /* don't propagate local jupes */
-+    return;
++  struct Welcome* welcome;
++  struct Welcome* swelcome;
 +
-+  sendcmdto_serv_butone(sptr, CMD_JUPE, cptr, "* %c%s %Tu %Tu :%s",
-+			JupeIsRemActive(jupe) ? '+' : '-', jupe->ju_server,
-+			jupe->ju_expire - CurrentTime, jupe->ju_lastmod,
-+			jupe->ju_reason);
++  for (welcome = GlobalWelcomeList; welcome; welcome = swelcome) { /* go through welcomes */
++    swelcome = welcome->we_next;
++    if (local != !!(welcome->we_flags & WELCOME_LOCAL))
++      continue;
++    if (name != welcome->we_name) /* found it yet? */
++      continue;
++    return welcome;
++  }
++  return 0;
 +}
 +
-+/** Add a new server jupe.
-+ * @param[in] cptr Local client that sent us the jupe.
-+ * @param[in] sptr Originator of the jupe.
-+ * @param[in] server Server name to jupe.
-+ * @param[in] reason Reason for the jupe.
-+ * @param[in] expire Jupe duration in seconds.
-+ * @param[in] lastmod Last modification timestamp (or NULL).
-+ * @param[in] flags Flags to set on jupe.
-+ * @return Zero, unless the jupe causes \a cptr to be SQUIT, in which
-+ * case CPTR_KILLED.
++
++/** Sort welcomes by name and type into an array.
++ * @return Array of pointers.
++ */
++/*
++struct Welcome *
++welcome_sort()
++{
++  struct Welcome* welcome;
++  struct Welcome* swelcome;
++  char *awelcome[2 * WELCOME_MAX_ENTRIES + 1];
++  int i;
++
++  for (welcome = GlobalWelcomeList; welcome; welcome = swelcome) {
++    swelcome = welcome->we_next;
++    i = welcome->we_name;
++    if (WelcomeIsLocal(welcome))
++      i =+ WELCOME_MAX_ENTRIES;
++    awelcome[i] = welcome;
++  }
++  return awelcome;
++}
++*/
++
++
++/** Unlink and free an unused welcome entry.
++ * @param[in] name Welcome message entry to free.
++ */
++void
++welcome_free(struct Welcome* welcome)
++{
++  /* TODO: use 0 or NULL ? */
++  assert(0 != welcome);
++
++  *welcome->we_prev_p = welcome->we_next; /* squeeze this welcome entry out */
++  if (welcome->we_next)
++    welcome->we_next->we_prev_p = welcome->we_prev_p;
++
++  MyFree(welcome->we_text); /* and free up the memory */
++  MyFree(welcome->we_who);
++  MyFree(welcome);
++}
++
++
++/** Send the full list of welcome message to \a cptr.
++ * @param[in] cptr Local server to send welcomes to.
++ */
++void
++welcome_burst(struct Client *cptr)
++{
++  struct Welcome *welcome;
++  struct Welcome *swelcome;
++
++  for (welcome = GlobalWelcomeList; welcome; welcome = swelcome) {
++    swelcome = welcome->we_next;
++    if (!WelcomeIsLocal(welcome))
++      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
++        welcome->we_name, welcome->we_timestamp, welcome->we_who, welcome->we_text);
++  }
++}
++
++
++/** Forward a welcome to another server.
++ * @param[in] cptr %Server to send welcome to.
++ * @param[in] welcome Welcome to forward.
 + */
 +int
-+jupe_add(struct Client *cptr, struct Client *sptr, char *server, char *reason,
-+	 time_t expire, time_t lastmod, unsigned int flags)
++welcome_resend(struct Client *cptr, struct Welcome *welcome)
 +{
-+  struct Jupe *ajupe;
++  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
++    welcome->we_name, welcome->we_timestamp, welcome->we_who, welcome->we_text);
++  return 0;
++}
 +
-+  assert(0 != server);
-+  assert(0 != reason);
++
++/** List welcome messages.
++ * @param[in] sptr Client requesting the listing.
++ * @param[in] connect When non zero do not report no welcome is set
++ * @return Zero.
++ */
++int
++welcome_list(struct Client *sptr, int connect)
++{
++  struct Welcome *welcome;
++  int found = 0, name = 1, local = 0;
++
++  while (name <= WELCOME_MAX_ENTRIES) {
++    welcome = welcome_find(name, local);
++    if (welcome && WelcomeIsSet(welcome)) {
++      found++;
++      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :[%s] %s",
++        sptr, local ? cli_name(&me) : feature_str(FEAT_NETWORK), welcome->we_text);
++    }
++    if (name == WELCOME_MAX_ENTRIES && !local) {
++      name = 0;
++      local = 1;
++    }
++    name++;
++  }
 +
 +  /*
-+   * You cannot set a negative (or zero) expire time, nor can you set an
-+   * expiration time for greater than JUPE_MAX_EXPIRE.
-+   */
-+  if (expire <= 0 || expire > JUPE_MAX_EXPIRE) {
-+    if (!IsServer(cptr) && MyConnect(cptr))
-+      send_reply(cptr, ERR_BADEXPIRE, expire);
-+    return 0;
++  char *awelcome[2 * WELCOME_MAX_ENTRIES + 1];
++
++  awelcome = welcome_sort();
++
++  while (i <= 2 * WELCOME_MAX_ENTRIES) {
++    i++;
++    welcome = awelcome[i];
++    if (!welcome)
++      continue;
++    found++;
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :W %d %s %s %Tu :%s",
++      sptr, welcome->we_name, WelcomeIsLocal(welcome) ? cli_name(&me) : "*",
++      welcome->we_who, welcome->we_timestamp, welcome->we_text);    
 +  }
-+
-+  expire += CurrentTime; /* convert from lifetime to timestamp */
-+
-+  /* Inform ops and log it */
-+  sendto_opmask_butone(0, SNO_NETWORK, "%s adding %sJUPE for %s, expiring at "
-+                       "%Tu: %s",
-+                       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+                         get_client_name_and_opername(sptr) :
-+                         cli_name((cli_user(sptr))->server),
-+		       flags & JUPE_LOCAL ? "local " : "", server,
-+		       expire + TSoffset, reason);
-+
-+  log_write(LS_JUPE, L_INFO, LOG_NOSNOTICE,
-+	    "%#C adding %sJUPE for %s, expiring at %Tu: %s", sptr,
-+	    flags & JUPE_LOCAL ? "local " : "", server, expire + TSoffset,
-+	    reason);
-+
-+  /* local jupe set by remote user, inform oper of success */
-+  if ((flags & JUPE_LOCAL) && IsUser(sptr) && !MyUser(sptr))
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s adding local JUPE for %s, expiring at %Tu: %s",
-+      sptr, cli_name(sptr), server, expire + TSoffset, reason);
-+
-+  /* make the jupe */
-+  ajupe = make_jupe(server, reason, expire, lastmod, flags);
-+
-+  propagate_jupe(cptr, sptr, ajupe);
-+
-+  return do_jupe(cptr, sptr, ajupe); /* remove server if necessary */
-+}
-+
-+/** Activate a jupe, optionally changing its lastmod and flags.
-+ * @param[in] cptr Local client that sent us the jupe.
-+ * @param[in] sptr Originator of the jupe.
-+ * @param[in] jupe Jupe to activate.
-+ * @param[in] lastmod New timestamp for last modification of the jupe.
-+ * @param[in] flags Flags to set on the jupe.
-+ * @return Zero, unless the jupe causes \a cptr to be SQUIT, in which
-+ * case CPTR_KILLED.
-+ */
-+int
-+jupe_activate(struct Client *cptr, struct Client *sptr, struct Jupe *jupe,
-+	      time_t lastmod, unsigned int flags)
-+{
-+  unsigned int saveflags = 0;
-+
-+  assert(0 != jupe);
-+
-+  saveflags = jupe->ju_flags;
-+
-+  if (flags & JUPE_LOCAL)
-+    jupe->ju_flags &= ~JUPE_LDEACT;
-+  else {
-+    jupe->ju_flags |= JUPE_ACTIVE;
-+
-+    if (jupe->ju_lastmod >= lastmod) /* force lastmod to increase */
-+      jupe->ju_lastmod++;
-+    else
-+      jupe->ju_lastmod = lastmod;
-+  }
-+
-+  if ((saveflags & JUPE_ACTMASK) == JUPE_ACTIVE)
-+    return 0; /* was active to begin with */
-+
-+  /* Inform ops and log it */
-+  sendto_opmask_butone(0, SNO_NETWORK, "%s activating JUPE for %s, expiring "
-+		       "at %Tu: %s",
-+                       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+                         get_client_name_and_opername(sptr) :
-+                         cli_name((cli_user(sptr))->server),
-+		       jupe->ju_server, jupe->ju_expire + TSoffset,
-+		       jupe->ju_reason);
-+
-+  log_write(LS_JUPE, L_INFO, LOG_NOSNOTICE,
-+	    "%#C activating JUPE for %s, expiring at %Tu: %s",sptr,
-+	    jupe->ju_server, jupe->ju_expire + TSoffset, jupe->ju_reason);
-+
-+  if (!(flags & JUPE_LOCAL)) /* don't propagate local changes */
-+    propagate_jupe(cptr, sptr, jupe);
-+
-+  return do_jupe(cptr, sptr, jupe);
-+}
-+
-+/** Deactivate a jupe.
-+ * @param[in] cptr Local client that sent us the jupe.
-+ * @param[in] sptr Originator of the jupe.
-+ * @param[in] jupe Jupe to deactivate.
-+ * @param[in] lastmod New timestamp for last modification of the jupe.
-+ * @param[in] flags Flags to set on the jupe.
-+ * @return Zero.
-+ */
-+int
-+jupe_deactivate(struct Client *cptr, struct Client *sptr, struct Jupe *jupe,
-+		time_t lastmod, unsigned int flags)
-+{
-+  unsigned int saveflags = 0;
-+
-+  assert(0 != jupe);
-+
-+  saveflags = jupe->ju_flags;
-+
-+  if (!JupeIsLocal(jupe)) {
-+    if (flags & JUPE_LOCAL)
-+      jupe->ju_flags |= JUPE_LDEACT;
-+    else {
-+      jupe->ju_flags &= ~JUPE_ACTIVE;
-+
-+      if (jupe->ju_lastmod >= lastmod) /* force lastmod to increase */
-+	jupe->ju_lastmod++;
-+      else
-+	jupe->ju_lastmod = lastmod;
-+    }
-+
-+    if ((saveflags & JUPE_ACTMASK) != JUPE_ACTIVE)
-+      return 0; /* was inactive to begin with */
-+  }
-+
-+  /* Inform ops and log it */
-+  sendto_opmask_butone(0, SNO_NETWORK, "%s %s JUPE for %s, expiring at %Tu: "
-+		       "%s",
-+                       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+                         get_client_name_and_opername(sptr) :
-+                         cli_name((cli_user(sptr))->server),
-+		       JupeIsLocal(jupe) ? "removing local" : "deactivating",
-+		       jupe->ju_server, jupe->ju_expire + TSoffset,
-+		       jupe->ju_reason);
-+
-+  log_write(LS_JUPE, L_INFO, LOG_NOSNOTICE,
-+	    "%#C %s JUPE for %s, expiring at %Tu: %s", sptr,
-+	    JupeIsLocal(jupe) ? "removing local" : "deactivating",
-+	    jupe->ju_server, jupe->ju_expire + TSoffset, jupe->ju_reason);
-+
-+  /* local jupe removed by remote user, inform oper of success */
-+  if ((flags & JUPE_LOCAL) && IsUser(sptr) && !MyUser(sptr))
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s removing local JUPE for %s, expiring at %Tu: %s",
-+      sptr, cli_name(sptr), jupe->ju_server, jupe->ju_expire + TSoffset, jupe->ju_reason);
-+
-+  if (JupeIsLocal(jupe))
-+    jupe_free(jupe);
-+  else if (!(flags & JUPE_LOCAL)) /* don't propagate local changes */
-+    propagate_jupe(cptr, sptr, jupe);
-+
++  */
++  if (!found && !connect)
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :No welcome message set.", sptr);  
 +  return 0;
 +}
 +
-+/** Find a jupe by name.
-+ * @param[in] server %Jupe name to search for.
-+ * @return Matching jupe (or NULL if none match).
-+ */
-+struct Jupe *
-+jupe_find(char *server)
-+{
-+  struct Jupe* jupe;
-+  struct Jupe* sjupe;
 +
-+  for (jupe = GlobalJupeList; jupe; jupe = sjupe) { /* go through jupes */
-+    sjupe = jupe->ju_next;
-+
-+    if (jupe->ju_expire <= CurrentTime) /* expire any that need expiring */
-+      jupe_free(jupe);
-+    else if (0 == ircd_strcmp(server, jupe->ju_server)) /* found it yet? */
-+      return jupe;
-+  }
-+
-+  return 0;
-+}
-+
-+/** Unlink and free an unused jupe.
-+ * @param[in] jupe Server jupe to free.
++/** Statistics callback to list Welcome messages.
++ * @param[in] sptr Client requesting statistics.
++ * @param[in] sd Stats descriptor for request (ignored).
++ * @param[in] param Extra parameter from user (ignored).
 + */
 +void
-+jupe_free(struct Jupe* jupe)
++welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param)
 +{
-+  assert(0 != jupe);
++  struct Welcome *welcome;
++  int found = 0, name = 1, local = 0;
 +
-+  *jupe->ju_prev_p = jupe->ju_next; /* squeeze this jupe out */
-+  if (jupe->ju_next)
-+    jupe->ju_next->ju_prev_p = jupe->ju_prev_p;
++  /* send header so the client knows what we are showing */
++  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
++    "W Name Target Who Timestamp :Message");
 +
-+  MyFree(jupe->ju_server);  /* and free up the memory */
-+  MyFree(jupe->ju_reason);
-+  MyFree(jupe);
-+}
-+
-+/** Send the full list of active global jupes to \a cptr.
-+ * @param[in] cptr Local server to send jupes to.
-+ */
-+void
-+jupe_burst(struct Client *cptr)
-+{
-+  struct Jupe *jupe;
-+  struct Jupe *sjupe;
-+
-+  for (jupe = GlobalJupeList; jupe; jupe = sjupe) { /* go through jupes */
-+    sjupe = jupe->ju_next;
-+
-+    if (jupe->ju_expire <= CurrentTime) /* expire any that need expiring */
-+      jupe_free(jupe);
-+    else if (!JupeIsLocal(jupe)) /* forward global jupes */
-+      sendcmdto_one(&me, CMD_JUPE, cptr, "* %c%s %Tu %Tu :%s",
-+		    JupeIsRemActive(jupe) ? '+' : '-', jupe->ju_server,
-+		    jupe->ju_expire - CurrentTime, jupe->ju_lastmod,
-+		    jupe->ju_reason);
-+  }
-+}
-+
-+/** Forward a jupe to another server.
-+ * @param[in] cptr %Server to send jupe to.
-+ * @param[in] jupe Jupe to forward.
-+ */
-+int
-+jupe_resend(struct Client *cptr, struct Jupe *jupe)
-+{
-+  if (JupeIsLocal(jupe)) /* don't propagate local jupes */
-+    return 0;
-+
-+  sendcmdto_one(&me, CMD_JUPE, cptr, "* %c%s %Tu %Tu :%s",
-+		JupeIsRemActive(jupe) ? '+' : '-', jupe->ju_server,
-+		jupe->ju_expire - CurrentTime, jupe->ju_lastmod,
-+		jupe->ju_reason);
-+
-+  return 0;
-+}
-+
-+/** Send a jupe (or a list of jupes) to a server.
-+ * @param[in] sptr Client searching for jupes.
-+ * @param[in] server Name of jupe to search for (if NULL, list all).
-+ * @return Zero.
-+ */
-+int
-+jupe_list(struct Client *sptr, char *server)
-+{
-+  struct Jupe *jupe;
-+  struct Jupe *sjupe;
-+
-+  if (server) {
-+    if (!(jupe = jupe_find(server))) /* no such jupe */
-+      return send_reply(sptr, ERR_NOSUCHJUPE, server);
-+
-+    /* send jupe information along */
-+    send_reply(sptr, RPL_JUPELIST, jupe->ju_server, jupe->ju_expire + TSoffset,
-+	       JupeIsLocal(jupe) ? cli_name(&me) : "*",
-+	       JupeIsActive(jupe) ? '+' : '-', jupe->ju_reason);
-+  } else {
-+    for (jupe = GlobalJupeList; jupe; jupe = sjupe) { /* go through jupes */
-+      sjupe = jupe->ju_next;
-+
-+      if (jupe->ju_expire <= CurrentTime) /* expire any that need expiring */
-+	jupe_free(jupe);
-+      else /* send jupe information along */
-+	send_reply(sptr, RPL_JUPELIST, jupe->ju_server,
-+		   jupe->ju_expire + TSoffset,
-+		   JupeIsLocal(jupe) ? cli_name(&me) : "*",
-+		   JupeIsActive(jupe) ? '+' : '-', jupe->ju_reason);
++  while (name <= WELCOME_MAX_ENTRIES) {
++    welcome = welcome_find(name, local);
++    if (welcome) {
++      found++;
++      send_reply(sptr, RPL_STATSWELCOME, welcome->we_name, local ? cli_name(&me) : "*",
++        welcome->we_who, welcome->we_timestamp, welcome->we_text);
 +    }
++    if (name == WELCOME_MAX_ENTRIES && !local) {
++      name = 0;
++      local = 1;
++    }
++    name++;
 +  }
-+
-+  /* end of jupe information */
-+  return send_reply(sptr, RPL_ENDOFJUPELIST);
 +}
 +
-+/** Count welcome and memory used by it.
++
++/** Count welcomes and memory used by it.
 + * @param[out] we_size Receives total number of bytes allocated for welcome.
 + * @return Number of welcomes currently allocated.
 + */
 +int
 +welcome_memory_count(size_t *we_size)
 +{
-+  struct Jupe *jupe;
-+  unsigned int ju = 0;
++  struct Welcome *welcome;
++  unsigned int we = 0;
 +
-+  for (jupe = GlobalJupeList; jupe; jupe = jupe->ju_next)
++  for (welcome = GlobalWelcomeList; welcome; welcome = welcome->we_next)
 +  {
-+    ju++;
-+    *ju_size += sizeof(struct Jupe);
-+    *ju_size += jupe->ju_server ? (strlen(jupe->ju_server) + 1) : 0;
-+    *ju_size += jupe->ju_reason ? (strlen(jupe->ju_reason) + 1) : 0;
++    we++;
++    *we_size += sizeof(struct Welcome);
++    *we_size += welcome->we_text ? (strlen(welcome->we_text) + 1) : 0;
++    *we_size += welcome->we_who ? (strlen(welcome->we_who) + 1) : 0;
 +  }
-+  return ju;
++  return we;
 +}
 \ No newline at end of file
