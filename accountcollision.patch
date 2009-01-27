@@ -11,21 +11,21 @@ ircd/s_err.c
 ircd/m_account.c
   add the account collision kills
 
-diff -r 981169e4fc94 include/ircd_features.h
---- a/include/ircd_features.h	Sat Jan 24 12:58:40 2009 +0100
-+++ b/include/ircd_features.h	Sat Jan 24 19:16:22 2009 +0100
-@@ -101,6 +101,7 @@
-   FEAT_IRCD_RES_TIMEOUT,
+diff -r 4599c781548c include/ircd_features.h
+--- a/include/ircd_features.h	Tue Jan 27 18:15:32 2009 +0100
++++ b/include/ircd_features.h	Tue Jan 27 18:19:05 2009 +0100
+@@ -102,6 +102,7 @@
    FEAT_AUTH_TIMEOUT,
    FEAT_ANNOUNCE_INVITES,
+   FEAT_WELCOME,
 +  FEAT_ACCOUNT_COLLISION_KILLS,
  
    /* features that affect all operators */
    FEAT_EXTENDED_CHECKCMD,
-diff -r 981169e4fc94 include/numeric.h
---- a/include/numeric.h	Sat Jan 24 12:58:40 2009 +0100
-+++ b/include/numeric.h	Sat Jan 24 19:16:22 2009 +0100
-@@ -357,6 +357,7 @@
+diff -r 4599c781548c include/numeric.h
+--- a/include/numeric.h	Tue Jan 27 18:15:32 2009 +0100
++++ b/include/numeric.h	Tue Jan 27 18:19:05 2009 +0100
+@@ -358,6 +358,7 @@
  /*	ERR_NORULES	     434   unreal */
  /*      ERR_SERVICECONFUSED  435 ? */
  /*	ERR_BANONCHAN	     435   dalnet */
@@ -33,20 +33,20 @@ diff -r 981169e4fc94 include/numeric.h
  #define ERR_NICKCOLLISION    436
  #define ERR_BANNICKCHANGE    437        /* Undernet extension */
       /* ERR_UNAVAILRESOURCE  437           IRCnet extension */
-diff -r 981169e4fc94 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/ircd_features.c	Sat Jan 24 19:16:22 2009 +0100
-@@ -355,6 +355,7 @@
-   F_I(IRCD_RES_TIMEOUT, 0, 4, 0),
+diff -r 4599c781548c ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Tue Jan 27 18:15:32 2009 +0100
++++ b/ircd/ircd_features.c	Tue Jan 27 18:19:05 2009 +0100
+@@ -356,6 +356,7 @@
    F_I(AUTH_TIMEOUT, 0, 9, 0),
    F_B(ANNOUNCE_INVITES, 0, 0, 0),
+   F_B(WELCOME, 0, 1, 0),
 +  F_B(ACCOUNT_COLLISION_KILLS, 0, 0, 0),
  
    /* features that affect all operators */
    F_B(EXTENDED_CHECKCMD, 0, 0, 0),
-diff -r 981169e4fc94 ircd/m_account.c
---- a/ircd/m_account.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/m_account.c	Sat Jan 24 19:16:22 2009 +0100
+diff -r 4599c781548c ircd/m_account.c
+--- a/ircd/m_account.c	Tue Jan 27 18:15:32 2009 +0100
++++ b/ircd/m_account.c	Tue Jan 27 18:19:05 2009 +0100
 @@ -82,10 +82,12 @@
  
  #include "client.h"
@@ -110,9 +110,9 @@ diff -r 981169e4fc94 ircd/m_account.c
  
      cli_user(acptr)->acc_flags = acc_flags;
  
-diff -r 981169e4fc94 ircd/s_err.c
---- a/ircd/s_err.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/s_err.c	Sat Jan 24 19:16:22 2009 +0100
+diff -r 4599c781548c ircd/s_err.c
+--- a/ircd/s_err.c	Tue Jan 27 18:15:32 2009 +0100
++++ b/ircd/s_err.c	Tue Jan 27 18:19:05 2009 +0100
 @@ -902,7 +902,7 @@
  /* 434 */
    { 0 },
