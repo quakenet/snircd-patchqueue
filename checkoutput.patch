@@ -1,0 +1,45 @@
+diff -r f1f58b86fae1 ircd/m_check.c
+--- a/ircd/m_check.c	Wed Jan 28 15:49:48 2009 +0100
++++ b/ircd/m_check.c	Wed Jan 28 16:16:50 2009 +0100
+@@ -119,8 +119,10 @@
+         break;
+         
+       case 'o':
++      case 'O':
+         flags |= CHECK_OPSONLY; /* fall through */
+       case 'u':
++      case 'U':
+         flags &= ~(CHECK_SHOWUSERS);
+         break;
+         
+@@ -128,18 +130,21 @@
+         flags |= CHECK_SHOWIPS;
+         break;
+       case 'l':
++      case 'L':
+         flags |= CHECK_OPLEVELS;
+         break;
+       case 'C':
+         flags |= CHECK_CLONES;
+         break;
+       case 's':
++      case 'S':
+         flags |= CHECK_SHOWSERVER;
+         break;
+       case 'I':
+         flags |= CHECK_SHOWHOSTIP;
+         break;
+       case 'e':
++      case 'E':
+         flags |= CHECK_SHOWMORE;
+         break; 
+      default:
+@@ -238,7 +243,7 @@
+   char *zombie, *showlevel;
+ 
+   if (flags & CHECK_SHOWUSERS) { 
+-    send_reply(sptr, RPL_DATASTR, "Users (@ = op, + = voice)");
++    send_reply(sptr, RPL_DATASTR, "Users (! = zombie, @ = op, + = voice, < = delayedjoin)");
+   }
+ 
+   if (flags & CHECK_CLONES) {
