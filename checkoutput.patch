@@ -1,6 +1,6 @@
-diff -r f1f58b86fae1 ircd/m_check.c
---- a/ircd/m_check.c	Wed Jan 28 15:49:48 2009 +0100
-+++ b/ircd/m_check.c	Wed Jan 28 16:16:50 2009 +0100
+diff -r 1efc7adbc134 ircd/m_check.c
+--- a/ircd/m_check.c	Wed Jan 28 16:24:48 2009 +0100
++++ b/ircd/m_check.c	Wed Jan 28 17:36:21 2009 +0100
 @@ -119,8 +119,10 @@
          break;
          
@@ -43,3 +43,320 @@ diff -r f1f58b86fae1 ircd/m_check.c
    }
  
    if (flags & CHECK_CLONES) {
+@@ -369,22 +374,19 @@
+   send_reply(sptr, RPL_DATASTR, " ");
+ 
+   /* Creation Time */
+-  ircd_snprintf(sptr, outbuf, sizeof(outbuf), "  Creation time:: %s (%Tu)", myctime(chptr->creationtime), chptr->creationtime);
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "  Creation time:: %s (%Tu)",
++    myctime(chptr->creationtime), chptr->creationtime);
+ 
+   /* Topic */
+   if (strlen(chptr->topic) <= 0)
+     send_reply(sptr, RPL_DATASTR, "          Topic:: <none>");
+   else {
+-    ircd_snprintf(sptr, outbuf, sizeof(outbuf), "          Topic:: %s", chptr->topic);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "          Topic:: %s", chptr->topic);
+ 
+     /* ..set by */
+-    ircd_snprintf(sptr, outbuf, sizeof(outbuf), "         Set by:: %s", chptr->topic_nick);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "         Set by:: %s", chptr->topic_nick);
+ 
+-    ircd_snprintf(sptr, outbuf, sizeof(outbuf), "         Set at:: %s (%Tu)", myctime(chptr->topic_time), chptr->topic_time);
+-    send_reply(sptr, RPL_DATASTR, outbuf); 
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "         Set at:: %s (%Tu)", myctime(chptr->topic_time), chptr->topic_time); 
+   }
+ 
+   /* Channel Modes */
+@@ -393,20 +395,14 @@
+ 
+   modebuf[0] = '\0';
+   parabuf[0] = '\0';
++  modebuf[1] = '\0';
+ 
++  /* channel_modes(sptr, modebuf, parabuf, sizeof(parabuf), chptr, member);
++   * from m_mode.c - sizeof(parabuf) instead of sizeof(modebuf) ?
++   */
+   channel_modes(sptr, modebuf, parabuf, sizeof(modebuf), chptr, NULL);
+-
+-  if(modebuf[1] == '\0')
+-      strcat(outbuf, "<none>");
+-  else if(*parabuf) {
+-    strcat(outbuf, modebuf);
+-    strcat(outbuf, " ");
+-    strcat(outbuf, parabuf);
+-  }
+-  else
+-    strcat(outbuf, modebuf);
+-
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "Channel mode(s):: %s %s",
++    modebuf ? modebuf : "<none>", parabuf);
+ 
+   /* Don't send 'END OF CHECK' message, it's sent in checkUsers, which is called after this. */
+ }
+@@ -424,44 +420,37 @@
+   send_reply(sptr, RPL_CHKHEAD, "user", cli_name(acptr));
+   send_reply(sptr, RPL_DATASTR, " ");
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "           Nick:: %s (%s%s)", cli_name(acptr), NumNick(acptr));
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "           Nick:: %s (%s%s)", cli_name(acptr), NumNick(acptr));
+ 
+-  if (MyUser(acptr)) {  
+-    ircd_snprintf(0, outbuf, sizeof(outbuf),  "      Signed on:: %s (%Tu)", myctime(acptr->cli_firsttime), acptr->cli_firsttime);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
+-  }
++  if (MyUser(acptr))  
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "      Signed on:: %s (%Tu)", myctime(acptr->cli_firsttime), acptr->cli_firsttime);
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "      Timestamp:: %s (%d)", myctime(acptr->cli_lastnick), acptr->cli_lastnick);
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "      Timestamp:: %s (%d)", myctime(acptr->cli_lastnick), acptr->cli_lastnick);
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "  User/Hostmask:: %s@%s [%s] (Clients: %hu)", cli_user(acptr)->username, cli_user(acptr)->host,
+-  ircd_ntoa(&(cli_ip(acptr))), IPcheck_nr(acptr));
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "  User/Hostmask:: %s@%s [%s] (Clients: %hu)",
++    cli_user(acptr)->username, cli_user(acptr)->host, ircd_ntoa(&(cli_ip(acptr))), IPcheck_nr(acptr));
+ 
+-  if (IsSetHost(acptr) || HasHiddenHost(acptr)) {
+-    ircd_snprintf(0, outbuf, sizeof(outbuf), " Real User/Host:: %s@%s", cli_user(acptr)->realusername, cli_user(acptr)->realhost);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
+-  }
++  if (IsSetHost(acptr) || HasHiddenHost(acptr))
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, " Real User/Host:: %s@%s", cli_user(acptr)->realusername, cli_user(acptr)->realhost);
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "      Real Name:: %s%c", cli_info(acptr), COLOR_OFF);
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  /* COLOR_OFF ? */
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "      Real Name:: %s", cli_info(acptr));
+ 
+   if( IsService(cli_user(acptr)->server)) {
+     if (IsChannelService(acptr))
+       send_reply(sptr, RPL_DATASTR, "         Status:: Network Service");
+     else if (IsAnOper(acptr))
+-      send_reply(sptr, RPL_DATASTR, "         Status:: IRC Operator (service) (ID: %s)", cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "         Status:: IRC Operator (service) (ID: %s)", cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
+     else 
+       send_reply(sptr, RPL_DATASTR, "         Status:: Client (service)");
+-  } else if (IsAnOper(acptr)) {
+-    ircd_snprintf(0, outbuf, sizeof(outbuf), "         Status:: IRC Operator (ID: %s)", cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
+-    send_reply(sptr, RPL_DATASTR, outbuf);
+-  } else
++  } else if (IsAnOper(acptr))
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "         Status:: IRC Operator (ID: %s)",
++      cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
++  else
++    /* this really needed ? */
+     send_reply(sptr, RPL_DATASTR, "         Status:: Client");
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "   Connected to:: %s (Hops: %d)", cli_name(cli_user(acptr)->server), cli_hopcount(acptr));
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "   Connected to:: %s (Hops: %d)", cli_name(cli_user(acptr)->server), cli_hopcount(acptr));
+ 
+   /* +s (SERV_NOTICE) is not relayed to us from remote servers,
+    * so we cannot tell if a remote client has that mode set.
+@@ -471,8 +460,7 @@
+ 
+   /* show the usermodes and account info (but not OperID and sethost)  */
+   umodes = umode_str(acptr, UMODE_AND_ACCOUNT);
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "    Usermode(s):: %s%s", *umodes ? "+" : "<none>", umodes);
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "    Usermode(s):: %s%s", *umodes ? "+" : "<none>", umodes);
+ 
+   if (cli_user(acptr)->joined == 0)
+     send_reply(sptr, RPL_DATASTR, "     Channel(s):: <none>");
+@@ -485,8 +473,7 @@
+      *     they are on *that* many).
+      */
+ 
+-    ircd_snprintf(0, outbuf, sizeof(outbuf), "     Channel(s):: - (total: %u)", cli_user(acptr)->joined);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "     Channel(s):: - (total: %u)", cli_user(acptr)->joined);
+   }
+   else {
+     char chntext[BUFSIZE];
+@@ -530,39 +517,31 @@
+ 
+   if (MyUser(acptr)) {
+     nowr = CurrentTime - cli_user(acptr)->last;
+-    ircd_snprintf(0, outbuf, sizeof(outbuf), "       Idle for:: %d days, %02ld:%02ld:%02ld",
+-        nowr / 86400, (nowr / 3600) % 24, (nowr / 60) % 60, nowr % 60);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "       Idle for:: %d days, %02ld:%02ld:%02ld",
++      nowr / 86400, (nowr / 3600) % 24, (nowr / 60) % 60, nowr % 60);
+   }
+ 
+   /* Away message (if applicable) */
+-  if (cli_user(acptr)->away) {
+-    ircd_snprintf(0, outbuf, sizeof(outbuf), "   Away message:: %s", cli_user(acptr)->away);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
+-  }
++  if (cli_user(acptr)->away)
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "   Away message:: %s", cli_user(acptr)->away);
+ 
+   /* If local user.. */
+   if (MyUser(acptr)) {
+     os_get_peername(con_fd(cli_connect(sptr)), &sin);
+ 
+     send_reply(sptr, RPL_DATASTR, " ");
+-    ircd_snprintf(0, outbuf, sizeof(outbuf), "          Ports:: %d -> %d (client -> server)",
+-        sin.port, cli_listener(acptr)->addr.port);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "          Ports:: %d -> %d (client -> server)",
++      sin.port, cli_listener(acptr)->addr.port);
+     if (feature_bool(FEAT_EXTENDED_CHECKCMD)) {
+       /* Note: sendq = receiveq for a client (it makes sense really) */
+-      ircd_snprintf(0, outbuf, sizeof(outbuf), "      Data sent:: %lu.%0.3u Kb (%u protocol messages)",
+-            (unsigned long)cli_receiveB(acptr) / 1024, (unsigned long)cli_receiveB(acptr) % 1024, cli_receiveM(acptr));
+-      send_reply(sptr, RPL_DATASTR, outbuf);                          
+-      ircd_snprintf(0, outbuf, sizeof(outbuf), "  Data received:: %lu.%0.3lu Kb (%u protocol messages)",
+-            (unsigned long)cli_sendB(acptr) / 1024, (unsigned long)cli_sendB(acptr) % 1024, cli_sendM(acptr));
+-      send_reply(sptr, RPL_DATASTR, outbuf);
+-      ircd_snprintf(0, outbuf, sizeof(outbuf), "  receiveQ size:: %d bytes (max. %d bytes)",
+-            DBufLength(&(cli_recvQ(acptr))), feature_int(FEAT_CLIENT_FLOOD));
+-      send_reply(sptr, RPL_DATASTR, outbuf);
+-            ircd_snprintf(0, outbuf, sizeof(outbuf), "     sendQ size:: %d bytes (max. %d bytes)",
+-            DBufLength(&(cli_sendQ(acptr))), get_sendq(acptr));                                
+-      send_reply(sptr, RPL_DATASTR, outbuf);                
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "      Data sent:: %lu.%0.3u Kb (%u protocol messages)",
++        (unsigned long)cli_receiveB(acptr) / 1024, (unsigned long)cli_receiveB(acptr) % 1024, cli_receiveM(acptr));
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "  Data received:: %lu.%0.3lu Kb (%u protocol messages)",
++        (unsigned long)cli_sendB(acptr) / 1024, (unsigned long)cli_sendB(acptr) % 1024, cli_sendM(acptr));
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "  receiveQ size:: %d bytes (max. %d bytes)",
++        DBufLength(&(cli_recvQ(acptr))), feature_int(FEAT_CLIENT_FLOOD));
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "     sendQ size:: %d bytes (max. %d bytes)",
++        DBufLength(&(cli_sendQ(acptr))), get_sendq(acptr));
+     }
+   }
+ 
+@@ -578,18 +557,17 @@
+   send_reply(sptr, RPL_CHKHEAD, "server", acptr->cli_name);
+   send_reply(sptr, RPL_DATASTR, " ");
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "   Connected at:: %s (%Tu)", myctime(acptr->cli_serv->timestamp), acptr->cli_serv->timestamp);
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "   Connected at:: %s (%Tu)",
++    myctime(acptr->cli_serv->timestamp), acptr->cli_serv->timestamp);
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "    Server name:: %s", acptr->cli_name);
+-  send_reply(sptr, RPL_DATASTR,  outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "    Server name:: %s", acptr->cli_name);
+ 
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "        Numeric:: %s --> %d", NumServ(acptr), base64toint(acptr->cli_yxx));
+-  send_reply(sptr, RPL_DATASTR, outbuf);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "        Numeric:: %s --> %d",
++    NumServ(acptr), base64toint(acptr->cli_yxx));
+   
+-  ircd_snprintf(0, outbuf, sizeof(outbuf), "          Users:: %d / %d", (acptr == &me) ? UserStats.local_clients : cli_serv(acptr)->clients, 
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "          Users:: %d / %d",
++    (acptr == &me) ? UserStats.local_clients : cli_serv(acptr)->clients, 
+     base64toint(cli_serv(acptr)->nn_capacity));
+-  send_reply(sptr, RPL_DATASTR, outbuf);
+   
+   if (IsBurst(acptr))
+     send_reply(sptr, RPL_DATASTR, "         Status:: Bursting");
+@@ -606,12 +584,14 @@
+     
+     send_reply(sptr, RPL_DATASTR, " ");
+     send_reply(sptr, RPL_DATASTR, "Downlinks::");
+-    for (slink = cli_serv(acptr)->down; slink; slink = slink->next) {
+-      ircd_snprintf(0, outbuf, sizeof(outbuf), "[%d] - %s%s", ++dlinkc, 
+-            IsBurst(slink->value.cptr) ? "*" : IsBurstAck(slink->value.cptr) ? "!" : IsService(slink->value.cptr) ? "=" : IsHub(slink->value.cptr) ? "+" : " ", 
+-            cli_name(slink->value.cptr));
+-      send_reply(sptr, RPL_DATASTR, outbuf);
+-    }
++    for (slink = cli_serv(acptr)->down; slink; slink = slink->next)
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "[%d] - %s%s",
++        ++dlinkc,
++        IsBurst(slink->value.cptr) ? "*" :
++         (IsBurstAck(slink->value.cptr) ? "!" :
++          (IsService(slink->value.cptr) ? "=" :
++           (IsHub(slink->value.cptr) ? "+" : " "))), 
++        cli_name(slink->value.cptr));
+     
+     if (!dlinkc)
+       send_reply(sptr, RPL_DATASTR, "<none>");
+@@ -686,8 +666,7 @@
+       break;
+ 
+     if(count >= 500) { /* sanity stuff */
+-      ircd_snprintf(0, outbuf, sizeof(outbuf), "More than %d results, truncating...", count);
+-      send_reply(sptr, RPL_DATASTR, outbuf);
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "More than %d results, truncating...", count);
+       break;
+     }
+ 
+@@ -723,32 +702,38 @@
+ 
+         send_reply(sptr, RPL_DATASTR, " ");
+         if (flags & CHECK_SHOWMORE)
+-          ircd_snprintf(0, outbuf, sizeof(outbuf), "No. %s  nick  user@host  [IP]  (usermodes)  :realname", (flags & CHECK_CLONES) ? "[clients]" : ""); 
++          send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "No. %s  nick  user@host  [IP]  (usermodes)  :realname",
++            (flags & CHECK_CLONES) ? "[clients]" : ""); 
+         else 
+-          ircd_snprintf(0, outbuf, sizeof(outbuf),  "%s   %-*s%-*s%s", "No.", (NICKLEN + 2), "Nick",
+-                (USERLEN + 2), "User", "Host");
+-        send_reply(sptr, RPL_DATASTR, outbuf);
++          send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "%s   %-*s%-*s%s", "No.",
++            (NICKLEN + 2), "Nick", (USERLEN + 2), "User", "Host");
+       }
+ 
+       if (flags & CHECK_SHOWMORE) {
+         /* show more information */
+         umodes = umode_str(acptr, UMODE_AND_ACCOUNT_SHORT);
+-        ircd_snprintf(0, outbuf, sizeof(outbuf), "%-4d  ", (count+1));
+         if (flags & CHECK_CLONES)
+-          ircd_snprintf(0, outbuf, sizeof(outbuf), "%s[%+3hu]    ", outbuf, IPcheck_nr(acptr));
+-        ircd_snprintf(0, outbuf, sizeof(outbuf), "%s%s  %s@%s  [%s]  (%s%s)  :%s", outbuf,
+-              acptr->cli_name,
+-              cli_user(acptr)->realusername, cli_user(acptr)->realhost,
+-              ircd_ntoa(&(cli_ip(acptr))),
+-              *umodes ? "+" : "<none>", umodes,
+-              (flags & CHECK_SHOWSERVER) ? cli_name(cli_user(acptr)->server) : cli_info(acptr));
+-      } else {
++          send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "%-4d  %s[%+3hu]    %s%s  %s@%s  [%s]  (%s%s)  :%s",
++            (count+1),
++            IPcheck_nr(acptr),
++            acptr->cli_name,
++            cli_user(acptr)->realusername, cli_user(acptr)->realhost,
++            ircd_ntoa(&(cli_ip(acptr))),
++            *umodes ? "+" : "<none>", umodes,
++            (flags & CHECK_SHOWSERVER) ? cli_name(cli_user(acptr)->server) : cli_info(acptr));
++        else
++          send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "%-4d  %s%s  %s@%s  [%s]  (%s%s)  :%s",
++            (count+1),
++            acptr->cli_name,
++            cli_user(acptr)->realusername, cli_user(acptr)->realhost,
++            ircd_ntoa(&(cli_ip(acptr))),
++            *umodes ? "+" : "<none>", umodes,
++            (flags & CHECK_SHOWSERVER) ? cli_name(cli_user(acptr)->server) : cli_info(acptr));          
++      } else
+         /* default output */
+-        ircd_snprintf(0, outbuf, sizeof(outbuf), "%-4d  %-*s%-*s%s", (count+1), (NICKLEN + 2),
+-              acptr->cli_name, (USERLEN + 2), cli_user(acptr)->realusername, 
+-              (flags & CHECK_SHOWIPS) ? ircd_ntoa(&(cli_ip(acptr))) : cli_user(acptr)->realhost);
+-      }
+-      send_reply(sptr, RPL_DATASTR, outbuf);
++        send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "%-4d  %-*s%-*s%s",
++          (count+1), (NICKLEN + 2), acptr->cli_name, (USERLEN + 2), cli_user(acptr)->realusername, 
++          (flags & CHECK_SHOWIPS) ? ircd_ntoa(&(cli_ip(acptr))) : cli_user(acptr)->realhost);
+ 
+       /* Show channel output (if applicable) - the 50 channel limit sanity check
+        * is specifically to prevent coredumping when someone lamely tries to /check
+@@ -802,10 +787,7 @@
+ 
+   if (count > 0) {
+     send_reply(sptr, RPL_DATASTR, " ");
+-
+-    ircd_snprintf(0, outbuf, sizeof(outbuf), "Matching records found:: %d", count);
+-    send_reply(sptr, RPL_DATASTR, outbuf);
+-
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, "Matching records found:: %d", count);
+     send_reply(sptr, RPL_ENDOFCHECK, " ");
+   }
+ 

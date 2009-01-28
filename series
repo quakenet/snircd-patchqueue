@@ -1,7 +1,8 @@
 who-accountid.patch
 statsheader.patch
+cprivmsgerracconly.patch
 nserverflag.patch
-checkoutput.patch
+checkoutput.patch #+check
 addnickchasetomodenick.patch
 chanopaccountabilityforkickdelayedjoin.patch
 addopkickcmd.patch
