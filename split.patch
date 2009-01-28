@@ -7,9 +7,9 @@ Add split.c split.h m_split.c
 
 NOTE: feature SPLIT is default enabled as that is just easier when working on this patch.
 
-diff -r 3ab25cd90c2e doc/api/log.txt
---- a/doc/api/log.txt	Tue Jan 27 20:50:02 2009 +0100
-+++ b/doc/api/log.txt	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff doc/api/log.txt
+--- a/doc/api/log.txt	Wed Jan 28 15:15:55 2009 +0100
++++ b/doc/api/log.txt	Wed Jan 28 15:46:43 2009 +0100
 @@ -41,7 +41,7 @@
  
  <enum>
@@ -19,9 +19,9 @@ diff -r 3ab25cd90c2e doc/api/log.txt
    LS_OPERKILL, LS_SERVKILL, LS_USER, LS_OPER, LS_RESOLVER, LS_SOCKET,
    LS_DEBUG, LS_OLDLOG,
    LS_LAST_SYSTEM
-diff -r 3ab25cd90c2e include/handlers.h
---- a/include/handlers.h	Tue Jan 27 20:50:02 2009 +0100
-+++ b/include/handlers.h	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff include/handlers.h
+--- a/include/handlers.h	Wed Jan 28 15:15:55 2009 +0100
++++ b/include/handlers.h	Wed Jan 28 15:46:43 2009 +0100
 @@ -139,6 +139,7 @@
  extern int m_registered(struct Client*, struct Client*, int, char*[]);
  extern int m_sethost(struct Client*, struct Client*, int, char*[]);
@@ -46,9 +46,9 @@ diff -r 3ab25cd90c2e include/handlers.h
  extern int ms_squit(struct Client*, struct Client*, int, char*[]);
  extern int ms_stats(struct Client*, struct Client*, int, char*[]);
  extern int ms_topic(struct Client*, struct Client*, int, char*[]);
-diff -r 3ab25cd90c2e include/ircd_features.h
---- a/include/ircd_features.h	Tue Jan 27 20:50:02 2009 +0100
-+++ b/include/ircd_features.h	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff include/ircd_features.h
+--- a/include/ircd_features.h	Wed Jan 28 15:15:55 2009 +0100
++++ b/include/ircd_features.h	Wed Jan 28 15:46:43 2009 +0100
 @@ -112,6 +112,10 @@
    FEAT_SETHOST_USER,
    FEAT_SETHOST_AUTO,
@@ -68,9 +68,9 @@ diff -r 3ab25cd90c2e include/ircd_features.h
    FEAT_HIS_STATS_s,
    FEAT_HIS_STATS_t,
    FEAT_HIS_STATS_T,
-diff -r 3ab25cd90c2e include/ircd_log.h
---- a/include/ircd_log.h	Tue Jan 27 20:50:02 2009 +0100
-+++ b/include/ircd_log.h	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff include/ircd_log.h
+--- a/include/ircd_log.h	Wed Jan 28 15:15:55 2009 +0100
++++ b/include/ircd_log.h	Wed Jan 28 15:46:43 2009 +0100
 @@ -55,6 +55,7 @@
    LS_OPERMODE,   /**< Uses of OPMODE, CLEARMODE< etc. */
    LS_GLINE,      /**< Adding, (de-)activating or removing GLINEs. */
@@ -79,9 +79,9 @@ diff -r 3ab25cd90c2e include/ircd_log.h
    LS_WHO,        /**< Use of extended WHO privileges. */
    LS_NETWORK,    /**< New server connections. */
    LS_OPERKILL,   /**< Kills by IRC operators. */
-diff -r 3ab25cd90c2e include/msg.h
---- a/include/msg.h	Tue Jan 27 20:50:02 2009 +0100
-+++ b/include/msg.h	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff include/msg.h
+--- a/include/msg.h	Wed Jan 28 15:15:55 2009 +0100
++++ b/include/msg.h	Wed Jan 28 15:46:43 2009 +0100
 @@ -336,6 +336,10 @@
  #define TOK_JUPE                "JU"
  #define CMD_JUPE		MSG_JUPE, TOK_JUPE
@@ -93,9 +93,9 @@ diff -r 3ab25cd90c2e include/msg.h
  #define MSG_OPMODE              "OPMODE"        /* OPMO */
  #define TOK_OPMODE              "OM"
  #define CMD_OPMODE		MSG_OPMODE, TOK_OPMODE
-diff -r 3ab25cd90c2e include/numeric.h
---- a/include/numeric.h	Tue Jan 27 20:50:02 2009 +0100
-+++ b/include/numeric.h	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff include/numeric.h
+--- a/include/numeric.h	Wed Jan 28 15:15:55 2009 +0100
++++ b/include/numeric.h	Wed Jan 28 15:46:43 2009 +0100
 @@ -118,6 +118,7 @@
  #define RPL_STATSALINE       226        /* Hybrid, Undernet */
  #define RPL_STATSWELCOME     227        /* QuakeNet extension */
@@ -121,9 +121,9 @@ diff -r 3ab25cd90c2e include/numeric.h
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r 3ab25cd90c2e include/split.h
+diff -r 5ec670983aff include/split.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/include/split.h	Tue Jan 27 21:14:37 2009 +0100
++++ b/include/split.h	Wed Jan 28 15:46:43 2009 +0100
 @@ -0,0 +1,106 @@
 +#ifndef INCLUDED_split_h
 +#define INCLUDED_split_h
@@ -231,9 +231,9 @@ diff -r 3ab25cd90c2e include/split.h
 +extern int split_memory_count(size_t *sp_size);
 +
 +#endif /* INCLUDED_split_h */
-diff -r 3ab25cd90c2e ircd/Makefile.in
---- a/ircd/Makefile.in	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/Makefile.in	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/Makefile.in
+--- a/ircd/Makefile.in	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/Makefile.in	Wed Jan 28 15:46:43 2009 +0100
 @@ -173,6 +173,7 @@
  	m_sethost.c \
  	m_settime.c \
@@ -291,9 +291,9 @@ diff -r 3ab25cd90c2e ircd/Makefile.in
  uping.o: uping.c ../config.h ../include/uping.h ../include/ircd_defs.h \
    ../include/ircd_events.h ../config.h ../include/res.h \
    ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r 3ab25cd90c2e ircd/ircd.c
---- a/ircd/ircd.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/ircd.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/ircd.c
+--- a/ircd/ircd.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/ircd.c	Wed Jan 28 15:46:43 2009 +0100
 @@ -55,6 +55,7 @@
  #include "s_misc.h"
  #include "s_stats.h"
@@ -312,9 +312,9 @@ diff -r 3ab25cd90c2e ircd/ircd.c
    event_loop();
  
    return 0;
-diff -r 3ab25cd90c2e ircd/ircd_features.c
---- a/ircd/ircd_features.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/ircd_features.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/ircd_features.c	Wed Jan 28 15:46:43 2009 +0100
 @@ -366,6 +366,10 @@
    F_B(SETHOST_USER, 0, 0, 0),
    F_B(SETHOST_AUTO, 0, 0, 0),
@@ -334,9 +334,9 @@ diff -r 3ab25cd90c2e ircd/ircd_features.c
    F_B(HIS_STATS_s, 0, 1, 0),
    F_B(HIS_STATS_t, 0, 1, 0),
    F_B(HIS_STATS_T, 0, 1, 0),
-diff -r 3ab25cd90c2e ircd/ircd_log.c
---- a/ircd/ircd_log.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/ircd_log.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/ircd_log.c
+--- a/ircd/ircd_log.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/ircd_log.c	Wed Jan 28 15:46:43 2009 +0100
 @@ -154,6 +154,7 @@
    S(OPERMODE, -1, SNO_HACK4),
    S(GLINE, -1, SNO_GLINE),
@@ -345,9 +345,9 @@ diff -r 3ab25cd90c2e ircd/ircd_log.c
    S(WHO, -1, 0),
    S(NETWORK, -1, SNO_NETWORK),
    S(OPERKILL, -1, 0),
-diff -r 3ab25cd90c2e ircd/m_endburst.c
---- a/ircd/m_endburst.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/m_endburst.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/m_endburst.c
+--- a/ircd/m_endburst.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/m_endburst.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -85,6 +85,7 @@
  #include "client.h"
  #include "hash.h"
@@ -383,9 +383,9 @@ diff -r 3ab25cd90c2e ircd/m_endburst.c
    if (MyConnect(sptr))
      sendcmdto_one(&me, CMD_END_OF_BURST_ACK, sptr, "");
  
-diff -r 3ab25cd90c2e ircd/m_reburst.c
---- a/ircd/m_reburst.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/m_reburst.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/m_reburst.c
+--- a/ircd/m_reburst.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/m_reburst.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -102,6 +102,7 @@
  #include "ircd_snprintf.h"
  #include "gline.h"
@@ -405,9 +405,9 @@ diff -r 3ab25cd90c2e ircd/m_reburst.c
      default:
        break;
    }
-diff -r 3ab25cd90c2e ircd/m_server.c
---- a/ircd/m_server.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/m_server.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/m_server.c
+--- a/ircd/m_server.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/m_server.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -47,6 +47,7 @@
  #include "s_misc.h"
  #include "s_serv.h"
@@ -426,9 +426,9 @@ diff -r 3ab25cd90c2e ircd/m_server.c
    /*
     * Old sendto_serv_but_one() call removed because we now need to send
     * different names to different servers (domain name matching).
-diff -r 3ab25cd90c2e ircd/m_split.c
+diff -r 5ec670983aff ircd/m_split.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_split.c	Tue Jan 27 21:14:37 2009 +0100
++++ b/ircd/m_split.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -0,0 +1,378 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_split.c
@@ -604,7 +604,7 @@ diff -r 3ab25cd90c2e ircd/m_split.c
 +  lastmod = atoi(parv[4]);
 +  lifetime = atoi(parv[5]);
 +  /* got a reason too */
-+  if (parc < 6)
++  if (parc > 5)
 +    reason = parv[parc - 1];
 +
 +  Debug((DEBUG_DEBUG, "I have a SPLIT I am acting upon now; "
@@ -808,9 +808,9 @@ diff -r 3ab25cd90c2e ircd/m_split.c
 +
 +  return split_list(sptr, parv[1]);
 +}
-diff -r 3ab25cd90c2e ircd/parse.c
---- a/ircd/parse.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/parse.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/parse.c
+--- a/ircd/parse.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/parse.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -505,6 +505,13 @@
      /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
      { m_unregistered, m_not_oper, ms_jupe, mo_jupe, m_ignore, mh_jupe }
@@ -825,9 +825,9 @@ diff -r 3ab25cd90c2e ircd/parse.c
    {
      MSG_OPMODE,
      TOK_OPMODE,
-diff -r 3ab25cd90c2e ircd/s_conf.c
---- a/ircd/s_conf.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/s_conf.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/s_conf.c
+--- a/ircd/s_conf.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/s_conf.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -53,6 +53,7 @@
  #include "s_debug.h"
  #include "s_misc.h"
@@ -844,9 +844,9 @@ diff -r 3ab25cd90c2e ircd/s_conf.c
  
    return ret;
  }
-diff -r 3ab25cd90c2e ircd/s_debug.c
---- a/ircd/s_debug.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/s_debug.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/s_debug.c
+--- a/ircd/s_debug.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/s_debug.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -48,6 +48,7 @@
  #include "s_user.h"
  #include "s_stats.h"
@@ -854,40 +854,39 @@ diff -r 3ab25cd90c2e ircd/s_debug.c
 +#include "split.h"
  #include "struct.h"
  #include "sys.h"
- #include "welcome.h"
-@@ -233,6 +234,7 @@
+ #include "whowas.h"
+@@ -231,7 +232,8 @@
+       aw = 0,                   /* aways set */
        wwa = 0,                  /* whowas aways */
        gl = 0,                   /* glines */
-       ju = 0,                   /* jupes */
-+      sp = 0,                   /* split entries */
-       we = 0;                   /* welcome messages */
+-      ju = 0;                   /* jupes */
++      ju = 0,                   /* jupes */
++      sp = 0;                   /* splits */
  
    size_t chm = 0,               /* memory used by channels */
-@@ -246,6 +248,7 @@
+       chbm = 0,                 /* memory used by channel bans */
+@@ -244,6 +246,7 @@
        wwm = 0,                  /* whowas array memory used */
        glm = 0,                  /* memory used by glines */
        jum = 0,                  /* memory used by jupes */
-+      spm = 0,                  /* memory used by split entries */
-       wem = 0,                  /* memory used by welcome messages */
++      spm = 0,                  /* memory used by splits */
        com = 0,                  /* memory used by conf lines */
        dbufs_allocated = 0,      /* memory used by dbufs */
-@@ -351,10 +354,11 @@
+       dbufs_used = 0,           /* memory used by dbufs */
+@@ -348,8 +351,9 @@
  
    gl = gline_memory_count(&glm);
    ju = jupe_memory_count(&jum);
 +  sp = split_memory_count(&spm);
-   we = welcome_memory_count(&wem);
    send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
--	     ":Glines %d(%zu) Jupes %d(%zu) WelcomeMessages %d(%zu)",
--	     gl, glm, ju, jum, we, wem);
-+	     ":Glines %d(%zu) Jupes %d(%zu) Splits %d(%zu) WelcomeMessages %d(%zu)",
-+	     gl, glm, ju, jum, sp, spm, we, wem);
+-	     ":Glines %d(%zu) Jupes %d(%zu)", gl, glm, ju, jum);
++	     ":Glines %d(%zu) Jupes %d(%zu) Splits %d(%zu)", gl, glm, ju, jum, sp, spm);
  
    send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
  	     ":Hash: client %d(%zu), chan is the same", HASHSIZE,
-diff -r 3ab25cd90c2e ircd/s_err.c
---- a/ircd/s_err.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/s_err.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/s_err.c
+--- a/ircd/s_err.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/s_err.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -490,7 +490,7 @@
  /* 228 */
    { RPL_STATSQLINE, "Q %s :%s", "228" },
@@ -918,9 +917,9 @@ diff -r 3ab25cd90c2e ircd/s_err.c
  /* 511 */
    { ERR_SILELISTFULL, "%s :Your silence list is full", "511" },
  /* 512 */
-diff -r 3ab25cd90c2e ircd/s_misc.c
---- a/ircd/s_misc.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/s_misc.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/s_misc.c
+--- a/ircd/s_misc.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/s_misc.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -53,6 +53,7 @@
  #include "s_stats.h"
  #include "s_user.h"
@@ -953,9 +952,9 @@ diff -r 3ab25cd90c2e ircd/s_misc.c
    }
  
    /*
-diff -r 3ab25cd90c2e ircd/s_serv.c
---- a/ircd/s_serv.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/s_serv.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/s_serv.c
+--- a/ircd/s_serv.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/s_serv.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -54,6 +54,7 @@
  #include "s_misc.h"
  #include "s_user.h"
@@ -972,9 +971,9 @@ diff -r 3ab25cd90c2e ircd/s_serv.c
    welcome_burst(cptr);
  
    /*
-diff -r 3ab25cd90c2e ircd/s_stats.c
---- a/ircd/s_stats.c	Tue Jan 27 20:50:02 2009 +0100
-+++ b/ircd/s_stats.c	Tue Jan 27 21:14:37 2009 +0100
+diff -r 5ec670983aff ircd/s_stats.c
+--- a/ircd/s_stats.c	Wed Jan 28 15:15:55 2009 +0100
++++ b/ircd/s_stats.c	Wed Jan 28 15:46:44 2009 +0100
 @@ -52,6 +52,7 @@
  #include "s_stats.h"
  #include "s_user.h"
@@ -995,10 +994,10 @@ diff -r 3ab25cd90c2e ircd/s_stats.c
      stats_sline, 0,
      "Spoofed hosts information." },
    { 'T', "motds", (STAT_FLAG_OPERFEAT | STAT_FLAG_CASESENS), FEAT_HIS_STATS_T,
-diff -r 3ab25cd90c2e ircd/split.c
+diff -r 5ec670983aff ircd/split.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/split.c	Tue Jan 27 21:14:37 2009 +0100
-@@ -0,0 +1,786 @@
++++ b/ircd/split.c	Wed Jan 28 15:46:44 2009 +0100
+@@ -0,0 +1,788 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/split.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1176,11 +1175,10 @@ diff -r 3ab25cd90c2e ircd/split.c
 +  if (reason[0] == '\0')
 +    ircd_snprintf(0, noreason, sizeof(noreason), "%C gave no reason.", sptr);
 +
-+  /* TODO: add opername */
 +  /* inform ops and log it */
 +  sendto_opmask_butone(0, SNO_NETWORK, "%s adding%sSPLIT for %s, expiring at %Tu: %s",
 +    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+      cli_name(sptr) : cli_name((cli_user(sptr))->server),
++      get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
 +    !(flags & SPLIT_ACTIVE) ? " deactivated " : " ",
 +    server, expire, reason[0] == '\0' ? noreason : reason);
 +
@@ -1369,11 +1367,10 @@ diff -r 3ab25cd90c2e ircd/split.c
 +               pos ? ";" : "", pos ? " and" : "", reason);
 +  }
 +
-+  /* TODO: add opername */
 +  /* All right, inform ops... */
 +  sendto_opmask_butone(0, SNO_NETWORK, "%s modifying SPLIT for %s:%s",
 +    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+      cli_name(sptr) : cli_name((cli_user(sptr))->server),
++      get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
 +    split->sp_server, buf);
 +
 +  /* and log the change */
@@ -1411,11 +1408,10 @@ diff -r 3ab25cd90c2e ircd/split.c
 +  split->sp_flags |= SPLIT_REMOVING;
 +  split->sp_flags &= ~SPLIT_ACTIVE;
 +
-+  /* TODO: add opername? */
 +  /* inform ops and log it */
 +  sendto_opmask_butone(0, SNO_NETWORK, "%s removing SPLIT for %s, expiring at %Tu: %s (%s)",
 +    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+      cli_name(sptr) : cli_name((cli_user(sptr))->server),
++      get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
 +    split->sp_server, split->sp_expire, split->sp_reason, reason);
 +
 +  log_write(LS_SPLIT, L_INFO, LOG_NOSNOTICE,
@@ -1683,9 +1679,7 @@ diff -r 3ab25cd90c2e ircd/split.c
 +split_conf()
 +{
 +  struct ConfItem *conf;
-+  struct Client *server;
 +  struct Split *split;
-+  struct Split *asplit;
 +  time_t creation = TStime(), expire = TStime() + feature_int(FEAT_SPLIT_AUTO_EXPIRE),
 +    lastmod = TStime(), lifetime = expire;
 +  unsigned int flags = SPLIT_ACTIVE;
@@ -1707,15 +1701,19 @@ diff -r 3ab25cd90c2e ircd/split.c
 +
 +  /* go over the conf contents */
 +  for (conf = GlobalConfList; conf; conf = conf->next) {
++
 +    /* not a Connect Block */
 +    if (CONF_SERVER != conf->status)
 +      continue;
++
 +    /* server is linked */
-+    if (server = FindServer(conf->name))
++    if (FindServer(conf->name))
 +      continue;
++
 +    /* we have a SPLIT for this server already */
-+    if (split = split_find(conf->name))
++    if (split_find(conf->name))
 +      continue;
++
 +    /* TODO: use SNO_OLDSNO here?
 +     * just like nickcollisions on local users go there?
 +     * or at least change the source / message format?
@@ -1731,12 +1729,12 @@ diff -r 3ab25cd90c2e ircd/split.c
 +      &me, conf->name, expire, reason);
 +
 +    /* make the split entry */
-+    asplit = split_make(conf->name, reason, creation, expire, lastmod, lifetime, flags);
++    split = split_make(conf->name, reason, creation, expire, lastmod, lifetime, flags);
 +  
-+    assert(asplit);
++    assert(split);
 +  
 +    /* and propagate it */
-+    split_propagate(&me, &me, asplit, NULL);
++    split_propagate(&me, &me, split, NULL);
 +  }
 +}
 +
@@ -1747,8 +1745,7 @@ diff -r 3ab25cd90c2e ircd/split.c
 + * @param[in] param Extra parameter from user (ignored).
 + */
 +void
-+split_stats(struct Client *sptr, const struct StatDesc *sd,
-+            char *param)
++split_stats(struct Client *sptr, const struct StatDesc *sd, char *param)
 +{
 +  struct Split *split;
 +
@@ -1757,8 +1754,12 @@ diff -r 3ab25cd90c2e ircd/split.c
 +    "S Server Creation Expire Lastmod Lifetime Status :Reason");
 +
 +  for (split = GlobalSplitList; split; split = split->sp_next) {
++
++    /* does not match */
 +    if (param && match(param, split->sp_server))
 +      continue;
++
++    /* send it */
 +    send_reply(sptr, RPL_STATSSPLIT, split->sp_server,
 +      split->sp_creation, split->sp_expire, split->sp_lastmod, split->sp_lifetime, 
 +      SplitIsActive(split) ? '+' : '-', split->sp_reason);
