@@ -21,9 +21,9 @@ add function find_message_by_cmd to find the mh_* function to call
 ircd/parse.c
 add mh_* functions in the message table
 
-diff -r 3fc56aefcea6 include/handlers.h
---- a/include/handlers.h	Tue Jan 27 18:27:54 2009 +0100
-+++ b/include/handlers.h	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb include/handlers.h
+--- a/include/handlers.h	Thu Jan 29 21:48:27 2009 +0100
++++ b/include/handlers.h	Thu Jan 29 21:50:11 2009 +0100
 @@ -244,5 +244,77 @@
  extern int ms_wallvoices(struct Client*, struct Client*, int, char*[]);
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
@@ -102,9 +102,9 @@ diff -r 3fc56aefcea6 include/handlers.h
 +
  #endif /* INCLUDED_handlers_h */
  
-diff -r 3fc56aefcea6 include/ircd_handler.h
---- a/include/ircd_handler.h	Tue Jan 27 18:27:54 2009 +0100
-+++ b/include/ircd_handler.h	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb include/ircd_handler.h
+--- a/include/ircd_handler.h	Thu Jan 29 21:48:27 2009 +0100
++++ b/include/ircd_handler.h	Thu Jan 29 21:50:11 2009 +0100
 @@ -36,6 +36,7 @@
    SERVER_HANDLER,       /**< Used for server conections. */
    OPER_HANDLER,         /**< Used for IRC operators. */
@@ -113,9 +113,9 @@ diff -r 3fc56aefcea6 include/ircd_handler.h
    LAST_HANDLER_TYPE     /**< NUmber of handler types. */
  } HandlerType;
  
-diff -r 3fc56aefcea6 include/msg.h
---- a/include/msg.h	Tue Jan 27 18:27:54 2009 +0100
-+++ b/include/msg.h	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb include/msg.h
+--- a/include/msg.h	Thu Jan 29 21:48:27 2009 +0100
++++ b/include/msg.h	Thu Jan 29 21:50:11 2009 +0100
 @@ -410,7 +410,7 @@
     * parv = parameter variable array
     */
@@ -125,9 +125,9 @@ diff -r 3fc56aefcea6 include/msg.h
     */
    MessageHandler handlers[LAST_HANDLER_TYPE];
  };
-diff -r 3fc56aefcea6 include/numeric.h
---- a/include/numeric.h	Tue Jan 27 18:27:54 2009 +0100
-+++ b/include/numeric.h	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb include/numeric.h
+--- a/include/numeric.h	Thu Jan 29 21:48:27 2009 +0100
++++ b/include/numeric.h	Thu Jan 29 21:50:11 2009 +0100
 @@ -292,6 +292,9 @@
  #define RPL_MOTDSTART        375
  #define RPL_ENDOFMOTD        376
@@ -154,9 +154,9 @@ diff -r 3fc56aefcea6 include/numeric.h
  /*	RPL_LOGON	     600	dalnet,unreal
  	RPL_LOGOFF           601	dalnet,unreal
  	RPL_WATCHOFF         602	dalnet,unreal
-diff -r 3fc56aefcea6 include/parse.h
---- a/include/parse.h	Tue Jan 27 18:27:54 2009 +0100
-+++ b/include/parse.h	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb include/parse.h
+--- a/include/parse.h	Thu Jan 29 21:48:27 2009 +0100
++++ b/include/parse.h	Thu Jan 29 21:50:11 2009 +0100
 @@ -15,6 +15,7 @@
  extern int parse_client(struct Client *cptr, char *buffer, char *bufend);
  extern int parse_server(struct Client *cptr, char *buffer, char *bufend);
@@ -165,9 +165,9 @@ diff -r 3fc56aefcea6 include/parse.h
  
  extern int register_mapping(struct s_map *map);
  extern int unregister_mapping(struct s_map *map);
-diff -r 3fc56aefcea6 ircd/m_defaults.c
---- a/ircd/m_defaults.c	Tue Jan 27 18:27:54 2009 +0100
-+++ b/ircd/m_defaults.c	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb ircd/m_defaults.c
+--- a/ircd/m_defaults.c	Thu Jan 29 21:48:27 2009 +0100
++++ b/ircd/m_defaults.c	Thu Jan 29 21:50:11 2009 +0100
 @@ -119,3 +119,18 @@
  {
    return 0;
@@ -187,10 +187,9 @@ diff -r 3fc56aefcea6 ircd/m_defaults.c
 +{
 +  return send_reply(sptr, SND_EXPLICIT | RPL_HELP, "%s :This command is for servers only.", parv[1]);
 +}
-\ No newline at end of file
-diff -r 3fc56aefcea6 ircd/m_help.c
---- a/ircd/m_help.c	Tue Jan 27 18:27:54 2009 +0100
-+++ b/ircd/m_help.c	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb ircd/m_help.c
+--- a/ircd/m_help.c	Thu Jan 29 21:48:27 2009 +0100
++++ b/ircd/m_help.c	Thu Jan 29 21:50:11 2009 +0100
 @@ -90,6 +90,7 @@
  #include "msg.h"
  #include "numeric.h"
@@ -1414,10 +1413,9 @@ diff -r 3fc56aefcea6 ircd/m_help.c
 +  }
 +  return 0;
 +}
-\ No newline at end of file
-diff -r 3fc56aefcea6 ircd/parse.c
---- a/ircd/parse.c	Tue Jan 27 18:27:54 2009 +0100
-+++ b/ircd/parse.c	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb ircd/parse.c
+--- a/ircd/parse.c	Thu Jan 29 21:48:27 2009 +0100
++++ b/ircd/parse.c	Thu Jan 29 21:50:11 2009 +0100
 @@ -110,534 +110,534 @@
      MSG_PRIVATE,
      TOK_PRIVATE,
@@ -2159,9 +2157,9 @@ diff -r 3fc56aefcea6 ircd/parse.c
  
    add_msg_element(&msg_tree, msg, msg->cmd);
    map->msg = msg;
-diff -r 3fc56aefcea6 ircd/s_err.c
---- a/ircd/s_err.c	Tue Jan 27 18:27:54 2009 +0100
-+++ b/ircd/s_err.c	Tue Jan 27 20:49:11 2009 +0100
+diff -r a9a01fcf9bfb ircd/s_err.c
+--- a/ircd/s_err.c	Thu Jan 29 21:48:27 2009 +0100
++++ b/ircd/s_err.c	Thu Jan 29 21:50:11 2009 +0100
 @@ -786,9 +786,9 @@
  /* 376 */
    { RPL_ENDOFMOTD, ":End of /MOTD command.", "376" },
