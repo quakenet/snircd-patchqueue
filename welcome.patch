@@ -71,9 +71,9 @@ add /STATS W/welcome
 ircd/s_user.c
 add showing of welcome messages on connect
 
-diff -r 5dc1ce46a213 include/handlers.h
---- a/include/handlers.h	Thu Jan 29 14:02:56 2009 +0100
-+++ b/include/handlers.h	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 include/handlers.h
+--- a/include/handlers.h	Fri Jan 30 11:47:37 2009 +0100
++++ b/include/handlers.h	Fri Jan 30 13:14:46 2009 +0100
 @@ -151,6 +151,7 @@
  extern int m_version(struct Client*, struct Client*, int, char*[]);
  extern int m_wallchops(struct Client*, struct Client*, int, char*[]);
@@ -106,9 +106,9 @@ diff -r 5dc1ce46a213 include/handlers.h
  extern int mh_who(struct Client*, struct Client*, int, char*[]);
  extern int mh_whois(struct Client*, struct Client*, int, char*[]);
  extern int mh_whowas(struct Client*, struct Client*, int, char*[]);
-diff -r 5dc1ce46a213 include/ircd_features.h
---- a/include/ircd_features.h	Thu Jan 29 14:02:56 2009 +0100
-+++ b/include/ircd_features.h	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 include/ircd_features.h
+--- a/include/ircd_features.h	Fri Jan 30 11:47:37 2009 +0100
++++ b/include/ircd_features.h	Fri Jan 30 13:14:46 2009 +0100
 @@ -101,6 +101,7 @@
    FEAT_IRCD_RES_TIMEOUT,
    FEAT_AUTH_TIMEOUT,
@@ -125,9 +125,9 @@ diff -r 5dc1ce46a213 include/ircd_features.h
    FEAT_HIS_STATS_w,
    FEAT_HIS_STATS_x,
    FEAT_HIS_STATS_y,
-diff -r 5dc1ce46a213 include/msg.h
---- a/include/msg.h	Thu Jan 29 14:02:56 2009 +0100
-+++ b/include/msg.h	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 include/msg.h
+--- a/include/msg.h	Fri Jan 30 11:47:37 2009 +0100
++++ b/include/msg.h	Fri Jan 30 13:14:46 2009 +0100
 @@ -196,6 +196,10 @@
  #define TOK_NOTICE              "O"
  #define CMD_NOTICE		MSG_NOTICE, TOK_NOTICE
@@ -139,9 +139,9 @@ diff -r 5dc1ce46a213 include/msg.h
  #define MSG_WALLCHOPS           "WALLCHOPS"     /* WC */
  #define TOK_WALLCHOPS           "WC"
  #define CMD_WALLCHOPS		MSG_WALLCHOPS, TOK_WALLCHOPS
-diff -r 5dc1ce46a213 include/numeric.h
---- a/include/numeric.h	Thu Jan 29 14:02:56 2009 +0100
-+++ b/include/numeric.h	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 include/numeric.h
+--- a/include/numeric.h	Fri Jan 30 11:47:37 2009 +0100
++++ b/include/numeric.h	Fri Jan 30 13:14:46 2009 +0100
 @@ -116,6 +116,7 @@
  	RPL_STATSGLINE	     227	   Dalnet 
  	RPL_STATSVLINE	     227	   unreal */
@@ -159,10 +159,10 @@ diff -r 5dc1ce46a213 include/numeric.h
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r 5dc1ce46a213 include/welcome.h
+diff -r 42bf40ebc839 include/welcome.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/include/welcome.h	Thu Jan 29 20:07:03 2009 +0100
-@@ -0,0 +1,56 @@
++++ b/include/welcome.h	Fri Jan 30 13:14:46 2009 +0100
+@@ -0,0 +1,60 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -197,13 +197,17 @@ diff -r 5dc1ce46a213 include/welcome.h
 +struct StatDesc;
 +
 +/* Maximum number of welcome entries (per type; X global, X local) */
-+#define WELCOME_MAX_ENTRIES  10 
++#define WELCOME_MAX_ENTRIES  10
++/* Maximum timestamp drift in seconds allowed ahead of our idea of nettime
++ * before we throw a warning to ops
++ */
++#define WELCOME_MAX_DRIFT   600
 +
 +/* Describes a Welcome message entry. */
 +struct Welcome {
-+  char               text[TOPICLEN];   /**< Message */
-+  char               who[ACCOUNTLEN];  /**< Who set it */
-+  time_t             timestamp;        /**< Timestamp of the welcome */
++  time_t             timestamp;            /**< Timestamp of the welcome */
++  char               text[TOPICLEN + 1];   /**< Message */
++  char               who[ACCOUNTLEN + 1];  /**< Who set it */
 +};
 +
 +/** Welcome type flags */
@@ -219,9 +223,9 @@ diff -r 5dc1ce46a213 include/welcome.h
 +extern void welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param);
 +
 +#endif /* INCLUDED_welcome_h */
-diff -r 5dc1ce46a213 ircd/Makefile.in
---- a/ircd/Makefile.in	Thu Jan 29 14:02:56 2009 +0100
-+++ b/ircd/Makefile.in	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 ircd/Makefile.in
+--- a/ircd/Makefile.in	Fri Jan 30 11:47:37 2009 +0100
++++ b/ircd/Makefile.in	Fri Jan 30 13:14:46 2009 +0100
 @@ -187,6 +187,7 @@
  	m_wallops.c \
  	m_wallusers.c \
@@ -264,9 +268,9 @@ diff -r 5dc1ce46a213 ircd/Makefile.in
  whocmds.o: whocmds.c ../config.h ../include/whocmds.h \
    ../include/channel.h ../include/ircd_defs.h ../include/res.h \
    ../config.h ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r 5dc1ce46a213 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Thu Jan 29 14:02:56 2009 +0100
-+++ b/ircd/ircd_features.c	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Fri Jan 30 11:47:37 2009 +0100
++++ b/ircd/ircd_features.c	Fri Jan 30 13:14:46 2009 +0100
 @@ -355,6 +355,7 @@
    F_I(IRCD_RES_TIMEOUT, 0, 4, 0),
    F_I(AUTH_TIMEOUT, 0, 9, 0),
@@ -283,10 +287,10 @@ diff -r 5dc1ce46a213 ircd/ircd_features.c
    F_B(HIS_STATS_w, 0, 1, 0),
    F_B(HIS_STATS_x, 0, 1, 0),
    F_B(HIS_STATS_y, 0, 1, 0),
-diff -r 5dc1ce46a213 ircd/m_welcome.c
+diff -r 42bf40ebc839 ircd/m_welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_welcome.c	Thu Jan 29 20:07:03 2009 +0100
-@@ -0,0 +1,269 @@
++++ b/ircd/m_welcome.c	Fri Jan 30 13:14:46 2009 +0100
+@@ -0,0 +1,300 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -390,12 +394,29 @@ diff -r 5dc1ce46a213 ircd/m_welcome.c
 + * m_welcome - local generic message handler
 + *
 + * parv[0] = Send prefix
++ * parv[1] = [remote server to query]
 + */
 +int m_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
 +  /* feature disabled */
 +  if (!feature_bool(FEAT_WELCOME))
 +    return send_reply(sptr, ERR_DISABLED, "WELCOME");
++
++  /* only opers can set the welcome messages */
++  if (parc > 2)
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
++  /* remote listing request, see if it is for me or a remote server
++   *  check FEAT_HIS_REMOTE to decide if an ordinary user can do this
++   */
++  if (parc == 2) {
++    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, feature_int(FEAT_HIS_REMOTE),
++      "%C", 1, parc, parv) != HUNTED_ISME)
++      return 0;
++    return welcome_list(sptr, 0);
++  }
++
++  /* just local listing */
 +  return welcome_list(sptr, 0);
 +}
 +
@@ -412,7 +433,7 @@ diff -r 5dc1ce46a213 ircd/m_welcome.c
 + *
 + * set global or on remote server:
 + * parv[0] = Send prefix
-+ * parv[1] = Target: server or * for global
++ * parv[1] = Target: server or * for global (or left out for this server)
 + * parv[2] = Name
 + * parv[3] = Text
 + */
@@ -421,7 +442,7 @@ diff -r 5dc1ce46a213 ircd/m_welcome.c
 +  char *target, *name, *who, *text, pattern[BUFSIZE];
 +  time_t timestamp;
 +  unsigned int flags = 0;
-+  int local = 0; /* 1 when it is for me */
++  int local = 0;
 +
 +  /* feature disabled */
 +  if (!feature_bool(FEAT_WELCOME))
@@ -444,13 +465,16 @@ diff -r 5dc1ce46a213 ircd/m_welcome.c
 +  }
 +  
 +  /* set the parameters */
-+  /* less than 4 parameters, assume target was left out, making it local for me */
++
++  /* target not given, only name - setting local welcome */
 +  if (parc < 4) {
 +    local++;
 +    target = cli_name(&me);
 +    name = parv[1];
 +    flags |= WELCOME_LOCAL;
-+  } else { /* otherwise set as it should */
++
++  /* target and name given */
++  } else {
 +    target = parv[1];
 +    name = parv[2];
 +  }
@@ -460,11 +484,14 @@ diff -r 5dc1ce46a213 ircd/m_welcome.c
 +
 +  /* target is not global */
 +  if (!(target[0] == '*' && target[1] == '\0') && !local) {
++
 +    /* build a pattern for hunt_server_cmd since we do not have all we need in parv */
 +    ircd_snprintf(0, pattern, sizeof(pattern), "%s %s %Tu %s :%s", "%C", name, timestamp, who, text);
 +    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, pattern, 1, 2, parv) != HUNTED_ISME)
 +      return 0;
-+    flags |= WELCOME_LOCAL; /* local welcome, for me */
++
++   /* else it is a local welcome, for me */
++    flags |= WELCOME_LOCAL; 
 +  }
 +
 +  /* TODO: disallow global announcement from oper?
@@ -498,33 +525,41 @@ diff -r 5dc1ce46a213 ircd/m_welcome.c
 +  time_t timestamp;
 +  unsigned int flags = 0;
 +  
-+  /* not enough */
-+  if (parc < 2)
++  /* not enough - complain */
++  if (parc < 2) {
++    protocol_violation(sptr, "Too few parameters for WELCOME (got %d - need 2)", parc);
 +    return need_more_params(sptr, "WELCOME");
++  }
 +
 +  /* remote listing request, see if it is for me or a remote server */
 +  if (parc == 2) {
-+    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C", 1, parc, parv) == HUNTED_ISME)
-+      return welcome_list(sptr, 0);
++    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C", 1, parc, parv) != HUNTED_ISME)
++      return 0;
++    return welcome_list(sptr, 0);
 +  }
 +
-+  /* we need at least 6 parameters to continue */  
-+  if (parc < 6)
++  /* we need at least 6 parameters to continue - complain */  
++  if (parc < 6) {
++    protocol_violation(sptr, "Too few parameters for WELCOME (got %d - need 6)", parc);
 +    return need_more_params(sptr, "WELCOME");
++  }
 +
 +  /* set the parameters */
 +  target = parv[1];
 +  name = parv[2];
 +  timestamp = atoi(parv[3]);
 +  who = parv[4];
-+  text = parv[parc - 1];
++  text = parv[parc - 1]; /* parse reason as last parameter */
 +
 +  /* target is not global */
 +  if (!(target[0] == '*' && target[1] == '\0')) {
++
 +    /* not for me, and forward it */
 +    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C %s %s %s :%s", 1, parc, parv) != HUNTED_ISME)
 +      return 0;
-+    flags |= WELCOME_LOCAL; /* local welcome, for me */
++
++    /* local welcome for me */
++    flags |= WELCOME_LOCAL; 
 +  }
 +
 +  /* check for anounce prefix */
@@ -556,9 +591,9 @@ diff -r 5dc1ce46a213 ircd/m_welcome.c
 +  }
 +  return 0;
 +}
-diff -r 5dc1ce46a213 ircd/parse.c
---- a/ircd/parse.c	Thu Jan 29 14:02:56 2009 +0100
-+++ b/ircd/parse.c	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 ircd/parse.c
+--- a/ircd/parse.c	Fri Jan 30 11:47:37 2009 +0100
++++ b/ircd/parse.c	Fri Jan 30 13:14:46 2009 +0100
 @@ -667,6 +667,15 @@
      /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
      { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore, mh_nohelp }
@@ -575,9 +610,9 @@ diff -r 5dc1ce46a213 ircd/parse.c
  
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
-diff -r 5dc1ce46a213 ircd/s_err.c
---- a/ircd/s_err.c	Thu Jan 29 14:02:56 2009 +0100
-+++ b/ircd/s_err.c	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 ircd/s_err.c
+--- a/ircd/s_err.c	Fri Jan 30 11:47:37 2009 +0100
++++ b/ircd/s_err.c	Fri Jan 30 13:14:46 2009 +0100
 @@ -486,7 +486,7 @@
  /* 226 */
    { RPL_STATSALINE, "%s", "226" },
@@ -596,9 +631,9 @@ diff -r 5dc1ce46a213 ircd/s_err.c
  /* 510 */
    { 0 },
  /* 511 */
-diff -r 5dc1ce46a213 ircd/s_serv.c
---- a/ircd/s_serv.c	Thu Jan 29 14:02:56 2009 +0100
-+++ b/ircd/s_serv.c	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 ircd/s_serv.c
+--- a/ircd/s_serv.c	Fri Jan 30 11:47:37 2009 +0100
++++ b/ircd/s_serv.c	Fri Jan 30 13:14:46 2009 +0100
 @@ -57,6 +57,7 @@
  #include "struct.h"
  #include "sys.h"
@@ -615,9 +650,9 @@ diff -r 5dc1ce46a213 ircd/s_serv.c
  
    /*
     * Pass on my client information to the new server
-diff -r 5dc1ce46a213 ircd/s_stats.c
---- a/ircd/s_stats.c	Thu Jan 29 14:02:56 2009 +0100
-+++ b/ircd/s_stats.c	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 ircd/s_stats.c
+--- a/ircd/s_stats.c	Fri Jan 30 11:47:37 2009 +0100
++++ b/ircd/s_stats.c	Fri Jan 30 13:14:46 2009 +0100
 @@ -54,6 +54,7 @@
  #include "send.h"
  #include "struct.h"
@@ -640,9 +675,9 @@ diff -r 5dc1ce46a213 ircd/s_stats.c
    { 'x', "memusage", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_x,
      stats_meminfo, 0,
      "List usage information." },
-diff -r 5dc1ce46a213 ircd/s_user.c
---- a/ircd/s_user.c	Thu Jan 29 14:02:56 2009 +0100
-+++ b/ircd/s_user.c	Thu Jan 29 20:07:03 2009 +0100
+diff -r 42bf40ebc839 ircd/s_user.c
+--- a/ircd/s_user.c	Fri Jan 30 11:47:37 2009 +0100
++++ b/ircd/s_user.c	Fri Jan 30 13:14:46 2009 +0100
 @@ -63,6 +63,7 @@
  #include "userload.h"
  #include "version.h"
@@ -661,10 +696,10 @@ diff -r 5dc1ce46a213 ircd/s_user.c
    }
    else {
      struct Client *acptr = user->server;
-diff -r 5dc1ce46a213 ircd/welcome.c
+diff -r 42bf40ebc839 ircd/welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/welcome.c	Thu Jan 29 20:07:03 2009 +0100
-@@ -0,0 +1,355 @@
++++ b/ircd/welcome.c	Fri Jan 30 13:14:46 2009 +0100
+@@ -0,0 +1,373 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -715,8 +750,7 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +
 +
 +/** List of welcome messages - first MAX for global, second MAX for local */
-+static struct Welcome WelcomeArray[WELCOME_MAX_ENTRIES * 2]; 
-+
++static struct Welcome WelcomeArray[WELCOME_MAX_ENTRIES * 2] = { { 0 } };
 +
 +
 +/** Allocate a new welcome with the given parameters.
@@ -756,20 +790,14 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
-+  int notext = (text[0] == '\0') ? 1 : 0;  /* 1 when text is empty */
-+  char *action;                            /* used for logging */
-+  /* TODO: these needed? */
-+  /*
-+  who[ACCOUNTLEN-1] = 0;
-+  text[WELCOMELEN-1] = 0;
-+  */
++  char oldtext[TOPICLEN + 1];              /* save old text when unsetting */
++  static time_t rate;
 +
-+  /* TODO: NULL or 0 ? they are pointers, so NULL? */
-+  assert(0 != cptr);
-+  assert(0 != sptr);
-+  assert(0 != name);
-+  /* TODO: assert(0 != text); */
-+  assert(0 != who);
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(NULL != name);
++  assert(NULL != text);
++  assert(NULL != who);
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", \"%s\" \"%s\", %Tu, 0x%04x)",
@@ -789,44 +817,38 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +    namearray += WELCOME_MAX_ENTRIES;
 +
 +  /* cannot unset welcome that is not set */
-+  if (WelcomeArray[namearray].timestamp == 0 && notext) {
++  if (WelcomeArray[namearray].timestamp == 0 && EmptyString(text)) {
++
 +    /* from user, throw error */
 +    if (IsUser(sptr))
 +      return send_reply(sptr, ERR_NOSUCHWELCOME, name);
-+     /* new local welcome from server, but empty - ignore */
++
++     /* new local welcome from server, but empty - ignore
++      * we do accept a new global welcome message that is empty 
++      */
 +    if (flags & WELCOME_LOCAL)
 +      return 0;
-+    /* new global welcome message, but empty, accept from server
-+     * otherwise we do not have the same state as them
-+     */
 +  }
 +
-+  /* TODO: check if we receive an entry with a timestamp >> TStime()
-+   * ..so from the future
-+   * something is wrong there - either side is wrong about the time (or both)
-+   *
-+   * if we accept a global welcome message with a timestamp far into the future
-+   * it will not be possible to change it - well, not until we pass that point in time
-+   * or /settime to get to it, or hack with a service..
-+   *
-+   * how to handle this - like CREATE and settime? hm, or throw error to ops?
-+   */
 +  /* check if there is something to change */
-+  if (WelcomeArray[namearray].timestamp != 0) { /* we got a record for it */
-+    if (namearray < WELCOME_MAX_ENTRIES) { /* global */
-+      if (timestamp == WelcomeArray[namearray].timestamp) /* we got this version already */
-+        return 0;
-+      if (timestamp < WelcomeArray[namearray].timestamp) { /* we got a later version */
-+        if (IsBurstOrBurstAck(cptr)) /* middle of a burst, it will resync on its own */
-+          return 0;
-+        return welcome_resend(cptr, namearray); /* resync the server */
-+      }
-+    } else
-+      /* local welcome, set timestamp to nettime, accept any change
-+       * we parse local welcome messages in the order we receive them
-+       * they cannot cross on the network and are not bursted,
-+       * and thus timestamp is not required for conflict resolving.
++  /* we got a record for it */
++  if (WelcomeArray[namearray].timestamp != 0) {
++
++    /* global */
++    if (namearray < WELCOME_MAX_ENTRIES) {
++
++      /* netburst and we got the same or a newer one
++       *
++       *   we only use the timestamp for resolving conflicts in net burst
++       *   outside of netburst, we simply parse whatever we get
++       *   this way we will not get stuck with a welcome message set by a server
++       *   running ahead with the time
 +       */
++      if (IsBurstOrBurstAck(cptr) && timestamp <= WelcomeArray[namearray].timestamp)
++        return 0;
++
++    /* local welcome - we use our idea of the time */
++    } else
 +      timestamp = TStime();
 +
 +    /* compare new message with old message */
@@ -839,34 +861,71 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +    }
 +  }
 +
++  /* TODO: rate limited for what? max 10 welcome messages..? */
++  /* possible timestamp drift - warn ops */
++  if (timestamp - TStime() > WELCOME_MAX_DRIFT) {
++    sendto_opmask_butone_ratelimited(0, SNO_NETWORK, &rate,
++      "Possible timestamp drift from %C; timestamp in WELCOME message is %is ahead of time",
++      IsServer(sptr) ? sptr : cli_user(sptr)->server, timestamp - TStime());
++
++    /* warn remote oper too */
++    if (IsUser(sptr))
++      sendcmdto_one(&me, CMD_NOTICE, sptr,
++        "%C :Possible timestamp drift from %C; timestamp in WELCOME message is %is ahead of time",
++        sptr, cli_user(sptr)->server, timestamp - TStime()); 
++  }
++
++  /* unsetting - do not announce, save text */
++  if (EmptyString(text)) {
++    flags &= ~WELCOME_ANNOUNCE;
++    ircd_strncpy(oldtext, WelcomeArray[namearray].text, TOPICLEN);
++  }
++
 +  /* update */
 +  welcome_make(namearray, text, who, timestamp);
 +
-+  /* set action */
-+  if (flags & WELCOME_LOCAL)
-+    action = notext ? "removing local" : "changing local";
-+  else
-+    action = notext ? "unsetting" : "changing";
-+
-+  /* TODO: WALLOPS for local welcome messages, so that all operators know about it? */
 +  /* inform ops */
-+  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s WELCOME for %d%s%s",
++  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s%s%sWELCOME %d \"%s\" [%Tu]",
 +    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
 +    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
-+    action, nameint, notext ? "" : " to :", notext ? "" : WelcomeArray[namearray].text);
-+
-+  /* log it */
-+  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s WELCOME for %d%s%s [%Tu]",
-+    sptr, WelcomeArray[namearray].who, action, nameint,
-+    notext ? "" : " to :", notext ? "" : WelcomeArray[namearray].text,
++    EmptyString(text) ? "unsetting" : "changing",
++    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
++    (flags & WELCOME_LOCAL) ? "local " : "",
++    nameint,
++    EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
 +    WelcomeArray[namearray].timestamp);
 +
-+  /* TODO: or WALLOPS here, local message remotely set? */
++  /* log it */
++  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s%s%sWELCOME %d \"%s\" [%Tu]",
++    sptr, WelcomeArray[namearray].who,
++    EmptyString(text) ? "unsetting" : "changing",
++    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
++    (flags & WELCOME_LOCAL) ? "local " : "",
++    nameint,
++    EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
++    WelcomeArray[namearray].timestamp);
++
 +  /* welcome set by remote user, inform oper of success */
-+  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr))
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s WELCOME for %d%s%s",
-+      sptr, get_client_name_and_opername(sptr), action, nameint,
-+      notext ? "" : " to :", notext ? "" : WelcomeArray[namearray].text);
++  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s%s local WELCOME %d \"%s\" [%Tu]",
++      sptr, get_client_name_and_opername(sptr),
++      EmptyString(text) ? "unsetting" : "changing",
++      (flags & WELCOME_ANNOUNCE) ? " and announcing" : "",
++      nameint,
++      EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
++      WelcomeArray[namearray].timestamp);
++
++    /* TODO: wallops all local changes, by both local and remote opers? */
++    /* tell all opers about the local message being set remotely */
++    sendwallto_group_butone(&me, WALL_WALLOPS, 0,
++      "%s %s%s local WELCOME %d \"%s\" [%Tu]",
++      get_client_name_and_opername(sptr),
++      EmptyString(text) ? "unsetting" : "changing",
++      (flags & WELCOME_ANNOUNCE) ? " and announcing" : "",
++      nameint,
++      EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
++      WelcomeArray[namearray].timestamp);
++  }
 +
 +  /* propagate it */
 +  if (!(flags & WELCOME_LOCAL))
@@ -876,7 +935,7 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +      WelcomeArray[namearray].text);
 +
 +  /* announce it */
-+  if ((flags & WELCOME_ANNOUNCE) && !notext)
++  if (flags & WELCOME_ANNOUNCE)
 +    welcome_announce(namearray);
 +
 +  return 0;
@@ -891,6 +950,7 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +{
 +  struct Client *acptr;
 +  struct MsgBuf *msgbuf;
++  int i;
 +
 +  /* range 0 to 2 * max - 1 */
 +  assert(name >= 0 && name <= 2 * WELCOME_MAX_ENTRIES - 1); 
@@ -905,16 +965,16 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +    name >= WELCOME_MAX_ENTRIES ? cli_name(&me) : feature_str(FEAT_NETWORK),
 +    WelcomeArray[name].text);
 +
-+  /* go over clients */
-+  for (acptr = GlobalClientList; acptr; acptr = cli_next(acptr)) {
++  /* go over local clients */
++  for (i = HighestFd; i > 0; --i) {
 +
-+    /* skip remote users
-+     * skip unregistered clients - they see the message during login
++    /* skip unregistered clients - they see the message during login
++     * skip servers
 +     */
-+    if (!MyUser(acptr) || !IsRegistered(acptr))
++    if (!(acptr = LocalClientArray[i]) || !IsRegistered(acptr) || IsServer(acptr))
 +      continue;
 +
-+    /* send it away */
++    /* send it away */ 
 +    send_buffer(acptr, msgbuf, 0);
 +  }
 +}
@@ -928,6 +988,8 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +{
 +  int name;
 +
++  assert(NULL != cptr);
++
 +  /* loop over global entries - 0 to max - 1*/
 +  for (name = 0; name <= WELCOME_MAX_ENTRIES - 1; name++) {
 +    if (WelcomeArray[name].timestamp != 0)
@@ -935,20 +997,6 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +        name + 1, WelcomeArray[name].timestamp, WelcomeArray[name].who,
 +        WelcomeArray[name].text);
 +  }
-+}
-+
-+
-+/** Forward a welcome to another server.
-+ * @param[in] cptr %Server to send welcome to.
-+ * @param[in] welcome Welcome to forward.
-+ */
-+int
-+welcome_resend(struct Client *cptr, int name)
-+{
-+  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
-+    name + 1, WelcomeArray[name].timestamp, WelcomeArray[name].who,
-+    WelcomeArray[name].text);
-+  return 0;
 +}
 +
 +
@@ -962,6 +1010,8 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +{
 +  int found = 0, local = 0, name;
 +
++  assert(NULL != sptr);
++
 +  /* loop over all entries - range 0 to 2 * max - 1 */
 +  for (name = 0; name <= 2 * WELCOME_MAX_ENTRIES - 1; name++) {
 +
@@ -970,6 +1020,7 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +      local = 1;
 +
 +    /* not set or empty - skip */
++    /* TODO: EmptyString? */
 +    if (WelcomeArray[name].timestamp == 0 || *WelcomeArray[name].text == 0)
 +      continue;
 +
@@ -997,10 +1048,11 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +{
 +  int name, local = 0;
 +
-+  /* TODO: change "Who" to "Opername" or "OperID" as that is what it is? */
++  assert(NULL != sptr);
++
 +  /* send header so the client knows what we are showing */
 +  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
-+    "W Name Target Who Timestamp :Message");
++    "W Name Target Opername Timestamp :Message");
 +
 +  /* loop over all entries - range 0 to 2 * max - 1*/
 +  for (name = 0; name <= 2 * WELCOME_MAX_ENTRIES - 1; name++) {
@@ -1015,8 +1067,9 @@ diff -r 5dc1ce46a213 ircd/welcome.c
 +
 +    /* send it */
 +    send_reply(sptr, RPL_STATSWELCOME,
-+      local ? name + 1 - WELCOME_MAX_ENTRIES : name + 1, local ? cli_name(&me) : "*",
++      local ? name + 1 - WELCOME_MAX_ENTRIES : name + 1,
++      local ? cli_name(&me) : "*",
 +      WelcomeArray[name].who, WelcomeArray[name].timestamp,
-+      (*WelcomeArray[name].text == 0) ? "<Empty>" : WelcomeArray[name].text);
++      EmptyString(WelcomeArray[name].text)  ? "<Empty>" : WelcomeArray[name].text);
 +  }
 +}
