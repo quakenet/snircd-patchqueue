@@ -1,0 +1,14 @@
+MyUser can never be a zombie.
+
+diff -r d86f87d314fd ircd/gline.c
+--- a/ircd/gline.c	Fri Jan 30 15:01:15 2009 +0100
++++ b/ircd/gline.c	Fri Jan 30 15:03:24 2009 +0100
+@@ -231,7 +231,7 @@
+         continue;
+       for (member=chptr->members;member;member=nmember) {
+         nmember=member->next_member;
+-        if (!MyUser(member->user) || IsZombie(member) || IsAnOper(member->user))
++        if (!MyUser(member->user) || IsAnOper(member->user))
+           continue;
+         sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
+         sendcmdto_channel_butserv_butone(&his, CMD_KICK, chptr, NULL, 0, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
