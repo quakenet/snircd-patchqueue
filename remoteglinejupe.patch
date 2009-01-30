@@ -3,9 +3,9 @@ never gets a reply in case of succes
 
 this patch sends a copy of the snomask message shown to local opers to the remote source oper
 
-diff -r 8b3f6f6bcfd6 ircd/gline.c
---- a/ircd/gline.c	Fri Jan 30 17:04:05 2009 +0100
-+++ b/ircd/gline.c	Fri Jan 30 18:11:37 2009 +0100
+diff -r 9302219aa778 ircd/gline.c
+--- a/ircd/gline.c	Fri Jan 30 19:02:20 2009 +0100
++++ b/ircd/gline.c	Fri Jan 30 19:12:16 2009 +0100
 @@ -584,6 +584,18 @@
  	    flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : host,
  	    expire + TSoffset, reason);
@@ -25,25 +25,7 @@ diff -r 8b3f6f6bcfd6 ircd/gline.c
    /* make the gline */
    agline = make_gline(nick, user, host, reason, expire, lastmod, lifetime, flags);
  
-@@ -728,6 +740,17 @@
- 	    gline->gl_host ? gline->gl_host : "",
- 	    gline->gl_expire + TSoffset, gline->gl_reason);
- 
-+  /* local gline removed by remote user, inform oper of success */
-+  if ((flags & GLINE_LOCAL) && IsUser(sptr) && !MyUser(sptr))
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s %s for %s%s%s%s%s, expiring at %Tu: %s",
-+                       sptr, cli_name(sptr),
-+		       msg, GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
-+                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
-+                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
-+		       gline->gl_user, gline->gl_host ? "@" : "",
-+                       gline->gl_host ? gline->gl_host : "",
-+		       gline->gl_expire + TSoffset, gline->gl_reason);
-+
-   if (!(flags & GLINE_LOCAL)) /* don't propagate local changes */
-     gline_propagate(cptr, sptr, gline);
- 
-@@ -972,6 +995,16 @@
+@@ -972,6 +984,16 @@
  	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "",
  	    buf);
  
@@ -60,7 +42,7 @@ diff -r 8b3f6f6bcfd6 ircd/gline.c
    /* We'll be simple for this release, but we can update this to change
     * the propagation syntax on future updates
     */
-@@ -1020,6 +1053,16 @@
+@@ -1020,6 +1042,16 @@
              gline->gl_user,
  	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "");
  
@@ -77,9 +59,9 @@ diff -r 8b3f6f6bcfd6 ircd/gline.c
    gline_free(gline); /* get rid of the G-line */
  
    return 0; /* convenience return */
-diff -r 8b3f6f6bcfd6 ircd/jupe.c
---- a/ircd/jupe.c	Fri Jan 30 17:04:05 2009 +0100
-+++ b/ircd/jupe.c	Fri Jan 30 18:11:37 2009 +0100
+diff -r 9302219aa778 ircd/jupe.c
+--- a/ircd/jupe.c	Fri Jan 30 19:02:20 2009 +0100
++++ b/ircd/jupe.c	Fri Jan 30 19:12:16 2009 +0100
 @@ -166,6 +166,20 @@
  	    flags & JUPE_LOCAL ? "local " : "", server, expire + TSoffset,
  	    reason);
