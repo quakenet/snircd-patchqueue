@@ -71,9 +71,9 @@ add /STATS W/welcome
 ircd/s_user.c
 add showing of welcome messages on connect
 
-diff -r 42bf40ebc839 include/handlers.h
---- a/include/handlers.h	Fri Jan 30 11:47:37 2009 +0100
-+++ b/include/handlers.h	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 include/handlers.h
+--- a/include/handlers.h	Sat Jan 31 18:54:23 2009 +0100
++++ b/include/handlers.h	Sat Jan 31 18:57:57 2009 +0100
 @@ -151,6 +151,7 @@
  extern int m_version(struct Client*, struct Client*, int, char*[]);
  extern int m_wallchops(struct Client*, struct Client*, int, char*[]);
@@ -106,9 +106,9 @@ diff -r 42bf40ebc839 include/handlers.h
  extern int mh_who(struct Client*, struct Client*, int, char*[]);
  extern int mh_whois(struct Client*, struct Client*, int, char*[]);
  extern int mh_whowas(struct Client*, struct Client*, int, char*[]);
-diff -r 42bf40ebc839 include/ircd_features.h
---- a/include/ircd_features.h	Fri Jan 30 11:47:37 2009 +0100
-+++ b/include/ircd_features.h	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 include/ircd_features.h
+--- a/include/ircd_features.h	Sat Jan 31 18:54:23 2009 +0100
++++ b/include/ircd_features.h	Sat Jan 31 18:57:57 2009 +0100
 @@ -101,6 +101,7 @@
    FEAT_IRCD_RES_TIMEOUT,
    FEAT_AUTH_TIMEOUT,
@@ -125,9 +125,9 @@ diff -r 42bf40ebc839 include/ircd_features.h
    FEAT_HIS_STATS_w,
    FEAT_HIS_STATS_x,
    FEAT_HIS_STATS_y,
-diff -r 42bf40ebc839 include/msg.h
---- a/include/msg.h	Fri Jan 30 11:47:37 2009 +0100
-+++ b/include/msg.h	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 include/msg.h
+--- a/include/msg.h	Sat Jan 31 18:54:23 2009 +0100
++++ b/include/msg.h	Sat Jan 31 18:57:57 2009 +0100
 @@ -196,6 +196,10 @@
  #define TOK_NOTICE              "O"
  #define CMD_NOTICE		MSG_NOTICE, TOK_NOTICE
@@ -139,9 +139,9 @@ diff -r 42bf40ebc839 include/msg.h
  #define MSG_WALLCHOPS           "WALLCHOPS"     /* WC */
  #define TOK_WALLCHOPS           "WC"
  #define CMD_WALLCHOPS		MSG_WALLCHOPS, TOK_WALLCHOPS
-diff -r 42bf40ebc839 include/numeric.h
---- a/include/numeric.h	Fri Jan 30 11:47:37 2009 +0100
-+++ b/include/numeric.h	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 include/numeric.h
+--- a/include/numeric.h	Sat Jan 31 18:54:23 2009 +0100
++++ b/include/numeric.h	Sat Jan 31 18:57:57 2009 +0100
 @@ -116,6 +116,7 @@
  	RPL_STATSGLINE	     227	   Dalnet 
  	RPL_STATSVLINE	     227	   unreal */
@@ -159,9 +159,9 @@ diff -r 42bf40ebc839 include/numeric.h
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r 42bf40ebc839 include/welcome.h
+diff -r a37e456cd6d6 include/welcome.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/include/welcome.h	Fri Jan 30 13:14:46 2009 +0100
++++ b/include/welcome.h	Sat Jan 31 18:57:57 2009 +0100
 @@ -0,0 +1,60 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
@@ -223,9 +223,9 @@ diff -r 42bf40ebc839 include/welcome.h
 +extern void welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param);
 +
 +#endif /* INCLUDED_welcome_h */
-diff -r 42bf40ebc839 ircd/Makefile.in
---- a/ircd/Makefile.in	Fri Jan 30 11:47:37 2009 +0100
-+++ b/ircd/Makefile.in	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 ircd/Makefile.in
+--- a/ircd/Makefile.in	Sat Jan 31 18:54:23 2009 +0100
++++ b/ircd/Makefile.in	Sat Jan 31 18:57:57 2009 +0100
 @@ -187,6 +187,7 @@
  	m_wallops.c \
  	m_wallusers.c \
@@ -268,9 +268,9 @@ diff -r 42bf40ebc839 ircd/Makefile.in
  whocmds.o: whocmds.c ../config.h ../include/whocmds.h \
    ../include/channel.h ../include/ircd_defs.h ../include/res.h \
    ../config.h ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r 42bf40ebc839 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Fri Jan 30 11:47:37 2009 +0100
-+++ b/ircd/ircd_features.c	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sat Jan 31 18:54:23 2009 +0100
++++ b/ircd/ircd_features.c	Sat Jan 31 18:57:57 2009 +0100
 @@ -355,6 +355,7 @@
    F_I(IRCD_RES_TIMEOUT, 0, 4, 0),
    F_I(AUTH_TIMEOUT, 0, 9, 0),
@@ -287,10 +287,10 @@ diff -r 42bf40ebc839 ircd/ircd_features.c
    F_B(HIS_STATS_w, 0, 1, 0),
    F_B(HIS_STATS_x, 0, 1, 0),
    F_B(HIS_STATS_y, 0, 1, 0),
-diff -r 42bf40ebc839 ircd/m_welcome.c
+diff -r a37e456cd6d6 ircd/m_welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_welcome.c	Fri Jan 30 13:14:46 2009 +0100
-@@ -0,0 +1,300 @@
++++ b/ircd/m_welcome.c	Sat Jan 31 18:57:57 2009 +0100
+@@ -0,0 +1,301 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -380,6 +380,7 @@ diff -r 42bf40ebc839 ircd/m_welcome.c
 +#include "ircd_features.h"
 +#include "ircd_log.h"
 +#include "ircd_reply.h"
++#include "ircd_snprintf.h"
 +#include "ircd_string.h"
 +#include "msg.h"
 +#include "numeric.h"
@@ -591,9 +592,9 @@ diff -r 42bf40ebc839 ircd/m_welcome.c
 +  }
 +  return 0;
 +}
-diff -r 42bf40ebc839 ircd/parse.c
---- a/ircd/parse.c	Fri Jan 30 11:47:37 2009 +0100
-+++ b/ircd/parse.c	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 ircd/parse.c
+--- a/ircd/parse.c	Sat Jan 31 18:54:23 2009 +0100
++++ b/ircd/parse.c	Sat Jan 31 18:57:57 2009 +0100
 @@ -667,6 +667,15 @@
      /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
      { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore, mh_nohelp }
@@ -610,9 +611,9 @@ diff -r 42bf40ebc839 ircd/parse.c
  
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
-diff -r 42bf40ebc839 ircd/s_err.c
---- a/ircd/s_err.c	Fri Jan 30 11:47:37 2009 +0100
-+++ b/ircd/s_err.c	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jan 31 18:54:23 2009 +0100
++++ b/ircd/s_err.c	Sat Jan 31 18:57:57 2009 +0100
 @@ -486,7 +486,7 @@
  /* 226 */
    { RPL_STATSALINE, "%s", "226" },
@@ -631,9 +632,9 @@ diff -r 42bf40ebc839 ircd/s_err.c
  /* 510 */
    { 0 },
  /* 511 */
-diff -r 42bf40ebc839 ircd/s_serv.c
---- a/ircd/s_serv.c	Fri Jan 30 11:47:37 2009 +0100
-+++ b/ircd/s_serv.c	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 ircd/s_serv.c
+--- a/ircd/s_serv.c	Sat Jan 31 18:54:23 2009 +0100
++++ b/ircd/s_serv.c	Sat Jan 31 18:57:57 2009 +0100
 @@ -57,6 +57,7 @@
  #include "struct.h"
  #include "sys.h"
@@ -650,9 +651,9 @@ diff -r 42bf40ebc839 ircd/s_serv.c
  
    /*
     * Pass on my client information to the new server
-diff -r 42bf40ebc839 ircd/s_stats.c
---- a/ircd/s_stats.c	Fri Jan 30 11:47:37 2009 +0100
-+++ b/ircd/s_stats.c	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 ircd/s_stats.c
+--- a/ircd/s_stats.c	Sat Jan 31 18:54:23 2009 +0100
++++ b/ircd/s_stats.c	Sat Jan 31 18:57:57 2009 +0100
 @@ -54,6 +54,7 @@
  #include "send.h"
  #include "struct.h"
@@ -675,9 +676,9 @@ diff -r 42bf40ebc839 ircd/s_stats.c
    { 'x', "memusage", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_x,
      stats_meminfo, 0,
      "List usage information." },
-diff -r 42bf40ebc839 ircd/s_user.c
---- a/ircd/s_user.c	Fri Jan 30 11:47:37 2009 +0100
-+++ b/ircd/s_user.c	Fri Jan 30 13:14:46 2009 +0100
+diff -r a37e456cd6d6 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jan 31 18:54:23 2009 +0100
++++ b/ircd/s_user.c	Sat Jan 31 18:57:57 2009 +0100
 @@ -63,6 +63,7 @@
  #include "userload.h"
  #include "version.h"
@@ -696,9 +697,9 @@ diff -r 42bf40ebc839 ircd/s_user.c
    }
    else {
      struct Client *acptr = user->server;
-diff -r 42bf40ebc839 ircd/welcome.c
+diff -r a37e456cd6d6 ircd/welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/welcome.c	Fri Jan 30 13:14:46 2009 +0100
++++ b/ircd/welcome.c	Sat Jan 31 18:57:57 2009 +0100
 @@ -0,0 +1,373 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
