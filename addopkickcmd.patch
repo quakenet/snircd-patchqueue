@@ -5,9 +5,9 @@ if implemented, it must not be enabled until ALL servers and services are upgrad
 generates HACK(4) snomask notice for accountability with oper as source
 probably needs some work (for one i simply copied the header from m_kick.c)
 
-diff -r d7557937c1ab include/handlers.h
---- a/include/handlers.h	Mon Jan 26 12:42:49 2009 +0100
-+++ b/include/handlers.h	Mon Jan 26 12:47:29 2009 +0100
+diff -r 61341aed2877 include/handlers.h
+--- a/include/handlers.h	Sat Jan 31 18:33:55 2009 +0100
++++ b/include/handlers.h	Sat Jan 31 18:35:03 2009 +0100
 @@ -167,6 +167,7 @@
  extern int mo_kill(struct Client*, struct Client*, int, char*[]);
  extern int mo_notice(struct Client*, struct Client*, int, char*[]);
@@ -24,9 +24,9 @@ diff -r d7557937c1ab include/handlers.h
  extern int ms_opmode(struct Client*, struct Client*, int, char*[]);
  extern int ms_part(struct Client*, struct Client*, int, char*[]);
  extern int ms_ping(struct Client*, struct Client*, int, char*[]);
-diff -r d7557937c1ab include/ircd_features.h
---- a/include/ircd_features.h	Mon Jan 26 12:42:49 2009 +0100
-+++ b/include/ircd_features.h	Mon Jan 26 12:47:29 2009 +0100
+diff -r 61341aed2877 include/ircd_features.h
+--- a/include/ircd_features.h	Sat Jan 31 18:33:55 2009 +0100
++++ b/include/ircd_features.h	Sat Jan 31 18:35:03 2009 +0100
 @@ -105,6 +105,7 @@
    /* features that affect all operators */
    FEAT_EXTENDED_CHECKCMD,
@@ -35,9 +35,9 @@ diff -r d7557937c1ab include/ircd_features.h
    FEAT_SETHOST,
    FEAT_SETHOST_USER,
    FEAT_SETHOST_AUTO,
-diff -r d7557937c1ab include/msg.h
---- a/include/msg.h	Mon Jan 26 12:42:49 2009 +0100
-+++ b/include/msg.h	Mon Jan 26 12:47:29 2009 +0100
+diff -r 61341aed2877 include/msg.h
+--- a/include/msg.h	Sat Jan 31 18:33:55 2009 +0100
++++ b/include/msg.h	Sat Jan 31 18:35:03 2009 +0100
 @@ -236,6 +236,10 @@
  #define TOK_KICK                "K"
  #define CMD_KICK		MSG_KICK, TOK_KICK
@@ -49,9 +49,9 @@ diff -r d7557937c1ab include/msg.h
  #define MSG_USERHOST            "USERHOST"      /* USER -> USRH */
  #define TOK_USERHOST            "USERHOST"
  #define CMD_USERHOST		MSG_USERHOST, TOK_USERHOST
-diff -r d7557937c1ab ircd/Makefile.in
---- a/ircd/Makefile.in	Mon Jan 26 12:42:49 2009 +0100
-+++ b/ircd/Makefile.in	Mon Jan 26 12:47:29 2009 +0100
+diff -r 61341aed2877 ircd/Makefile.in
+--- a/ircd/Makefile.in	Sat Jan 31 18:33:55 2009 +0100
++++ b/ircd/Makefile.in	Sat Jan 31 18:35:03 2009 +0100
 @@ -151,6 +151,7 @@
  	m_nick.c \
  	m_notice.c \
@@ -75,9 +75,9 @@ diff -r d7557937c1ab ircd/Makefile.in
  m_opmode.o: m_opmode.c ../config.h ../include/client.h \
    ../include/ircd_defs.h ../include/dbuf.h ../include/msgq.h \
    ../include/ircd_events.h ../config.h ../include/ircd_handler.h \
-diff -r d7557937c1ab ircd/ircd_features.c
---- a/ircd/ircd_features.c	Mon Jan 26 12:42:49 2009 +0100
-+++ b/ircd/ircd_features.c	Mon Jan 26 12:47:29 2009 +0100
+diff -r 61341aed2877 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sat Jan 31 18:33:55 2009 +0100
++++ b/ircd/ircd_features.c	Sat Jan 31 18:35:03 2009 +0100
 @@ -359,6 +359,7 @@
    /* features that affect all operators */
    F_B(EXTENDED_CHECKCMD, 0, 0, 0),
@@ -86,9 +86,9 @@ diff -r d7557937c1ab ircd/ircd_features.c
    F_B(SETHOST, 0, 0, 0),
    F_B(SETHOST_USER, 0, 0, 0),
    F_B(SETHOST_AUTO, 0, 0, 0),
-diff -r d7557937c1ab ircd/m_opkick.c
+diff -r 61341aed2877 ircd/m_opkick.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_opkick.c	Mon Jan 26 12:47:29 2009 +0100
++++ b/ircd/m_opkick.c	Sat Jan 31 18:35:03 2009 +0100
 @@ -0,0 +1,231 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_opkick.c
@@ -275,7 +275,7 @@ diff -r d7557937c1ab ircd/m_opkick.c
 +{
 +  struct Client *who;
 +  struct Channel *chptr;
-+  struct Membership *member = 0, *sptr_link = 0;
++  struct Membership *member = 0;
 +  char *name, *comment;
 +
 +  ClrFlag(sptr, FLAG_TS8);
@@ -321,9 +321,9 @@ diff -r d7557937c1ab ircd/m_opkick.c
 +  }
 +  return 0;
 +}
-diff -r d7557937c1ab ircd/parse.c
---- a/ircd/parse.c	Mon Jan 26 12:42:49 2009 +0100
-+++ b/ircd/parse.c	Mon Jan 26 12:47:29 2009 +0100
+diff -r 61341aed2877 ircd/parse.c
+--- a/ircd/parse.c	Sat Jan 31 18:33:55 2009 +0100
++++ b/ircd/parse.c	Sat Jan 31 18:35:03 2009 +0100
 @@ -656,6 +656,17 @@
      0, MAXPARA, MFLG_SLOW, 0, NULL,
      { m_unregistered, m_not_oper, m_check, m_check, m_ignore }
