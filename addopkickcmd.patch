@@ -5,9 +5,9 @@ if implemented, it must not be enabled until ALL servers and services are upgrad
 generates HACK(4) snomask notice for accountability with oper as source
 probably needs some work (for one i simply copied the header from m_kick.c)
 
-diff -r 8d3cf5a69cf8 include/handlers.h
---- a/include/handlers.h	Mon Jan 12 19:30:23 2009 +0100
-+++ b/include/handlers.h	Mon Jan 12 20:26:49 2009 +0100
+diff -r d7557937c1ab include/handlers.h
+--- a/include/handlers.h	Mon Jan 26 12:42:49 2009 +0100
++++ b/include/handlers.h	Mon Jan 26 12:47:29 2009 +0100
 @@ -167,6 +167,7 @@
  extern int mo_kill(struct Client*, struct Client*, int, char*[]);
  extern int mo_notice(struct Client*, struct Client*, int, char*[]);
@@ -24,9 +24,9 @@ diff -r 8d3cf5a69cf8 include/handlers.h
  extern int ms_opmode(struct Client*, struct Client*, int, char*[]);
  extern int ms_part(struct Client*, struct Client*, int, char*[]);
  extern int ms_ping(struct Client*, struct Client*, int, char*[]);
-diff -r 8d3cf5a69cf8 include/ircd_features.h
---- a/include/ircd_features.h	Mon Jan 12 19:30:23 2009 +0100
-+++ b/include/ircd_features.h	Mon Jan 12 20:26:49 2009 +0100
+diff -r d7557937c1ab include/ircd_features.h
+--- a/include/ircd_features.h	Mon Jan 26 12:42:49 2009 +0100
++++ b/include/ircd_features.h	Mon Jan 26 12:47:29 2009 +0100
 @@ -105,6 +105,7 @@
    /* features that affect all operators */
    FEAT_EXTENDED_CHECKCMD,
@@ -35,9 +35,9 @@ diff -r 8d3cf5a69cf8 include/ircd_features.h
    FEAT_SETHOST,
    FEAT_SETHOST_USER,
    FEAT_SETHOST_AUTO,
-diff -r 8d3cf5a69cf8 include/msg.h
---- a/include/msg.h	Mon Jan 12 19:30:23 2009 +0100
-+++ b/include/msg.h	Mon Jan 12 20:26:49 2009 +0100
+diff -r d7557937c1ab include/msg.h
+--- a/include/msg.h	Mon Jan 26 12:42:49 2009 +0100
++++ b/include/msg.h	Mon Jan 26 12:47:29 2009 +0100
 @@ -236,6 +236,10 @@
  #define TOK_KICK                "K"
  #define CMD_KICK		MSG_KICK, TOK_KICK
@@ -49,9 +49,9 @@ diff -r 8d3cf5a69cf8 include/msg.h
  #define MSG_USERHOST            "USERHOST"      /* USER -> USRH */
  #define TOK_USERHOST            "USERHOST"
  #define CMD_USERHOST		MSG_USERHOST, TOK_USERHOST
-diff -r 8d3cf5a69cf8 ircd/Makefile.in
---- a/ircd/Makefile.in	Mon Jan 12 19:30:23 2009 +0100
-+++ b/ircd/Makefile.in	Mon Jan 12 20:26:49 2009 +0100
+diff -r d7557937c1ab ircd/Makefile.in
+--- a/ircd/Makefile.in	Mon Jan 26 12:42:49 2009 +0100
++++ b/ircd/Makefile.in	Mon Jan 26 12:47:29 2009 +0100
 @@ -151,6 +151,7 @@
  	m_nick.c \
  	m_notice.c \
@@ -75,20 +75,20 @@ diff -r 8d3cf5a69cf8 ircd/Makefile.in
  m_opmode.o: m_opmode.c ../config.h ../include/client.h \
    ../include/ircd_defs.h ../include/dbuf.h ../include/msgq.h \
    ../include/ircd_events.h ../config.h ../include/ircd_handler.h \
-diff -r 8d3cf5a69cf8 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Mon Jan 12 19:30:23 2009 +0100
-+++ b/ircd/ircd_features.c	Mon Jan 12 20:26:49 2009 +0100
+diff -r d7557937c1ab ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Mon Jan 26 12:42:49 2009 +0100
++++ b/ircd/ircd_features.c	Mon Jan 26 12:47:29 2009 +0100
 @@ -359,6 +359,7 @@
    /* features that affect all operators */
    F_B(EXTENDED_CHECKCMD, 0, 0, 0),
    F_B(CONFIG_OPERCMDS, 0, 0, 0),
-+  F_B(OPKICK, 0, 0, 0),
++  F_B(OPKICK, 0, 1, 0),
    F_B(SETHOST, 0, 0, 0),
    F_B(SETHOST_USER, 0, 0, 0),
    F_B(SETHOST_AUTO, 0, 0, 0),
-diff -r 8d3cf5a69cf8 ircd/m_opkick.c
+diff -r d7557937c1ab ircd/m_opkick.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_opkick.c	Mon Jan 12 20:26:49 2009 +0100
++++ b/ircd/m_opkick.c	Mon Jan 26 12:47:29 2009 +0100
 @@ -0,0 +1,231 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_opkick.c
@@ -220,14 +220,12 @@ diff -r 8d3cf5a69cf8 ircd/m_opkick.c
 +  if (!HasPriv(sptr, IsLocalChannel(chptr->chname) ? PRIV_LOCAL_OPMODE : PRIV_OPMODE))
 +    return send_reply(sptr, ERR_NOPRIVILEGES);
 +
-+  if (!(who = find_chasing(sptr, parv[2], 0)))
++  if (!(who = find_chasing(sptr, parv[2], 0, 1)))
 +    return 0; /* find_chasing sends the reply for us */
 +
 +  /* Don't allow the channel service to be kicked */
-+  if (IsChannelService(who)) {
-+    if (IsService(cli_user(who)->server))
-+      return send_reply(sptr, ERR_ISREALSERVICE, cli_name(who), chptr->chname);
-+  }
++  if (IsChannelService(who) && IsService(cli_user(who)->server))
++    return send_reply(sptr, ERR_ISREALSERVICE, cli_name(who), chptr->chname);
 +
 +  /* check if kicked user is actually on the channel */
 +  if (!(member = find_member_link(chptr, who)) || IsZombie(member))
@@ -236,12 +234,14 @@ diff -r 8d3cf5a69cf8 ircd/m_opkick.c
 +  /* We rely on ircd_snprintf to truncate the comment */
 +  comment = EmptyString(parv[parc - 1]) ? parv[2] : parv[parc - 1];
 +
++  /* propagate it */
 +  if (!IsLocalChannel(name))
 +    sendcmdto_serv_butone(sptr, CMD_OPKICK, cptr, "%H %C :%s", chptr, who, comment);
 +
++  /* If it's a delayed join, only send the KICK to the person doing
++   * the kicking and the victim
++   */
 +  if (IsDelayedJoin(member)) {
-+    /* If it's a delayed join, only send the KICK to the person doing
-+     * the kicking and the victim */
 +    if (MyUser(who))
 +      sendcmdto_one(feature_bool(FEAT_HIS_MODEWHO) ? &his : sptr, CMD_KICK, who, "%H %C :%s", chptr, who, comment);
 +    /* operator using OPKICK is on the channel */
@@ -321,9 +321,9 @@ diff -r 8d3cf5a69cf8 ircd/m_opkick.c
 +  }
 +  return 0;
 +}
-diff -r 8d3cf5a69cf8 ircd/parse.c
---- a/ircd/parse.c	Mon Jan 12 19:30:23 2009 +0100
-+++ b/ircd/parse.c	Mon Jan 12 20:26:49 2009 +0100
+diff -r d7557937c1ab ircd/parse.c
+--- a/ircd/parse.c	Mon Jan 26 12:42:49 2009 +0100
++++ b/ircd/parse.c	Mon Jan 26 12:47:29 2009 +0100
 @@ -656,6 +656,17 @@
      0, MAXPARA, MFLG_SLOW, 0, NULL,
      { m_unregistered, m_not_oper, m_check, m_check, m_ignore }

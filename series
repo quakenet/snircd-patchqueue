@@ -1,10 +1,14 @@
 who-accountid.patch
 statsheader.patch
+cprivmsgerracconly.patch
+badchanzombie.patch
 nserverflag.patch
-addnickchasetomodenick.patch #+nickchase
+checkoutput.patch #+check
+addnickchasetomodenick.patch
 chanopaccountabilityforkickdelayedjoin.patch
-addopkickcmd.patch #+opkick
+addopkickcmd.patch
 addhacktypetohackkick.patch
+ischannelservice.patch
 ulined.patch
 cansendtochan.patch
 hidebanowner.patch #+hidebanowner
@@ -17,7 +21,7 @@ commonchansumode.patch
 remoteglinejupe.patch
 whoban.patch
 opername.patch
-cmdhelp.patch #+help
+cmdhelp.patch
 noticepluschan.patch
 whomatch.patch
 privlocalchan.patch

@@ -1,0 +1,138 @@
+Added new define in include/client.h
+IsRealChannelService() - client has usermode +k and is on a services server (+s flag)
+
+Function ms_invite did not return an error when the source was a channel service,
+that should only be for a real channel service.
+
+Some places the IsChannelService() check is not changed because it is changed in some of the
+other patches later in the queue.
+
+TODO: keep the side effect of usermode +k that channels are hidden, or leave that soley to usermode +n?
+That is, keep IsChannelService() in whois/who or use IsRealChannelService().
+
+diff -r 979639f84630 include/client.h
+--- a/include/client.h	Fri Jan 30 15:56:19 2009 +0100
++++ b/include/client.h	Fri Jan 30 16:38:40 2009 +0100
+@@ -568,6 +568,8 @@
+ #define IsBurstOrBurstAck(x)    (HasFlag(x, FLAG_BURST) || HasFlag(x, FLAG_BURST_ACK))
+ /** Return non-zero if the client has set mode +k (channel service). */
+ #define IsChannelService(x)     HasFlag(x, FLAG_CHSERV)
++/** Return non-zero if the client has set mode +k (channel service) and is on a service server */
++#define IsRealChannelService(x) (IsChannelService(x) && IsService(cli_user(x)->server))
+ /** Return non-zero if the client's socket is disconnected. */
+ #define IsDead(x)               HasFlag(x, FLAG_DEADSOCKET)
+ /** Return non-zero if the client has set mode +d (deaf). */
+diff -r 979639f84630 ircd/channel.c
+--- a/ircd/channel.c	Fri Jan 30 15:56:19 2009 +0100
++++ b/ircd/channel.c	Fri Jan 30 16:38:40 2009 +0100
+@@ -180,7 +180,7 @@
+    * however there are typically no more than 1000 people in a channel
+    * at a time.
+    */
+-  if (IsChannelService(cptr)) {
++  if (IsRealChannelService(cptr)) {
+     m = chptr->members;
+     while (m) {
+       assert(m->channel == chptr);
+@@ -3190,7 +3190,7 @@
+        * Allow +X'ed users to mess with +k'ed.
+        * --Bigfoot
+        */
+-      if ((IsChannelService(state->cli_change[i].client) && IsService(cli_user(state->cli_change[i].client)->server)) || (IsChannelService(state->cli_change[i].client) && !IsXtraOp(state->sptr))) {
++      if ((IsRealChannelService(state->cli_change[i].client)) || (IsChannelService(state->cli_change[i].client) && !IsXtraOp(state->sptr))) {
+ 	if (state->flags & MODE_PARSE_FORCE) /* it was forced */
+ 	  sendto_opmask_butone(0, SNO_HACK4, "Deop of +k user on %H by %s",
+ 			       state->chptr,
+@@ -3198,7 +3198,7 @@
+ 				cli_name((cli_user(state->sptr))->server)));
+ 
+         else if (MyUser(state->sptr) && state->flags & MODE_PARSE_SET && (state->sptr != state->cli_change[i].client)) {
+-          if(IsService(cli_user(state->cli_change[i].client)->server) && IsChannelService(state->cli_change[i].client)){
++          if(IsRealChannelService(state->cli_change[i].client)){
+             send_reply(state->sptr, ERR_ISREALSERVICE,
+                      cli_name(state->cli_change[i].client),
+                      state->chptr->chname);
+diff -r 979639f84630 ircd/m_invite.c
+--- a/ircd/m_invite.c	Fri Jan 30 15:56:19 2009 +0100
++++ b/ircd/m_invite.c	Fri Jan 30 16:38:40 2009 +0100
+@@ -271,7 +271,7 @@
+   } else if (IsBurstOrBurstAck(cptr))
+     return 0;
+ 
+-  if (!IsChannelService(sptr) && !find_channel_member(sptr, chptr)) {
++  if (!IsRealChannelService(sptr) && !find_channel_member(sptr, chptr)) {
+     send_reply(sptr, ERR_NOTONCHANNEL, chptr->chname);
+     return 0;
+   }
+diff -r 979639f84630 ircd/m_kick.c
+--- a/ircd/m_kick.c	Fri Jan 30 15:56:19 2009 +0100
++++ b/ircd/m_kick.c	Fri Jan 30 16:38:40 2009 +0100
+@@ -136,17 +136,14 @@
+    * Allow +X'ed users to kick +k'ed, but not U-lined services.
+    * --Bigfoot
+    */
+-  if (IsChannelService(who)) {
+-    if (IsService(cli_user(who)->server))
+-      return send_reply(sptr, ERR_ISREALSERVICE, cli_name(who), chptr->chname);
++  if (IsRealChannelService(who))
++    return send_reply(sptr, ERR_ISREALSERVICE, cli_name(who), chptr->chname);
+ 
+-    if (!IsXtraOp(sptr) && (who!=sptr)) {
+-      /* the victim is paranoid AND on the channel but not a zombie - wiebe */
+-      if (IsParanoid(who) && (member = find_member_link(chptr, who)) && !IsZombie(member)) {
+-        sendcmdto_one(&me, CMD_NOTICE, who, "%C :kick: %s tried to /KICK you from %s.", who, cli_name(sptr), chptr->chname);
+-      }
+-      return send_reply(sptr, ERR_ISCHANSERVICE, cli_name(who), chptr->chname);
+-    }
++  if (IsChannelService(who) && !IsXtraOp(sptr) && (who!=sptr)) {
++    /* the victim is paranoid AND on the channel but not a zombie */
++    if (IsParanoid(who) && (member = find_member_link(chptr, who)) && !IsZombie(member))
++      sendcmdto_one(&me, CMD_NOTICE, who, "%C :kick: %s tried to /KICK you from %s.", who, cli_name(sptr), chptr->chname);
++    return send_reply(sptr, ERR_ISCHANSERVICE, cli_name(who), chptr->chname);
+   }
+ 
+   /* Prevent kicking opers from local channels -DM- */
+diff -r 979639f84630 ircd/m_kill.c
+--- a/ircd/m_kill.c	Fri Jan 30 15:56:19 2009 +0100
++++ b/ircd/m_kill.c	Fri Jan 30 16:38:40 2009 +0100
+@@ -293,7 +293,7 @@
+    * Allow +X'ed users to kill +k'ed, but not U-lined services.
+    * --Bigfoot
+    */
+-  if (IsChannelService(victim) && IsService(cli_user(victim)->server))
++  if (IsRealChannelService(victim))
+     return send_reply(sptr, ERR_ISREALSERVICE, "KILL", cli_name(victim));
+ 
+   if (IsChannelService(victim) && !IsXtraOp(sptr) && !(victim==sptr))
+diff -r 979639f84630 ircd/m_whois.c
+--- a/ircd/m_whois.c	Fri Jan 30 15:56:19 2009 +0100
++++ b/ircd/m_whois.c	Fri Jan 30 16:38:40 2009 +0100
+@@ -143,8 +143,13 @@
+   send_reply(sptr, RPL_WHOISUSER, name, user->username, user->host,
+ 		   cli_info(acptr));
+ 
++  /* TODO: IsChannelService or IsRealChannelService?
++   * we have usermode +n to hide channels already, so could go with the IsReal.. version
++   * if an oper wants to hide channels too, they can set +n
++   * in that case also remove || (acptr==sptr)
++   */
+   /* Display the channels this user is on. */
+-  if ((!IsChannelService(acptr) && !IsNoChan(acptr)) || (acptr==sptr))
++  if ((!IsRealChannelService(acptr) && !IsNoChan(acptr)) || (acptr==sptr))
+   {
+     struct Membership* chan;
+     mlen = strlen(cli_name(&me)) + strlen(cli_name(sptr)) + 12 + strlen(name);
+diff -r 979639f84630 ircd/whocmds.c
+--- a/ircd/whocmds.c	Fri Jan 30 15:56:19 2009 +0100
++++ b/ircd/whocmds.c	Fri Jan 30 16:38:40 2009 +0100
+@@ -94,8 +94,9 @@
+   {
+     chan = find_channel_member(acptr, repchan);
+   }
++  /* TODO: use IsRealChannelService or IsChannelService? */
+   else if ((!fields || (fields & (WHO_FIELD_CHA | WHO_FIELD_FLA)))
+-           && !IsChannelService(acptr) && !IsNoChan(acptr)) 
++           && !IsRealChannelService(acptr) && !IsNoChan(acptr)) 
+   {
+     for (chan = cli_user(acptr)->channel; chan; chan = chan->next_channel)
+       if (PubChannel(chan->channel) &&

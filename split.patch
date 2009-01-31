@@ -7,9 +7,9 @@ Add split.c split.h m_split.c
 
 NOTE: feature SPLIT is default enabled as that is just easier when working on this patch.
 
-diff -r 0f7ba4913233 doc/api/log.txt
---- a/doc/api/log.txt	Sat Jan 24 12:58:40 2009 +0100
-+++ b/doc/api/log.txt	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 doc/api/log.txt
+--- a/doc/api/log.txt	Fri Jan 30 13:22:50 2009 +0100
++++ b/doc/api/log.txt	Fri Jan 30 14:30:16 2009 +0100
 @@ -41,7 +41,7 @@
  
  <enum>
@@ -19,9 +19,9 @@ diff -r 0f7ba4913233 doc/api/log.txt
    LS_OPERKILL, LS_SERVKILL, LS_USER, LS_OPER, LS_RESOLVER, LS_SOCKET,
    LS_DEBUG, LS_OLDLOG,
    LS_LAST_SYSTEM
-diff -r 0f7ba4913233 include/handlers.h
---- a/include/handlers.h	Sat Jan 24 12:58:40 2009 +0100
-+++ b/include/handlers.h	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 include/handlers.h
+--- a/include/handlers.h	Fri Jan 30 13:22:50 2009 +0100
++++ b/include/handlers.h	Fri Jan 30 14:30:16 2009 +0100
 @@ -139,6 +139,7 @@
  extern int m_registered(struct Client*, struct Client*, int, char*[]);
  extern int m_sethost(struct Client*, struct Client*, int, char*[]);
@@ -30,7 +30,7 @@ diff -r 0f7ba4913233 include/handlers.h
  extern int m_stats(struct Client*, struct Client*, int, char*[]);
  extern int m_time(struct Client*, struct Client*, int, char*[]);
  extern int m_topic(struct Client*, struct Client*, int, char*[]);
-@@ -178,6 +179,7 @@
+@@ -179,6 +180,7 @@
  extern int mo_rping(struct Client*, struct Client*, int, char*[]);
  extern int mo_set(struct Client*, struct Client*, int, char*[]);
  extern int mo_settime(struct Client*, struct Client*, int, char*[]);
@@ -38,7 +38,7 @@ diff -r 0f7ba4913233 include/handlers.h
  extern int mo_squit(struct Client*, struct Client*, int, char*[]);
  extern int mo_stats(struct Client*, struct Client*, int, char*[]);
  extern int mo_trace(struct Client*, struct Client*, int, char*[]);
-@@ -232,6 +234,7 @@
+@@ -234,6 +236,7 @@
  extern int ms_sethost(struct Client*, struct Client*, int, char*[]);
  extern int ms_settime(struct Client*, struct Client*, int, char*[]);
  extern int ms_silence(struct Client*, struct Client*, int, char*[]);
@@ -46,10 +46,10 @@ diff -r 0f7ba4913233 include/handlers.h
  extern int ms_squit(struct Client*, struct Client*, int, char*[]);
  extern int ms_stats(struct Client*, struct Client*, int, char*[]);
  extern int ms_topic(struct Client*, struct Client*, int, char*[]);
-diff -r 0f7ba4913233 include/ircd_features.h
---- a/include/ircd_features.h	Sat Jan 24 12:58:40 2009 +0100
-+++ b/include/ircd_features.h	Sat Jan 24 18:42:34 2009 +0100
-@@ -111,6 +111,10 @@
+diff -r 574e7b8526d3 include/ircd_features.h
+--- a/include/ircd_features.h	Fri Jan 30 13:22:50 2009 +0100
++++ b/include/ircd_features.h	Fri Jan 30 14:30:16 2009 +0100
+@@ -112,6 +112,10 @@
    FEAT_SETHOST_USER,
    FEAT_SETHOST_AUTO,
  
@@ -60,7 +60,15 @@ diff -r 0f7ba4913233 include/ircd_features.h
    /* HEAD_IN_SAND Features */
    FEAT_HIS_SNOTICES,
    FEAT_HIS_SNOTICES_OPER_ONLY,
-@@ -138,6 +142,7 @@
+@@ -120,6 +124,7 @@
+   FEAT_HIS_MAP,
+   FEAT_HIS_LINKS,
+   FEAT_HIS_TRACE,
++  FEAT_HIS_SPLIT,
+   FEAT_HIS_STATS_a,
+   FEAT_HIS_STATS_c,
+   FEAT_HIS_STATS_d,
+@@ -139,6 +144,7 @@
    FEAT_HIS_STATS_q,
    FEAT_HIS_STATS_R,
    FEAT_HIS_STATS_r,
@@ -68,9 +76,9 @@ diff -r 0f7ba4913233 include/ircd_features.h
    FEAT_HIS_STATS_s,
    FEAT_HIS_STATS_t,
    FEAT_HIS_STATS_T,
-diff -r 0f7ba4913233 include/ircd_log.h
---- a/include/ircd_log.h	Sat Jan 24 12:58:40 2009 +0100
-+++ b/include/ircd_log.h	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 include/ircd_log.h
+--- a/include/ircd_log.h	Fri Jan 30 13:22:50 2009 +0100
++++ b/include/ircd_log.h	Fri Jan 30 14:30:16 2009 +0100
 @@ -55,6 +55,7 @@
    LS_OPERMODE,   /**< Uses of OPMODE, CLEARMODE< etc. */
    LS_GLINE,      /**< Adding, (de-)activating or removing GLINEs. */
@@ -79,10 +87,10 @@ diff -r 0f7ba4913233 include/ircd_log.h
    LS_WHO,        /**< Use of extended WHO privileges. */
    LS_NETWORK,    /**< New server connections. */
    LS_OPERKILL,   /**< Kills by IRC operators. */
-diff -r 0f7ba4913233 include/msg.h
---- a/include/msg.h	Sat Jan 24 12:58:40 2009 +0100
-+++ b/include/msg.h	Sat Jan 24 18:42:34 2009 +0100
-@@ -332,6 +332,10 @@
+diff -r 574e7b8526d3 include/msg.h
+--- a/include/msg.h	Fri Jan 30 13:22:50 2009 +0100
++++ b/include/msg.h	Fri Jan 30 14:30:16 2009 +0100
+@@ -336,6 +336,10 @@
  #define TOK_JUPE                "JU"
  #define CMD_JUPE		MSG_JUPE, TOK_JUPE
  
@@ -93,18 +101,18 @@ diff -r 0f7ba4913233 include/msg.h
  #define MSG_OPMODE              "OPMODE"        /* OPMO */
  #define TOK_OPMODE              "OM"
  #define CMD_OPMODE		MSG_OPMODE, TOK_OPMODE
-diff -r 0f7ba4913233 include/numeric.h
---- a/include/numeric.h	Sat Jan 24 12:58:40 2009 +0100
-+++ b/include/numeric.h	Sat Jan 24 18:42:34 2009 +0100
-@@ -117,6 +117,7 @@
- 	RPL_STATSVLINE	     227	   unreal */
+diff -r 574e7b8526d3 include/numeric.h
+--- a/include/numeric.h	Fri Jan 30 13:22:50 2009 +0100
++++ b/include/numeric.h	Fri Jan 30 14:30:16 2009 +0100
+@@ -118,6 +118,7 @@
  #define RPL_STATSALINE       226        /* Hybrid, Undernet */
+ #define RPL_STATSWELCOME     227        /* QuakeNet extension */
  #define RPL_STATSQLINE       228        /* Undernet extension */
 +#define RPL_STATSSPLIT       229        /* QuakeNet extension */
  #define RPL_STATSHEADER      230        /* QuakeNet extension */
  
  /*      RPL_SERVICEINFO      231	unused */
-@@ -178,6 +179,8 @@
+@@ -179,6 +180,8 @@
  #define RPL_STATSDLINE       275        /* Undernet extension */
  #define RPL_STATSRLINE       276        /* Undernet extension */
  
@@ -113,18 +121,18 @@ diff -r 0f7ba4913233 include/numeric.h
  #define RPL_GLIST            280        /* Undernet extension */
  #define RPL_ENDOFGLIST       281        /* Undernet extension */
  #define RPL_JUPELIST         282        /* Undernet extension - jupe -Kev */
-@@ -442,6 +445,7 @@
- /*      ERR_GHOSTEDCLIENT    503           efnet */
- /*	ERR_VWORLDWARN	     503	   austnet */
+@@ -449,6 +452,7 @@
+ 
+ #define ERR_NOSUCHWELCOME    509        /* QuakeNet extension */
  
 +#define ERR_NOSUCHSPLIT      510        /* QuakeNet extension */
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r 0f7ba4913233 include/split.h
+diff -r 574e7b8526d3 include/split.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/include/split.h	Sat Jan 24 18:42:34 2009 +0100
-@@ -0,0 +1,106 @@
++++ b/include/split.h	Fri Jan 30 14:30:16 2009 +0100
+@@ -0,0 +1,110 @@
 +#ifndef INCLUDED_split_h
 +#define INCLUDED_split_h
 +/*
@@ -149,7 +157,6 @@ diff -r 0f7ba4913233 include/split.h
 + */
 +/** @file
 + * @brief  Interface and declarations for split server handling.
-+ * @version $Id: jupe.h 1208 2004-10-03 14:12:35Z entrope $
 + */
 +#ifndef INCLUDED_sys_types_h
 +#include <sys/types.h>
@@ -160,7 +167,13 @@ diff -r 0f7ba4913233 include/split.h
 +struct Client;
 +struct StatDesc;
 +
-+#define SPLIT_MAX_EXPIRE   2419200   /**< Maximum split expiration time (4 weeks). */
++#define SPLIT_MAX_EXPIRE   2419200   /**< Maximum split expiration time (4 weeks).
++                                       *  that an operator can use in /SPLIT
++                                       */
++#define SPLIT_MAX_DRIFT    600       /**< Maximum drift in seconds allowed in lastmod
++                                       *  timestamp
++                                       *  when greater correct and throw warning
++                                       */
 +
 +/* Describes a SPLIT server entry. */
 +struct Split {
@@ -176,7 +189,7 @@ diff -r 0f7ba4913233 include/split.h
 +};
 +
 +/** Split state flags. */
-+#define SPLIT_ACTIVE	    0x01  /**< Split is active. */
++#define SPLIT_ACTIVE     0x01  /**< Split is active. */
 +#define SPLIT_REMOVING   0x02  /**< Split is being force removed (instead of deactivated). */
 +#define SPLIT_BURST      0x04  /**< Split is for a server that is in progress of linking,
 +                                    and will be destroyed at the end of burst */
@@ -193,11 +206,10 @@ diff -r 0f7ba4913233 include/split.h
 +#define SPLIT_EXPIRE     0x01  /**< Expiration time update. */
 +#define SPLIT_LIFETIME   0x02  /**< Record lifetime update. */
 +#define SPLIT_REASON     0x04  /**< Reason update. */
-+#define SPLIT_CREATION   0x08  /**< TODO: Creation time update - unused. */
-+#define SPLIT_MODIFY     0x10  /**< No state change. */
++#define SPLIT_MODIFY     0x08  /**< No state change. */
 +
 +/* mask for Split update flags. */
-+#define SPLIT_UPDATE (SPLIT_EXPIRE | SPLIT_CREATION | SPLIT_LIFETIME | SPLIT_REASON)
++#define SPLIT_UPDATE (SPLIT_EXPIRE | SPLIT_LIFETIME | SPLIT_REASON)
 +
 +/* test whether a split entry is active. */
 +#define SplitIsActive(s)      ((s)->sp_flags & SPLIT_ACTIVE)
@@ -231,9 +243,9 @@ diff -r 0f7ba4913233 include/split.h
 +extern int split_memory_count(size_t *sp_size);
 +
 +#endif /* INCLUDED_split_h */
-diff -r 0f7ba4913233 ircd/Makefile.in
---- a/ircd/Makefile.in	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/Makefile.in	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/Makefile.in
+--- a/ircd/Makefile.in	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/Makefile.in	Fri Jan 30 14:30:16 2009 +0100
 @@ -173,6 +173,7 @@
  	m_sethost.c \
  	m_settime.c \
@@ -242,15 +254,15 @@ diff -r 0f7ba4913233 ircd/Makefile.in
  	m_squit.c \
  	m_stats.c \
  	m_time.c \
-@@ -212,6 +213,7 @@
+@@ -213,6 +214,7 @@
  	s_stats.c \
  	s_user.c \
  	send.c \
 +	split.c \
  	uping.c \
  	userload.c \
- 	whocmds.c \
-@@ -1052,6 +1054,15 @@
+ 	welcome.c \
+@@ -1054,6 +1056,15 @@
    ../include/ircd_chattr.h ../include/list.h ../include/msg.h \
    ../include/numeric.h ../include/numnicks.h ../include/s_user.h \
    ../include/send.h ../include/struct.h
@@ -266,7 +278,7 @@ diff -r 0f7ba4913233 ircd/Makefile.in
  m_squit.o: m_squit.c ../config.h ../include/client.h \
    ../include/ircd_defs.h ../include/dbuf.h ../include/msgq.h \
    ../include/ircd_events.h ../config.h ../include/ircd_handler.h \
-@@ -1325,6 +1336,7 @@
+@@ -1332,6 +1343,7 @@
    ../include/msgq.h ../include/numeric.h ../include/numnicks.h \
    ../include/res.h ../include/s_bsd.h ../include/s_conf.h \
    ../include/s_user.h ../include/s_stats.h ../include/send.h \
@@ -274,7 +286,7 @@ diff -r 0f7ba4913233 ircd/Makefile.in
    ../include/struct.h ../include/sys.h ../include/whowas.h
  s_err.o: s_err.c ../config.h ../include/numeric.h ../include/ircd_log.h \
    ../include/s_debug.h ../config.h ../include/ircd_defs.h
-@@ -1410,6 +1422,16 @@
+@@ -1417,6 +1429,16 @@
    ../include/msg.h ../include/numnicks.h ../include/parse.h \
    ../include/s_bsd.h ../include/s_debug.h ../include/s_misc.h \
    ../include/s_user.h ../include/struct.h ../include/sys.h
@@ -291,9 +303,9 @@ diff -r 0f7ba4913233 ircd/Makefile.in
  uping.o: uping.c ../config.h ../include/uping.h ../include/ircd_defs.h \
    ../include/ircd_events.h ../config.h ../include/res.h \
    ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r 0f7ba4913233 ircd/ircd.c
---- a/ircd/ircd.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/ircd.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/ircd.c
+--- a/ircd/ircd.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/ircd.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -55,6 +55,7 @@
  #include "s_misc.h"
  #include "s_stats.h"
@@ -312,10 +324,10 @@ diff -r 0f7ba4913233 ircd/ircd.c
    event_loop();
  
    return 0;
-diff -r 0f7ba4913233 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/ircd_features.c	Sat Jan 24 18:42:34 2009 +0100
-@@ -365,6 +365,10 @@
+diff -r 574e7b8526d3 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/ircd_features.c	Fri Jan 30 14:30:16 2009 +0100
+@@ -366,6 +366,10 @@
    F_B(SETHOST_USER, 0, 0, 0),
    F_B(SETHOST_AUTO, 0, 0, 0),
  
@@ -326,7 +338,15 @@ diff -r 0f7ba4913233 ircd/ircd_features.c
    /* HEAD_IN_SAND Features */
    F_B(HIS_SNOTICES, 0, 1, 0),
    F_B(HIS_SNOTICES_OPER_ONLY, 0, 1, 0),
-@@ -392,6 +396,7 @@
+@@ -374,6 +378,7 @@
+   F_B(HIS_MAP, 0, 1, 0),
+   F_B(HIS_LINKS, 0, 1, 0),
+   F_B(HIS_TRACE, 0, 1, 0),
++  F_B(HIS_SPLIT, 0, 1, 0),
+   F_B(HIS_STATS_a, 0, 1, 0),
+   F_B(HIS_STATS_c, 0, 1, 0),
+   F_B(HIS_STATS_d, 0, 1, 0),
+@@ -393,6 +398,7 @@
    F_B(HIS_STATS_q, 0, 1, 0),
    F_B(HIS_STATS_R, 0, 1, 0),
    F_B(HIS_STATS_r, 0, 1, 0),
@@ -334,9 +354,9 @@ diff -r 0f7ba4913233 ircd/ircd_features.c
    F_B(HIS_STATS_s, 0, 1, 0),
    F_B(HIS_STATS_t, 0, 1, 0),
    F_B(HIS_STATS_T, 0, 1, 0),
-diff -r 0f7ba4913233 ircd/ircd_log.c
---- a/ircd/ircd_log.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/ircd_log.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/ircd_log.c
+--- a/ircd/ircd_log.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/ircd_log.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -154,6 +154,7 @@
    S(OPERMODE, -1, SNO_HACK4),
    S(GLINE, -1, SNO_GLINE),
@@ -345,9 +365,9 @@ diff -r 0f7ba4913233 ircd/ircd_log.c
    S(WHO, -1, 0),
    S(NETWORK, -1, SNO_NETWORK),
    S(OPERKILL, -1, 0),
-diff -r 0f7ba4913233 ircd/m_endburst.c
---- a/ircd/m_endburst.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/m_endburst.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/m_endburst.c
+--- a/ircd/m_endburst.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/m_endburst.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -85,6 +85,7 @@
  #include "client.h"
  #include "hash.h"
@@ -383,9 +403,9 @@ diff -r 0f7ba4913233 ircd/m_endburst.c
    if (MyConnect(sptr))
      sendcmdto_one(&me, CMD_END_OF_BURST_ACK, sptr, "");
  
-diff -r 0f7ba4913233 ircd/m_reburst.c
---- a/ircd/m_reburst.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/m_reburst.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/m_reburst.c
+--- a/ircd/m_reburst.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/m_reburst.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -102,6 +102,7 @@
  #include "ircd_snprintf.h"
  #include "gline.h"
@@ -405,9 +425,9 @@ diff -r 0f7ba4913233 ircd/m_reburst.c
      default:
        break;
    }
-diff -r 0f7ba4913233 ircd/m_server.c
---- a/ircd/m_server.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/m_server.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/m_server.c
+--- a/ircd/m_server.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/m_server.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -47,6 +47,7 @@
  #include "s_misc.h"
  #include "s_serv.h"
@@ -426,10 +446,10 @@ diff -r 0f7ba4913233 ircd/m_server.c
    /*
     * Old sendto_serv_but_one() call removed because we now need to send
     * different names to different servers (domain name matching).
-diff -r 0f7ba4913233 ircd/m_split.c
+diff -r 574e7b8526d3 ircd/m_split.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_split.c	Sat Jan 24 18:42:34 2009 +0100
-@@ -0,0 +1,376 @@
++++ b/ircd/m_split.c	Fri Jan 30 14:30:16 2009 +0100
+@@ -0,0 +1,401 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_split.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -453,7 +473,6 @@ diff -r 0f7ba4913233 ircd/m_split.c
 + * along with this program; if not, write to the Free Software
 + * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 + *
-+ * $Id: m_split.c 1737 2006-12-19 05:20:48Z entrope $
 + */
 +
 +/*
@@ -554,26 +573,33 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +  unsigned int flags = 0;
 +  enum SplitAction action = SPLIT_MODIFY;
 +  time_t creation = 0, expire = 0, lastmod = 0, lifetime = 0;
-+  char *server = 0, *tmp = 0;
++  char *server;
 +  const char *reason = "No reason";
 +
 +  /* reason is optional - for lazy services, we always send it */
-+  if (parc < 5)
++  if (parc < 5) {
++    protocol_violation(sptr, "Too few parameters for SPLIT (got %d - need at least 5)", parc);
 +    return need_more_params(sptr, "SPLIT");
++  }
 +
++  /* server param */
++  server = parv[1];
++
++  /* check for ! prefix - force removing */
 +  if (*server == '!') {
 +    server++;
-+    action = SPLIT_REMOVE; /* removing entry */
++    action = SPLIT_REMOVE;
 +  }
-+  
-+  switch (*server) { /* handle + and - */
-+    case '+': /* activate the split entry */
++
++  /* check for + and - prefix */
++  switch (*server) {
++    case '+':
 +    if (action != SPLIT_REMOVE)
 +      action = SPLIT_ACTIVATE;
 +    server++;
 +    break;
 +
-+    case '-': /* deactivate the entry */
++    case '-':
 +    if (action != SPLIT_REMOVE)
 +      action = SPLIT_DEACTIVATE;
 +    server++;
@@ -581,14 +607,13 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +  }
 +
 +  /* Next, try to find the split entry... */
-+  server = parv[1];
 +  asplit = split_find(server);
 +
 +  /* We now have all the pieces to tell us what we've got; let's put
 +   * it all together and convert the rest of the arguments.
 +   */
 +
-+  /* can't modify a split entry that doesn't exist, so remap to activate */
++  /* cannot modify a split entry that does not exist - remap to activate */
 +  if (!asplit && action == SPLIT_MODIFY)
 +    action = SPLIT_ACTIVATE;
 +
@@ -601,10 +626,14 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +  expire = atoi(parv[3]);
 +  lastmod = atoi(parv[4]);
 +  lifetime = atoi(parv[5]);
-+  /* got a reason too */
-+  if (parc < 6)
-+    reason = parv[parc - 1];
 +
++  /* got a reason too */
++  if (parc > 5)
++    reason = parv[parc - 1];
++  else 
++    flags &= ~SPLIT_REASON;
++
++  /* debug */
 +  Debug((DEBUG_DEBUG, "I have a SPLIT I am acting upon now; "
 +    "server %s, action %s, creation %Tu, expire %Tu, "
 +    "lastmod %Tu, lifetime %Tu, reason: %s; split %s!", server,
@@ -614,9 +643,7 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +	 creation, expire, lastmod, lifetime, reason,
 +	 asplit ? "EXISTS" : "does not exist"));
 +
-+  /* OK, at this point, we have converted all available parameters.
-+   * Let's actually do the action!
-+   */
++  /* modify or remove an existing SPLIT */
 +  if (asplit) {
 +    if (action == SPLIT_REMOVE)
 +      return split_remove(cptr, sptr, asplit, reason);
@@ -626,19 +653,21 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +
 +  /* desynch or cross - we do not have it so we cannot remove it */
 +  /* TODO: manually propagate the message ?
-+   *   ..but if we do not have it, can our downlinks have it?
-+   * they could if my oper force removed it earlier, and then my downlinks linked
-+   * no, then they would have bursted it again to us.. argh
++   *
++   * but if we do not have it, can our downlinks have it?
++   *   they could if my oper force removed it earlier, and then my downlinks linked
++   *     no, then they would have bursted it again to us.. argh
 +   */
 +  if (!asplit && action == SPLIT_REMOVE)
 +    return 0;
 +
++  /* this should not happen */
 +  assert(action != SPLIT_MODIFY);
 +  assert(action != SPLIT_REMOVE);
 +
-+  /* only give one flag when needed - SPLIT_ACTIVE */
++  /* create a new SPLIT */
 +  return split_add(cptr, sptr, server, reason, creation, expire, lastmod, lifetime,
-+    (flags & SPLIT_ACTIVATE) ? SPLIT_ACTIVE : 0);
++    action == SPLIT_ACTIVATE ? SPLIT_ACTIVE : 0);
 +}
 +
 +
@@ -663,31 +692,35 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +  unsigned int flags = 0;
 +  enum SplitAction action = SPLIT_MODIFY;
 +  time_t expire = 0, lastmod = TStime(), creation = TStime();
-+  char *server = parv[1], *end;
++  char *server, *end;
 +  const char *reason = NULL;
 +
-+  /* listing */
-+  if (parc < 2) {
-+    if (!HasPriv(sptr, PRIV_ROUTEINFO)) 
-+      return send_reply(sptr, ERR_NOPRIVILEGES);
-+    else
-+      return split_list(sptr, 0);
-+  }
++  /* check HIS and privs */
++  if (feature_bool(FEAT_HIS_SPLIT) && !HasPriv(sptr, PRIV_ROUTEINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
 +
-+  /* force removal */
++  /* listing */
++  if (parc < 2)
++    return split_list(sptr, 0);
++
++  /* set server */
++  server = parv[1];
++
++  /* ! prefix - force removal */
 +  if (*server == '!') {
 +    server++;
 +    action = SPLIT_REMOVE;
 +  }
 +
-+  switch (*server) { /* handle + and - */
-+    case '+': /* activate the split entry */
++  /* handle + and - */
++  switch (*server) {
++    case '+':
 +    if (action != SPLIT_REMOVE)
 +      action = SPLIT_ACTIVATE;
 +    server++;
 +    break;
 +
-+    case '-': /* deactivate the split entry */
++    case '-':
 +    if (action != SPLIT_REMOVE)
 +      action = SPLIT_DEACTIVATE;
 +    server++;
@@ -700,7 +733,7 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +
 +  /* if we have an expire, this must be it */
 +  if (parc > 2)
-+    expire = strtol(parv[2], &end, 10); /* and the expiration */
++    expire = strtol(parv[2], &end, 10);
 +
 +  /* got reason and expire */
 +  if (parc > 3) {
@@ -718,7 +751,8 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +  /* set reason */
 +  if (flags & SPLIT_REASON) {
 +    reason = parv[parc - 1];
-+    if (reason[0] == '\0') /* reason is empty */
++    /* ignore empty reason */
++    if (EmptyString(reason))
 +      flags &= ~SPLIT_REASON;
 +  }
 +
@@ -738,18 +772,16 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +      expire += TStime();
 +   }
 +
++  /* TODO: but allow force removal when disabled? */
 +  /* check feature and privs */
-+  if (!feature_bool(FEAT_SPLIT)) /* TODO: but allow force removal? */
++  if (!feature_bool(FEAT_SPLIT))
 +    return send_reply(sptr, ERR_DISABLED, "SPLIT");
-+  else if (!HasPriv(sptr, PRIV_SERVERINFO)) /* TODO: create PRIV_SPLIT - need help there */
++  /* TODO: create PRIV_SPLIT - need help there */
++  else if (!HasPriv(sptr, PRIV_SERVERINFO))
 +    return send_reply(sptr, ERR_NOPRIVILEGES);
 +
-+  /* find the split */
++  /* we have all we need - find the split */
 +  asplit = split_find(server);
-+
-+  /* We now have all the pieces to tell us what we've got; let's put
-+   * it all together and convert the rest of the arguments.
-+   */
 +
 +  /* SPLIT not found and thus we cannot:
 +   *   remove SPLIT we do not have
@@ -762,10 +794,11 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +       (action == SPLIT_MODIFY && !reason)))
 +    return send_reply(sptr, ERR_NOSUCHSPLIT, server);
 +
-+  /* can't modify a split entry that doesn't exist, so remap to activate */
++  /* cannot modify a split entry that does not exist - remap to activate */
 +  if (!asplit && action == SPLIT_MODIFY)
 +    action = SPLIT_ACTIVATE;
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "I have a SPLIT I am acting upon now; "
 +    "server %s, action %s, expire %Tu, "
 +    "reason: %s; split %s!  (fields present: %s %s)", server,
@@ -776,21 +809,24 @@ diff -r 0f7ba4913233 ircd/m_split.c
 +    flags & SPLIT_EXPIRE ? "expire" : "",
 +    flags & SPLIT_REASON ? "reason" : ""));
 +
-+  if (asplit) { /* modifying an existing SPLIT */
++  /* modify or remove an existing SPLIT */
++  if (asplit) {
 +    if (action == SPLIT_REMOVE)
 +      return split_remove(cptr, sptr, asplit, reason);
 +    return split_modify(cptr, sptr, asplit, action, reason,
 +      asplit->sp_creation, expire, lastmod, asplit->sp_lifetime, flags);
 +  }
 +
++  /* this should not happen */
 +  assert(action != SPLIT_MODIFY);
 +  assert(action != SPLIT_REMOVE);
 +
 +  /* create a new SPLIT */
 +  return split_add(cptr, sptr, server, reason,
 +    creation, expire, lastmod, expire,
-+    flags | ((action == SPLIT_ACTIVATE) ? SPLIT_ACTIVE : 0));
++    (action == SPLIT_ACTIVATE) ? SPLIT_ACTIVE : 0);
 +}
++
 +
 +/*
 + * m_split - user message handler
@@ -801,31 +837,40 @@ diff -r 0f7ba4913233 ircd/m_split.c
 + */
 +int m_split(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
++
++  /* ordinary users are not allowed to see it
++   * or give more than 2 parameters
++   */
++  if (!feature_bool(FEAT_HIS_SPLIT) || parc > 2)
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
++  /* listing all */
 +  if (parc < 2)
 +    return split_list(sptr, 0);
 +
++  /* looking for a match */
 +  return split_list(sptr, parv[1]);
 +}
-diff -r 0f7ba4913233 ircd/parse.c
---- a/ircd/parse.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/parse.c	Sat Jan 24 18:42:34 2009 +0100
-@@ -505,6 +505,13 @@
-     0, MAXPARA, MFLG_SLOW, 0, NULL,
-     /* UNREG, CLIENT, SERVER, OPER, SERVICE */
-     { m_unregistered, m_not_oper, ms_jupe, mo_jupe, m_ignore }
-+  },
-+  {
+diff -r 574e7b8526d3 ircd/parse.c
+--- a/ircd/parse.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/parse.c	Fri Jan 30 14:30:16 2009 +0100
+@@ -506,6 +506,13 @@
+     { m_unregistered, m_not_oper, ms_jupe, mo_jupe, m_ignore, mh_jupe }
+   },
+   {
 +    MSG_SPLIT,
 +    TOK_SPLIT,
 +    0, MAXPARA, MFLG_SLOW, 0, NULL,
-+    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
-+    { m_unregistered, m_not_oper, ms_split, mo_split, m_ignore }
-   },
-   {
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_split, ms_split, mo_split, m_ignore, mh_nohelp }
++   },
++  {
      MSG_OPMODE,
-diff -r 0f7ba4913233 ircd/s_conf.c
---- a/ircd/s_conf.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/s_conf.c	Sat Jan 24 18:42:34 2009 +0100
+     TOK_OPMODE,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+diff -r 574e7b8526d3 ircd/s_conf.c
+--- a/ircd/s_conf.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/s_conf.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -53,6 +53,7 @@
  #include "s_debug.h"
  #include "s_misc.h"
@@ -842,9 +887,9 @@ diff -r 0f7ba4913233 ircd/s_conf.c
  
    return ret;
  }
-diff -r 0f7ba4913233 ircd/s_debug.c
---- a/ircd/s_debug.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/s_debug.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/s_debug.c
+--- a/ircd/s_debug.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/s_debug.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -48,6 +48,7 @@
  #include "s_user.h"
  #include "s_stats.h"
@@ -859,7 +904,7 @@ diff -r 0f7ba4913233 ircd/s_debug.c
        gl = 0,                   /* glines */
 -      ju = 0;                   /* jupes */
 +      ju = 0,                   /* jupes */
-+      sp = 0;                   /* split entries */
++      sp = 0;                   /* splits */
  
    size_t chm = 0,               /* memory used by channels */
        chbm = 0,                 /* memory used by channel bans */
@@ -867,7 +912,7 @@ diff -r 0f7ba4913233 ircd/s_debug.c
        wwm = 0,                  /* whowas array memory used */
        glm = 0,                  /* memory used by glines */
        jum = 0,                  /* memory used by jupes */
-+      spm = 0,                  /* memory used by split entries */
++      spm = 0,                  /* memory used by splits */
        com = 0,                  /* memory used by conf lines */
        dbufs_allocated = 0,      /* memory used by dbufs */
        dbufs_used = 0,           /* memory used by dbufs */
@@ -882,9 +927,9 @@ diff -r 0f7ba4913233 ircd/s_debug.c
  
    send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
  	     ":Hash: client %d(%zu), chan is the same", HASHSIZE,
-diff -r 0f7ba4913233 ircd/s_err.c
---- a/ircd/s_err.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/s_err.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/s_err.c
+--- a/ircd/s_err.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/s_err.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -490,7 +490,7 @@
  /* 228 */
    { RPL_STATSQLINE, "Q %s :%s", "228" },
@@ -908,16 +953,16 @@ diff -r 0f7ba4913233 ircd/s_err.c
  /* 281 */
 @@ -1052,7 +1052,7 @@
  /* 509 */
-   { 0 },
+   { ERR_NOSUCHWELCOME, "%s :No such welcome", "509" },
  /* 510 */
 -  { 0 },
 +  { ERR_NOSUCHSPLIT, "%s :No such split", "510" },
  /* 511 */
    { ERR_SILELISTFULL, "%s :Your silence list is full", "511" },
  /* 512 */
-diff -r 0f7ba4913233 ircd/s_misc.c
---- a/ircd/s_misc.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/s_misc.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/s_misc.c
+--- a/ircd/s_misc.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/s_misc.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -53,6 +53,7 @@
  #include "s_stats.h"
  #include "s_user.h"
@@ -950,9 +995,9 @@ diff -r 0f7ba4913233 ircd/s_misc.c
    }
  
    /*
-diff -r 0f7ba4913233 ircd/s_serv.c
---- a/ircd/s_serv.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/s_serv.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/s_serv.c
+--- a/ircd/s_serv.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/s_serv.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -54,6 +54,7 @@
  #include "s_misc.h"
  #include "s_user.h"
@@ -961,17 +1006,17 @@ diff -r 0f7ba4913233 ircd/s_serv.c
  #include "struct.h"
  #include "sys.h"
  #include "userload.h"
-@@ -196,6 +197,7 @@
+@@ -197,6 +198,7 @@
     */
    gline_burst(cptr);
    jupe_burst(cptr);
 +  split_burst(cptr);
+   welcome_burst(cptr);
  
    /*
-    * Pass on my client information to the new server
-diff -r 0f7ba4913233 ircd/s_stats.c
---- a/ircd/s_stats.c	Sat Jan 24 12:58:40 2009 +0100
-+++ b/ircd/s_stats.c	Sat Jan 24 18:42:34 2009 +0100
+diff -r 574e7b8526d3 ircd/s_stats.c
+--- a/ircd/s_stats.c	Fri Jan 30 13:22:50 2009 +0100
++++ b/ircd/s_stats.c	Fri Jan 30 14:30:16 2009 +0100
 @@ -52,6 +52,7 @@
  #include "s_stats.h"
  #include "s_user.h"
@@ -979,8 +1024,8 @@ diff -r 0f7ba4913233 ircd/s_stats.c
 +#include "split.h"
  #include "struct.h"
  #include "userload.h"
- 
-@@ -668,7 +669,10 @@
+ #include "welcome.h"
+@@ -669,7 +670,10 @@
      send_usage, 0,
      "System resource usage (Debug only)." },
  #endif
@@ -992,10 +1037,10 @@ diff -r 0f7ba4913233 ircd/s_stats.c
      stats_sline, 0,
      "Spoofed hosts information." },
    { 'T', "motds", (STAT_FLAG_OPERFEAT | STAT_FLAG_CASESENS), FEAT_HIS_STATS_T,
-diff -r 0f7ba4913233 ircd/split.c
+diff -r 574e7b8526d3 ircd/split.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/split.c	Sat Jan 24 18:42:34 2009 +0100
-@@ -0,0 +1,786 @@
++++ b/ircd/split.c	Fri Jan 30 14:30:16 2009 +0100
+@@ -0,0 +1,881 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/split.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1018,7 +1063,6 @@ diff -r 0f7ba4913233 ircd/split.c
 + */
 +/** @file
 + * @brief Implementation of split server handling functions.
-+ * @version $Id: split.c 1633 2006-03-25 03:46:56Z entrope $
 + */
 +#include "config.h"
 +
@@ -1065,26 +1109,30 @@ diff -r 0f7ba4913233 ircd/split.c
 +  unsigned int flags)
 +{
 +  struct Split *asplit;
++  char sp_server[HOSTLEN+1];
++  char sp_reason[TOPICLEN+1];
 +
-+  asplit = (struct Split*) MyMalloc(sizeof(struct Split)); /* alloc memory */
++  /* alloc memory */
++  asplit = (struct Split*) MyMalloc(sizeof(struct Split));
++  
++  /* we should have it now */
 +  assert(0 != asplit);
 +
 +  memset(asplit, 0, sizeof(*asplit));
-+  /* TODO: some limit for servername length? HOSTLEN? */
-+  DupString(asplit->sp_server, server); /* copy vital information */
-+  /* TODO: some limit for reason length? QUITLEN TOPICLEN? */
++  ircd_strncpy(sp_server, server, HOSTLEN);
++  DupString(asplit->sp_server, sp_server);
 +  /* TODO: prefix the reason here with the opername/ID? */
-+  DupString(asplit->sp_reason, reason);
-+  /* TODO: what we use creation for and do we need it? */
++  ircd_strncpy(sp_reason, reason, TOPICLEN);
++  DupString(asplit->sp_reason, sp_reason);
 +  asplit->sp_creation = creation;
 +  asplit->sp_expire = expire;
-+  /* TODO: are we using nettime etc.? CurrentTime is used. */
-+  /* TODO: TStime() is CurrentTime + TSoffset */
 +  asplit->sp_lastmod = lastmod;
 +  asplit->sp_lifetime = lifetime;
-+  asplit->sp_flags = flags & SPLIT_ACTIVE; /* set split flags */
++  /* set split flags - only save SPLIT_ACTIVE */
++  asplit->sp_flags = flags & SPLIT_ACTIVE;
 +
-+  asplit->sp_next = GlobalSplitList; /* link it into the list */
++  /* link it into the list */
++  asplit->sp_next = GlobalSplitList;
 +  asplit->sp_prev_p = &GlobalSplitList;
 +  if (GlobalSplitList)
 +    GlobalSplitList->sp_prev_p = &asplit->sp_next;
@@ -1092,6 +1140,7 @@ diff -r 0f7ba4913233 ircd/split.c
 +
 +  return asplit;
 +}
++
 +
 +/** Forward a split entry to another server.
 + * @param[in] cptr Local client that sent us the split entry.
@@ -1108,9 +1157,9 @@ diff -r 0f7ba4913233 ircd/split.c
 +    SplitIsActive(split) && !SplitIsRemoving(split) ? '+' : '-', /* always !- not !+ */
 +    split->sp_server, split->sp_creation, split->sp_expire,
 +    split->sp_lastmod, split->sp_lifetime,
-+    /* TODO: does reason ? reason : split->sp_reason work too? */
-+    reason != NULL ? reason : split->sp_reason);
++    EmptyString(reason) ? split->sp_reason : reason);
 +}
++
 +
 +/** Add a new server split entry.
 + * @param[in] cptr Local client that sent us the split entry.
@@ -1128,15 +1177,16 @@ diff -r 0f7ba4913233 ircd/split.c
 +	 unsigned int flags)
 +{
 +
-+  struct Split *asplit;
-+  struct Client *acptr;
++  struct Split *split;
 +  char noreason[BUFSIZE];
++  static time_t rate;
 +
-+  assert(0 != cptr);
-+  assert(0 != sptr);
-+  assert(0 != server);
-+  assert(0 != reason);
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(NULL != server);
++  assert(NULL != reason);
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "split_add(\"%s\", \"%s\", \"%s\", \"%s\", %Tu, %Tu, %Tu, "
 +	 "%Tu, 0x%04x)", cli_name(cptr), cli_name(sptr), server, reason,
 +	 creation, expire, lastmod, lifetime, flags));
@@ -1146,10 +1196,10 @@ diff -r 0f7ba4913233 ircd/split.c
 +   *   otherwise ignore - SERVER and SPLIT messages can cross,
 +   *   or a server is bursting and it will see our end and destroy the SPLITs
 +   */
-+  if ((acptr = FindServer(server))) {
++  if (FindServer(server)) {
 +    if (MyUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
-+        "%C :Cannot add SPLIT %s - server is linked.", sptr, server);
++        "%C :SPLIT: Cannot add SPLIT %s - server is linked.", sptr, server);
 +    return 0;
 +  }
 +
@@ -1158,7 +1208,6 @@ diff -r 0f7ba4913233 ircd/split.c
 +   * duration greater than SPLIT_MAX_EXPIRE.
 +   */
 +  if (expire - TStime() <= 0 || expire - TStime() > SPLIT_MAX_EXPIRE) {
-+    /* TODO: cptr or sptr here? */
 +    if (MyUser(sptr))
 +      return send_reply(cptr, ERR_BADEXPIRE, expire - TStime());
 +    if (lifetime <= TStime()) /* no point going further */
@@ -1170,30 +1219,41 @@ diff -r 0f7ba4913233 ircd/split.c
 +  }
 +
 +  /* empty reason */
-+  if (reason[0] == '\0')
++  if (EmptyString(reason))
 +    ircd_snprintf(0, noreason, sizeof(noreason), "%C gave no reason.", sptr);
 +
-+  /* TODO: add opername */
-+  /* inform ops and log it */
-+  sendto_opmask_butone(0, SNO_NETWORK, "%s adding%sSPLIT for %s, expiring at %Tu: %s",
-+    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+      cli_name(sptr) : cli_name((cli_user(sptr))->server),
-+    !(flags & SPLIT_ACTIVE) ? " deactivated " : " ",
-+    server, expire, reason[0] == '\0' ? noreason : reason);
-+
-+  log_write(LS_SPLIT, L_INFO, LOG_NOSNOTICE,
-+    "%#C adding%sSPLIT for %s, expiring at %Tu: %s",
-+    sptr, !(flags & SPLIT_ACTIVE) ? " deactivated " : " ",
-+    server, expire, reason[0] == '\0' ? noreason : reason);
++  /* lastmod is more than SPLIT_MAX_DRIFT seconds ahead of our idea of time
++   *   correct and warn ops
++   */
++  if (lastmod - TStime() > SPLIT_MAX_DRIFT) {
++    sendto_opmask_butone_ratelimited(0, SNO_NETWORK, &rate,
++      "Possible timestamp drift from %C; lastmod in SPLIT message is %is ahead of time",
++      IsServer(sptr) ? sptr : cli_user(sptr)->server, lastmod - TStime());
++    lastmod = TStime() + SPLIT_MAX_DRIFT;
++  }
 +
 +  /* make the split entry */
-+  asplit = split_make(server, reason[0] == '\0' ? noreason : reason,
++  split = split_make(server, EmptyString(reason) ? noreason : reason,
 +             creation, expire, lastmod, lifetime, flags);
-+  
-+  assert(asplit);
++
++  /* got to have it now */
++  assert(split);
++
++  /* inform ops */
++  sendto_opmask_butone(0, SNO_NETWORK, "%s adding%sSPLIT for %s, expiring at %Tu: %s",
++    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
++      get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
++    SplitIsActive(split) ? " " : " deactivated ",
++    split->sp_server, split->sp_expire, split->sp_reason);
++
++  /* log it */
++  log_write(LS_SPLIT, L_INFO, LOG_NOSNOTICE,
++    "%#C adding%sSPLIT for %s, expiring at %Tu: %s",
++    sptr, SplitIsActive(split) ? " " : " deactivated ",
++    split->sp_server, split->sp_expire, split->sp_reason);
 +  
 +  /* and propagate it */
-+  split_propagate(cptr, sptr, asplit, NULL);
++  split_propagate(cptr, sptr, split, NULL);
 +
 +  return 0;
 +}
@@ -1203,7 +1263,7 @@ diff -r 0f7ba4913233 ircd/split.c
 + * @param[in] cptr Client that sent us the split modification.
 + * @param[in] sptr Client that originated the split modification.
 + * @param[in] split Split entry being modified.
-+ * @param[in] action Resultant status of the G-line.
++ * @param[in] action Resultant status of the SPLIT.
 + * @param[in] reason Reason.
 + * @param[in] expire Expiration time.
 + * @param[in] lastmod Last modification time.
@@ -1217,14 +1277,16 @@ diff -r 0f7ba4913233 ircd/split.c
 +  time_t creation, time_t expire, time_t lastmod, time_t lifetime,
 +  unsigned int flags)
 +{
-+  struct Client* acptr;
 +  char buf[BUFSIZE];
++  char sp_reason[TOPICLEN+1];
 +  int pos = 0;
++  static time_t rate;
 +
-+  assert(0 != cptr);
-+  assert(0 != sptr);
-+  assert(0 != split);
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(NULL != split);
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "split_modify(cptr \"%s\", sptr \"%s\", split \"%s\", reason \"%s\","
 +    " action %d, creation %Tu, expire %Tu, lastmod %Tu, lifetime %Tu, flags 0x%04x)",
 +    cli_name(cptr), cli_name(sptr), split->sp_server, reason, action,
@@ -1240,25 +1302,55 @@ diff -r 0f7ba4913233 ircd/split.c
 +   *       we can get SPLITs for a linked server.
 +   *       also more than one server can be bursting at a time.
 +   */
-+  if ((acptr = FindServer(split->sp_server))) {
++  if (FindServer(split->sp_server)) {
 +    if (MyUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
-+        "%C :Cannot modify SPLIT %s - server is linked.", sptr, split->sp_server);
-+    /* SPLIT is not for a server part of a netmerge */
++        "%C :SPLIT: Cannot modify SPLIT %s - server is linked.", sptr, split->sp_server);
++
++    /* SPLIT is not for a server part of a netmerge - free it */
 +    if (!SplitIsBurst(split))
-+      split_free(split); /* and free it */
++      split_free(split);
 +    return 0;
 +  }
 +
 +  /* check lastmod */
-+  if (split->sp_lastmod > lastmod) { /* we have a more recent version */
-+    if (IsBurstOrBurstAck(cptr)) /* middle of a burst, it will resync on its own */
++  /* check if my oper modifies the SPLIT
++   * in which case use the greater of lastmod and split->sp_lastmod+1
++   *
++   * because if the lastmod of the split is in the future (greater than TStime())
++   * my oper cannot modify it when we use TStime() as lastmod
++   * therefore use split->sp_lastmod+1 - ugly hack, but the only way in that situation
++   * to modify it, apart from force removing it first..
++   */
++  if (MyUser(sptr))
++    lastmod = IRCD_MAX(lastmod, split->sp_lastmod + 1);
++  /* we have a more recent version */
++  if (split->sp_lastmod > lastmod) {
++    /* middle of a burst, it will resync on its own */
++    if (IsBurstOrBurstAck(cptr))
 +      return 0;
-+    return split_resend(cptr, split); /* resync the server */
-+  } else if (split->sp_lastmod == lastmod) /* same version */
++    /* resync the server */
++    return split_resend(cptr, split);
++  /* same version */
++  } else if (split->sp_lastmod == lastmod)
 +     return 0;
-+  
-+  /* there is a change of some sort */
++
++  /* lastmod is more than SPLIT_MAX_DRIFT seconds ahead of our idea of time
++   *   correct and warn ops
++   *
++   *   not in case it is my oper
++   *   we use the lastmod of either TStime() or the lastmod we have plus 1 second
++   *   see above
++   */
++  if (lastmod - TStime() > SPLIT_MAX_DRIFT && !MyUser(sptr)) {
++    sendto_opmask_butone_ratelimited(0, SNO_NETWORK, &rate,
++      "Possible timestamp drift from %C; lastmod in SPLIT message is %is ahead of time",
++      IsServer(sptr) ? sptr : cli_user(sptr)->server, lastmod - TStime());
++    lastmod = TStime() + SPLIT_MAX_DRIFT;
++  }
++
++  /* we got here so there is a change of some sort */
++
 +  /* check out the expiration time */
 +  if (flags & SPLIT_EXPIRE) {
 +    if (expire != split->sp_expire) {
@@ -1272,72 +1364,82 @@ diff -r 0f7ba4913233 ircd/split.c
 +      flags &= ~SPLIT_EXPIRE;
 +  }
 +
-+  /* Next, check out lifetime */
++  /* check out lifetime */
 +  if (!(flags & SPLIT_LIFETIME) || !lifetime)
 +    lifetime = split->sp_lifetime; /* use Split lifetime */
 +
-+  lifetime = IRCD_MAX(lifetime, expire); /* set lifetime to the max */
++  /* raise lifetime when required */
++  lifetime = IRCD_MAX(lifetime, expire);
 +
-+  /* now that we have the correct lifetime, check it */
-+  if (lifetime - TStime() <= 0) /* no point in going further */
++  /* SPLIT already expired with this lifetime */
++  if (lifetime - TStime() <= 0)
 +    return 0;
 +
-+  /* OK, let's see which is greater... */
++  /* check if lifetime needs to be updated */
 +  if (lifetime > split->sp_lifetime)
-+    flags |= SPLIT_LIFETIME; /* have to update lifetime */
++    flags |= SPLIT_LIFETIME;
 +  else {
-+    flags &= ~SPLIT_LIFETIME; /* no change to lifetime */
++    flags &= ~SPLIT_LIFETIME;
 +    lifetime = 0;
 +  }
 +
-+  /* Finally, let's see if the reason needs to be updated */
-+  if ((flags & SPLIT_REASON) && (reason[0] == '\0' || !ircd_strcmp(split->sp_reason, reason)))
-+    flags &= ~SPLIT_REASON; /* no changes to the reason */
++  /* no changes to the reason - empty or the same */
++  if ((flags & SPLIT_REASON) &&
++      (EmptyString(reason) || !ircd_strcmp(split->sp_reason, reason)))
++    flags &= ~SPLIT_REASON;
 +
-+  /* OK, now let's take a look at the action... */
++  /* no status change
++   *  activate but split is active
++   *  deactivate but split is deactivated
++   *  expire timestamp is in the past so it should be deactivated
++   *    and cannot be activated anymore
++   */
 +  if ((action == SPLIT_ACTIVATE && SplitIsActive(split)) ||
 +      (action == SPLIT_DEACTIVATE && !SplitIsActive(split)) ||
-+      /* can't activate an expired split entry */
 +      (IRCD_MAX(split->sp_expire, expire) <= TStime()))
-+    action = SPLIT_MODIFY; /* no activity state modifications */
++    action = SPLIT_MODIFY;
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG,  "About to perform changes; flags 0x%04x, action %s",
 +	 flags, action == SPLIT_ACTIVATE ? "SPLIT_ACTIVATE" :
 +	 (action == SPLIT_DEACTIVATE ? "SPLIT_DEACTIVATE" :
 +     (action == SPLIT_MODIFY ? "SPLIT_MODIFY" : "<UNKNOWN>"))));
 +
-+  /* If there are no changes to perform, do no changes */
++  /* nothing to change at all */
 +  if (!(flags & SPLIT_UPDATE) && action == SPLIT_MODIFY) {
 +    if (MyUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
-+        "%C :Cannot modify SPLIT %s - nothing to change.", sptr, split->sp_server);
++        "%C :SPLIT: Cannot modify SPLIT %s - nothing to change.", sptr, split->sp_server);
 +    return 0;
 +  }
 +
-+  /* Start by updating lastmod, if indicated... */
++  /* update lastmod */
 +  split->sp_lastmod = lastmod;
 +
-+  /* Then move on to activity status changes... */
++  /* update status */
 +  switch (action) {
-+  case SPLIT_ACTIVATE: /* activating split entry */
-+    split->sp_flags |= SPLIT_ACTIVE; /* make it active... */
++
++  /* activating split entry */
++  case SPLIT_ACTIVATE: 
++    split->sp_flags |= SPLIT_ACTIVE;
 +    pos += ircd_snprintf(0, buf, sizeof(buf), " activating SPLIT");
 +    break;
 +
-+  case SPLIT_DEACTIVATE: /* deactivating split entry */
-+    split->sp_flags &= ~SPLIT_ACTIVE; /* make it inactive... */
++  /* deactivating split entry */
++  case SPLIT_DEACTIVATE:
++    split->sp_flags &= ~SPLIT_ACTIVE;
 +    pos += ircd_snprintf(0, buf, sizeof(buf), " deactivating SPLIT");
 +    break;
 +
-+  case SPLIT_MODIFY: /* no change to activity status */
++  /* no change to activity status */
++  case SPLIT_MODIFY:
 +    break;
 +  }
 +
-+  /* TODO: Handle creation changes... */
 +
-+  /* Handle expiration changes... */
++  /* update expire */
 +  if (flags & SPLIT_EXPIRE) {
-+    split->sp_expire = expire; /* save new expiration time */
++    split->sp_expire = expire;
 +    if (pos < BUFSIZE)
 +      pos += ircd_snprintf(0, buf + pos, sizeof(buf) - pos,
 +               "%s%s changing expiration time to %Tu",
@@ -1346,9 +1448,9 @@ diff -r 0f7ba4913233 ircd/split.c
 +               " and" : "", expire);
 +  }
 +  
-+  /* Next, handle lifetime changes... */
++  /* update lifetime */
 +  if (flags & SPLIT_LIFETIME) {
-+    split->sp_lifetime = lifetime; /* save new lifetime */
++    split->sp_lifetime = lifetime;
 +    if (pos < BUFSIZE)
 +      pos += ircd_snprintf(0, buf + pos, sizeof(buf) - pos,
 +               "%s%s extending record lifetime to %Tu",
@@ -1356,24 +1458,24 @@ diff -r 0f7ba4913233 ircd/split.c
 +               " and" : "", lifetime);
 +  }
 +
-+  /* Now, handle reason changes... */
++  /* update reason */
 +  if (flags & SPLIT_REASON) {
-+    MyFree(split->sp_reason); /* release old reason */
-+    DupString(split->sp_reason, reason); /* store new reason */
++    MyFree(split->sp_reason);
++    ircd_strncpy(sp_reason, reason, TOPICLEN);
++    DupString(split->sp_reason, sp_reason);
 +    if (pos < BUFSIZE)
 +      pos += ircd_snprintf(0, buf + pos, sizeof(buf) - pos,
 +               "%s%s changing reason to \"%s\"",
-+               pos ? ";" : "", pos ? " and" : "", reason);
++               pos ? ";" : "", pos ? " and" : "", sp_reason);
 +  }
 +
-+  /* TODO: add opername */
-+  /* All right, inform ops... */
++  /* inform ops */
 +  sendto_opmask_butone(0, SNO_NETWORK, "%s modifying SPLIT for %s:%s",
 +    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+      cli_name(sptr) : cli_name((cli_user(sptr))->server),
++      get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
 +    split->sp_server, buf);
 +
-+  /* and log the change */
++  /* log it */
 +  log_write(LS_SPLIT, L_INFO, LOG_NOSNOTICE,
 +    "%#C modifying SPLIT for %s:%s",
 +    sptr, split->sp_server, buf);
@@ -1397,10 +1499,12 @@ diff -r 0f7ba4913233 ircd/split.c
 +{
 +  unsigned int saveflags = 0;
 +
-+  assert(0 != split);
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
++  assert(NULL != split);
++  assert(NULL != reason);
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "split_remove(\"%s\", \"%s\", \"%s\", \"%s\")",
 +    cli_name(cptr), cli_name(sptr), split->sp_server, reason));
 +
@@ -1408,13 +1512,13 @@ diff -r 0f7ba4913233 ircd/split.c
 +  split->sp_flags |= SPLIT_REMOVING;
 +  split->sp_flags &= ~SPLIT_ACTIVE;
 +
-+  /* TODO: add opername? */
-+  /* inform ops and log it */
++  /* inform ops */
 +  sendto_opmask_butone(0, SNO_NETWORK, "%s removing SPLIT for %s, expiring at %Tu: %s (%s)",
 +    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+      cli_name(sptr) : cli_name((cli_user(sptr))->server),
++      get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
 +    split->sp_server, split->sp_expire, split->sp_reason, reason);
 +
++  /* log it */
 +  log_write(LS_SPLIT, L_INFO, LOG_NOSNOTICE,
 +    "%#C removing SPLIT for %s, expiring at %Tu: %s (%s)",
 +    sptr, split->sp_server, split->sp_expire, split->sp_reason, reason);
@@ -1439,17 +1543,23 @@ diff -r 0f7ba4913233 ircd/split.c
 +  struct Split* split;
 +  struct Split* ssplit;
 +
-+  for (split = GlobalSplitList; split; split = ssplit) { /* go through splits */
++  /* go over SPLITs */
++  for (split = GlobalSplitList; split; split = ssplit) {
 +    ssplit = split->sp_next;
 +
-+    if (split_expire(split)) /* expire any that need expiring */
++    /* expire any that need expiring */
++    if (split_expire(split))
 +      split_free(split);
-+    else if (0 == ircd_strcmp(server, split->sp_server)) /* found it yet? */
++
++   /* found it */
++    else if (0 == ircd_strcmp(server, split->sp_server))
 +      return split;
 +  }
-+  /* TODO: we return 0 not NULL? */
-+  return 0;
++
++  /* nothing found */
++  return NULL;
 +}
++
 +
 +/** Unlink and free an unused split entry.
 + * @param[in] split Server split entry to free.
@@ -1457,15 +1567,15 @@ diff -r 0f7ba4913233 ircd/split.c
 +void
 +split_free(struct Split* split)
 +{
-+  /* TODO: use 0 or NULL ? */
-+  assert(0 != split);
++  assert(NULL != split);
 +
-+  *split->sp_prev_p = split->sp_next; /* squeeze this split entry out */
++  /* squeeze this split entry out */
++  *split->sp_prev_p = split->sp_next;
 +  if (split->sp_next)
 +    split->sp_next->sp_prev_p = split->sp_prev_p;
 +
-+  /* CHECK: the other fields in this struct are destroyed with MyFree() call? */
-+  MyFree(split->sp_server);  /* and free up the memory */
++  /* and free up the memory */
++  MyFree(split->sp_server);
 +  MyFree(split->sp_reason);
 +  MyFree(split);
 +}
@@ -1479,7 +1589,7 @@ diff -r 0f7ba4913233 ircd/split.c
 +int
 +split_expire(struct Split* split)
 +{
-+  assert(0 != split);
++  assert(NULL != split);
 +
 +  /* TODO: also check if the server in SPLIT entry is linked atm? */
 +  /* past lifetime */
@@ -1493,6 +1603,7 @@ diff -r 0f7ba4913233 ircd/split.c
 +  return 0;
 +}
 +
++
 +/** Send the full list of split entries to \a cptr.
 + * @param[in] cptr Local server to send split entries to.
 + */
@@ -1504,25 +1615,31 @@ diff -r 0f7ba4913233 ircd/split.c
 +
 +  assert(NULL != cptr);
 +
-+  for (split = GlobalSplitList; split; split = ssplit) { /* go through splits */
++  /* go over SPLITs */
++  for (split = GlobalSplitList; split; split = ssplit) {
 +    ssplit = split->sp_next;
 +
 +    /* expire any that need expiring */
-+    if (split_expire(split))      
++    if (split_expire(split)) {      
 +      split_free(split);
++      continue;
++    }
++
 +    /* if we have an entry for cptr, dont send it - but do not free here yet
 +     *   free it at end of burst, to get the correct count for SPLITs removed.
 +     */
-+    else if (ircd_strcmp(split->sp_server, cli_name(cptr)) == 0)
++    if (ircd_strcmp(split->sp_server, cli_name(cptr)) == 0)
 +      continue;
-+    else
-+      sendcmdto_one(&me, CMD_SPLIT, cptr, "%c%s %Tu %Tu %Tu %Tu :%s",
-+        SplitIsActive(split) ? '+' : '-', split->sp_server,
-+        split->sp_creation, split->sp_expire,
-+        split->sp_lastmod, split->sp_lifetime,
-+        split->sp_reason);
++
++    /* send it */
++    sendcmdto_one(&me, CMD_SPLIT, cptr, "%c%s %Tu %Tu %Tu %Tu :%s",
++      SplitIsActive(split) ? '+' : '-', split->sp_server,
++      split->sp_creation, split->sp_expire,
++      split->sp_lastmod, split->sp_lifetime,
++      split->sp_reason);
 +  }
 +}
++
 +
 +/** Forward a split to another server.
 + * @param[in] cptr Server to send split entries to.
@@ -1541,7 +1658,8 @@ diff -r 0f7ba4913233 ircd/split.c
 +  return 0;
 +}
 +
-+/** Send a split entry (or a list of split entries) to a server.
++
++/** List split entries to a client.
 + * @param[in] sptr Client searching for split entries.
 + * @param[in] server Name of split entry to search for (if NULL, list all).
 + * @return Zero.
@@ -1556,12 +1674,18 @@ diff -r 0f7ba4913233 ircd/split.c
 +
 +  /* go through SPLITs */
 +  for (split = GlobalSplitList; split; split = split->sp_next) {
-+    if (split_expire(split)) { /* expire any that need expiring */
++
++    /* expire any that need expiring */
++    if (split_expire(split)) {
 +      split_free(split);
 +      continue;
 +    }
++
++    /* server given and does not match */
 +    if (server && match(server, split->sp_server))
 +      continue;
++
++    /* got one */
 +    count++;
 +    send_reply(sptr, RPL_SPLITLIST, split->sp_server,
 +      split->sp_creation, split->sp_expire, split->sp_lastmod, split->sp_lifetime, 
@@ -1587,18 +1711,19 @@ diff -r 0f7ba4913233 ircd/split.c
 +
 +  assert(NULL != acptr);
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "split_newserver(\"%s\")", cli_name(acptr)));
 +
 +  /* mark the SPLIT with SPLIT_BURST
 +   *  so we know this SPLIT is marked for removal already
 +   *  but not remove it just yet to get the correct count
 +   *  of SPLITs removed at the end of burst.
++   *
 +   *  also we need the SPLIT in case the net breaks again
 +   *  before end of burst?
 +   */
 +  if ((split = split_find(cli_name(acptr))))
 +    split->sp_flags |= SPLIT_BURST;
-+  return;
 +}
 +
 +
@@ -1615,6 +1740,7 @@ diff -r 0f7ba4913233 ircd/split.c
 +
 +  assert(NULL != sptr);
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "split_netmerge(\"%s\")", cli_name(sptr)));
 +
 +  /* find the SPLIT for this server */
@@ -1626,6 +1752,8 @@ diff -r 0f7ba4913233 ircd/split.c
 +  /* go over its downlinks */
 +  for (lp = cli_serv(sptr)->down; lp; lp = lp->next)
 +    count += split_netmerge(lp->value.cptr);
++
++  /* return the number of SPLITs removed */
 +  return count;
 +}
 +
@@ -1647,6 +1775,7 @@ diff -r 0f7ba4913233 ircd/split.c
 +
 +  assert(NULL != victim);
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "split_netbreak(\"%s\", \"%s\")", cli_name(victim), reason));
 +
 +  /* bad auto expire value */
@@ -1664,11 +1793,14 @@ diff -r 0f7ba4913233 ircd/split.c
 +    split_make(cli_name(victim), reason, creation, expire, lastmod, lifetime, flags);
 +    count++;
 +  } else
-+    split->sp_flags &= SPLIT_BURST; /* clear the burst flag for it */
++    /* clear the burst flag for it */
++    split->sp_flags &= SPLIT_BURST;
 +
 +  /* go over its downlinks */
 +  for (lp = cli_serv(victim)->down; lp; lp = lp->next)
 +    count += split_netbreak(lp->value.cptr, reason);
++
++  /* return the number of SPLITs created */
 +  return count;
 +}
 +
@@ -1680,14 +1812,13 @@ diff -r 0f7ba4913233 ircd/split.c
 +split_conf()
 +{
 +  struct ConfItem *conf;
-+  struct Client *server;
 +  struct Split *split;
-+  struct Split *asplit;
 +  time_t creation = TStime(), expire = TStime() + feature_int(FEAT_SPLIT_AUTO_EXPIRE),
 +    lastmod = TStime(), lifetime = expire;
 +  unsigned int flags = SPLIT_ACTIVE;
 +  char reason[BUFSIZE];
 +
++  /* debug */
 +  Debug((DEBUG_DEBUG, "split_conf()"));
 +
 +  /* we are not set to generate SPLITs */
@@ -1704,36 +1835,42 @@ diff -r 0f7ba4913233 ircd/split.c
 +
 +  /* go over the conf contents */
 +  for (conf = GlobalConfList; conf; conf = conf->next) {
++
 +    /* not a Connect Block */
 +    if (CONF_SERVER != conf->status)
 +      continue;
++
 +    /* server is linked */
-+    if (server = FindServer(conf->name))
++    if (FindServer(conf->name))
 +      continue;
++
 +    /* we have a SPLIT for this server already */
-+    if (split = split_find(conf->name))
++    if (split_find(conf->name))
 +      continue;
++
 +    /* TODO: use SNO_OLDSNO here?
 +     * just like nickcollisions on local users go there?
 +     * or at least change the source / message format?
 +     * /REHASH goes to SNO_OLDSNO? so this too?
 +     * if oper did rehash, add his name here?
 +     */
-+    /* inform ops and log it */
++    /* inform ops */
 +    sendto_opmask_butone(0, SNO_NETWORK, "%C adding SPLIT for %s, expiring at %Tu: %s",
 +      &me, conf->name, expire, reason);
 +
++    /* log it */
 +    log_write(LS_SPLIT, L_INFO, LOG_NOSNOTICE,
 +      "%C adding SPLIT for %s, expiring at %Tu: %s",
 +      &me, conf->name, expire, reason);
 +
 +    /* make the split entry */
-+    asplit = split_make(conf->name, reason, creation, expire, lastmod, lifetime, flags);
-+  
-+    assert(asplit);
++    split = split_make(conf->name, reason, creation, expire, lastmod, lifetime, flags);
++
++    /* got to have it now */
++    assert(split);
 +  
 +    /* and propagate it */
-+    split_propagate(&me, &me, asplit, NULL);
++    split_propagate(&me, &me, split, NULL);
 +  }
 +}
 +
@@ -1744,8 +1881,7 @@ diff -r 0f7ba4913233 ircd/split.c
 + * @param[in] param Extra parameter from user (ignored).
 + */
 +void
-+split_stats(struct Client *sptr, const struct StatDesc *sd,
-+            char *param)
++split_stats(struct Client *sptr, const struct StatDesc *sd, char *param)
 +{
 +  struct Split *split;
 +
@@ -1753,9 +1889,14 @@ diff -r 0f7ba4913233 ircd/split.c
 +  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
 +    "S Server Creation Expire Lastmod Lifetime Status :Reason");
 +
++  /* go over SPLIT entries */
 +  for (split = GlobalSplitList; split; split = split->sp_next) {
++
++    /* does not match */
 +    if (param && match(param, split->sp_server))
 +      continue;
++
++    /* send it */
 +    send_reply(sptr, RPL_STATSSPLIT, split->sp_server,
 +      split->sp_creation, split->sp_expire, split->sp_lastmod, split->sp_lifetime, 
 +      SplitIsActive(split) ? '+' : '-', split->sp_reason);
@@ -1781,4 +1922,3 @@ diff -r 0f7ba4913233 ircd/split.c
 +  }
 +  return sp;
 +}
-+
