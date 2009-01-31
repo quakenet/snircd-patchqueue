@@ -1,8 +1,8 @@
 same as 42 but then for version, tidied up a bit, and use hunt_server_cmd to find and forward remote requests to, rather than doing that work itself in the various *_version functions.
 
-diff -r 2fe969629892 ircd/m_version.c
---- a/ircd/m_version.c	Sun Jan 11 22:38:40 2009 +0000
-+++ b/ircd/m_version.c	Sun Jan 11 22:38:40 2009 +0000
+diff -r 6bd3926f94aa ircd/m_version.c
+--- a/ircd/m_version.c	Sat Jan 31 18:42:09 2009 +0100
++++ b/ircd/m_version.c	Sat Jan 31 18:43:26 2009 +0100
 @@ -109,7 +109,7 @@
   */
  int m_version(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
@@ -12,8 +12,11 @@ diff -r 2fe969629892 ircd/m_version.c
      return send_reply(sptr, ERR_NOPRIVILEGES);
  
    send_reply(sptr, RPL_VERSION, version, debugmode, cli_name(&me),
-@@ -129,26 +129,16 @@
-   struct Client *acptr;
+@@ -126,29 +126,18 @@
+  */
+ int mo_version(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+-  struct Client *acptr;
    char *target=parv[1];
  
 -  if (MyConnect(sptr) && parc > 1)
@@ -46,8 +49,11 @@ diff -r 2fe969629892 ircd/m_version.c
    {
      send_reply(sptr, RPL_VERSION, version, debugmode, cli_name(&me),
  	       debug_serveropts());
-@@ -169,18 +159,8 @@
-   struct Client *acptr;
+@@ -166,21 +155,10 @@
+  */
+ int ms_version(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+-  struct Client *acptr;
    char *target=parv[1];
  
 -  if (MyConnect(sptr) && parc > 1)
