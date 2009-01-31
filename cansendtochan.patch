@@ -21,9 +21,9 @@ but the code then proceeds to check target limits, which upon refusal means the 
 user is revealed (locally) without actually sending anything to the channel...
 ...that seems wrong/weird
 
-diff -r 7113a0179d71 include/channel.h
---- a/include/channel.h	Wed Jan 21 16:44:50 2009 +0100
-+++ b/include/channel.h	Wed Jan 21 17:13:44 2009 +0100
+diff -r e5a9f5ebb56d include/channel.h
+--- a/include/channel.h	Sat Jan 31 18:37:49 2009 +0100
++++ b/include/channel.h	Sat Jan 31 18:40:26 2009 +0100
 @@ -103,9 +103,9 @@
  #define MODE_DELJOINS   0x1000  	/**< New join messages are delayed */
  #define MODE_REGISTERED 0x2000          /**< Channel marked as registered
@@ -46,7 +46,7 @@ diff -r 7113a0179d71 include/channel.h
  
  #define MODE_NOMULTITARGET 0x1000000    /**< +T No multiple targets */
  #define MODE_MODERATENOREG 0x2000000    /**< +M Moderate unauthed users */
-@@ -396,8 +396,10 @@
+@@ -396,8 +396,12 @@
  
  extern const char* find_no_nickchange_channel(struct Client* cptr);
  extern struct Membership* find_channel_member(struct Client* cptr, struct Channel* chptr);
@@ -56,13 +56,15 @@ diff -r 7113a0179d71 include/channel.h
 +  unsigned int flags, const char *text, const int target);
 +extern int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr,
 +  int reveal, unsigned int flags, const char *text, const int target);
++extern int can_send_to_channel(struct Client *cptr, struct Channel *chptr,
++  unsigned int flags, const char *text, const int target);
  
  extern void remove_user_from_channel(struct Client *sptr, struct Channel *chptr);
  extern void remove_user_from_all_channels(struct Client* cptr);
-diff -r 7113a0179d71 ircd/channel.c
---- a/ircd/channel.c	Wed Jan 21 16:44:50 2009 +0100
-+++ b/ircd/channel.c	Wed Jan 21 17:13:44 2009 +0100
-@@ -681,10 +681,14 @@
+diff -r e5a9f5ebb56d ircd/channel.c
+--- a/ircd/channel.c	Sat Jan 31 18:37:49 2009 +0100
++++ b/ircd/channel.c	Sat Jan 31 18:40:26 2009 +0100
+@@ -683,10 +683,14 @@
   * @param member	The membership of the user
   * @param reveal	If true, the user will be "revealed" on a delayed
   * 			joined channel.
@@ -78,7 +80,7 @@ diff -r 7113a0179d71 ircd/channel.c
  {
    assert(0 != member);
  
-@@ -692,15 +696,17 @@
+@@ -694,15 +698,17 @@
     * temporary desynch, or maybe they are on an older server, but
     * we do not want to send ERR_CANNOTSENDTOCHAN more than once.
     */
@@ -100,7 +102,7 @@ diff -r 7113a0179d71 ircd/channel.c
      if (IsDelayedJoin(member) && reveal)
        RevealDelayedJoin(member);
      return 1;
-@@ -712,7 +718,7 @@
+@@ -714,7 +720,7 @@
  
    /* If you have voice or ops, you can speak. */
    if (IsVoicedOrOpped(member))
@@ -109,12 +111,10 @@ diff -r 7113a0179d71 ircd/channel.c
  
    /*
     * If it's moderated, and you aren't a privileged user, you can't
-@@ -727,6 +733,23 @@
- 
-   /* If you're banned then you can't speak either. */
+@@ -731,6 +737,23 @@
    if (is_banned(member))
-+    return 0;
-+
+     return 0;
+ 
 +  /* enough checked for remote users */
 +  if (!MyUser(member->user)) {
 +    if (IsDelayedJoin(member) && reveal)
@@ -130,10 +130,12 @@ diff -r 7113a0179d71 ircd/channel.c
 +
 +  /* check various other modes (like cCNT) */
 +  if (!can_send_to_channel(member->user, member->channel, flags, text, target))
-     return 0;
- 
++    return 0;
++
    if (IsDelayedJoin(member) && reveal)
-@@ -744,16 +767,22 @@
+     RevealDelayedJoin(member);
+ 
+@@ -746,16 +769,22 @@
   * @param chptr	The channel to check
   * @param reveal If the user should be revealed (see 
   * 		member_can_send_to_channel())
@@ -158,7 +160,7 @@ diff -r 7113a0179d71 ircd/channel.c
    /*
     * Servers can always speak on channels.
     */
-@@ -767,15 +796,90 @@
+@@ -769,15 +798,90 @@
     * or +m (moderated).
     */
    if (!member) {
@@ -255,7 +257,7 @@ diff -r 7113a0179d71 ircd/channel.c
  }
  
  /** Returns the name of a channel that prevents the user from changing nick.
-@@ -3625,13 +3729,11 @@
+@@ -3627,13 +3731,11 @@
      /* Send notification to channel */
      if (!(flags & (CHFL_ZOMBIE | CHFL_DELAYED)))
        sendcmdto_channel_butserv_butone(jbuf->jb_source, CMD_PART, chan, NULL, 0,
@@ -271,9 +273,9 @@ diff -r 7113a0179d71 ircd/channel.c
  		    ":%H" : "%H :%s", chan, jbuf->jb_comment);
      /* XXX: Shouldn't we send a PART here anyway? */
      /* to users on the channel?  Why?  From their POV, the user isn't on
-diff -r 7113a0179d71 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Wed Jan 21 16:44:50 2009 +0100
-+++ b/ircd/ircd_relay.c	Wed Jan 21 17:13:44 2009 +0100
+diff -r e5a9f5ebb56d ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jan 31 18:37:49 2009 +0100
++++ b/ircd/ircd_relay.c	Sat Jan 31 18:40:26 2009 +0100
 @@ -87,7 +87,6 @@
  void relay_channel_message(struct Client* sptr, const char* name, const char* text, const int targetc)
  {
@@ -333,7 +335,7 @@ diff -r 7113a0179d71 ircd/ircd_relay.c
    assert(0 != sptr);
    assert(0 != name);
    assert(0 != text);
-@@ -153,30 +135,14 @@
+@@ -153,31 +135,15 @@
    /*
     * This first: Almost never a server/service
     */
@@ -346,7 +348,7 @@ diff -r 7113a0179d71 ircd/ircd_relay.c
    if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
        check_target_limit(sptr, chptr, chptr->chname, 0))
      return;
--
+ 
 -  if ((chptr->mode.mode & MODE_NONOTICE))
 -    return;
 -
@@ -364,9 +366,10 @@ diff -r 7113a0179d71 ircd/ircd_relay.c
 -    for (ch=text;*ch;)
 -      if (*ch++==1)
 -        return;
- 
+-
    sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
  			   SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
+ }
 @@ -204,7 +170,7 @@
     * This first: Almost never a server/service
     * Servers may have channel services, need to check for it here
@@ -386,9 +389,9 @@ diff -r 7113a0179d71 ircd/ircd_relay.c
      sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
  			     SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
    }
-diff -r 7113a0179d71 ircd/m_part.c
---- a/ircd/m_part.c	Wed Jan 21 16:44:50 2009 +0100
-+++ b/ircd/m_part.c	Wed Jan 21 17:13:44 2009 +0100
+diff -r e5a9f5ebb56d ircd/m_part.c
+--- a/ircd/m_part.c	Sat Jan 31 18:37:49 2009 +0100
++++ b/ircd/m_part.c	Sat Jan 31 18:40:26 2009 +0100
 @@ -140,7 +140,8 @@
  
      assert(!IsZombie(member)); /* Local users should never zombie */
@@ -399,9 +402,9 @@ diff -r 7113a0179d71 ircd/m_part.c
      {
        flags |= CHFL_BANNED;
        /* Remote clients don't want to see a comment either. */
-diff -r 7113a0179d71 ircd/m_quit.c
---- a/ircd/m_quit.c	Wed Jan 21 16:44:50 2009 +0100
-+++ b/ircd/m_quit.c	Wed Jan 21 17:13:44 2009 +0100
+diff -r e5a9f5ebb56d ircd/m_quit.c
+--- a/ircd/m_quit.c	Sat Jan 31 18:37:49 2009 +0100
++++ b/ircd/m_quit.c	Sat Jan 31 18:40:26 2009 +0100
 @@ -109,8 +109,8 @@
      struct Membership* chan;
      /* (slug for +u) removed !IsDelayedJoin(chan) as splidge said to */
@@ -413,9 +416,9 @@ diff -r 7113a0179d71 ircd/m_quit.c
            return exit_client(cptr, sptr, sptr, "Signed off");
      }
    }
-diff -r 7113a0179d71 ircd/m_topic.c
---- a/ircd/m_topic.c	Wed Jan 21 16:44:50 2009 +0100
-+++ b/ircd/m_topic.c	Wed Jan 21 17:13:44 2009 +0100
+diff -r e5a9f5ebb56d ircd/m_topic.c
+--- a/ircd/m_topic.c	Sat Jan 31 18:37:49 2009 +0100
++++ b/ircd/m_topic.c	Sat Jan 31 18:40:26 2009 +0100
 @@ -144,7 +144,7 @@
      }
      else if ((chptr->mode.mode & MODE_TOPICLIMIT) && !is_chan_op(sptr, chptr))
@@ -425,9 +428,9 @@ diff -r 7113a0179d71 ircd/m_topic.c
        send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
      else
        do_settopic(sptr,cptr,chptr,topic,0);
-diff -r 7113a0179d71 ircd/m_wallchops.c
---- a/ircd/m_wallchops.c	Wed Jan 21 16:44:50 2009 +0100
-+++ b/ircd/m_wallchops.c	Wed Jan 21 17:13:44 2009 +0100
+diff -r e5a9f5ebb56d ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Sat Jan 31 18:37:49 2009 +0100
++++ b/ircd/m_wallchops.c	Sat Jan 31 18:40:26 2009 +0100
 @@ -103,7 +103,6 @@
  {
    struct Channel *chptr;
@@ -436,7 +439,7 @@ diff -r 7113a0179d71 ircd/m_wallchops.c
  
    assert(0 != cptr);
    assert(cptr == sptr);
-@@ -117,23 +116,12 @@
+@@ -117,24 +116,13 @@
      return send_reply(sptr, ERR_NOTEXTTOSEND);
  
    if (IsChannelName(parv[1]) && (chptr = FindChannel(parv[1]))) {
@@ -447,7 +450,7 @@ diff -r 7113a0179d71 ircd/m_wallchops.c
        if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
            check_target_limit(sptr, chptr, chptr->chname, 0))
          return 0;
--
+ 
 -      /* +cC checks */
 -      if (chptr->mode.mode & MODE_NOCOLOUR)
 -        for (ch=parv[parc - 1];*ch;ch++)
@@ -460,9 +463,10 @@ diff -r 7113a0179d71 ircd/m_wallchops.c
 -          if (*ch++==1) {
 -            return 0;
 -          }
- 
+-
        /* Reveal delayedjoin user */
       if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
+        RevealDelayedJoin(member);
 @@ -165,7 +153,7 @@
      return 0;
  
@@ -472,9 +476,9 @@ diff -r 7113a0179d71 ircd/m_wallchops.c
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
  			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
  			       "%H :%s", chptr, parv[parc - 1]);
-diff -r 7113a0179d71 ircd/m_wallvoices.c
---- a/ircd/m_wallvoices.c	Wed Jan 21 16:44:50 2009 +0100
-+++ b/ircd/m_wallvoices.c	Wed Jan 21 17:13:44 2009 +0100
+diff -r e5a9f5ebb56d ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Sat Jan 31 18:37:49 2009 +0100
++++ b/ircd/m_wallvoices.c	Sat Jan 31 18:40:26 2009 +0100
 @@ -102,7 +102,6 @@
  {
    struct Channel *chptr;
@@ -483,7 +487,7 @@ diff -r 7113a0179d71 ircd/m_wallvoices.c
  
    assert(0 != cptr);
    assert(cptr == sptr);
-@@ -116,23 +115,11 @@
+@@ -116,24 +115,12 @@
      return send_reply(sptr, ERR_NOTEXTTOSEND);
  
    if (IsChannelName(parv[1]) && (chptr = FindChannel(parv[1]))) {
@@ -493,7 +497,7 @@ diff -r 7113a0179d71 ircd/m_wallvoices.c
        if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
            check_target_limit(sptr, chptr, chptr->chname, 0))
          return 0;
--
+ 
 -      /* +cC checks */
 -      if (chptr->mode.mode & MODE_NOCOLOUR)
 -        for (ch=parv[parc - 1];*ch;ch++)
@@ -506,9 +510,10 @@ diff -r 7113a0179d71 ircd/m_wallvoices.c
 -          if (*ch++==1) {
 -            return 0;
 -          }
- 
+-
        /* Reveal delayedjoin user */
       if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
+        RevealDelayedJoin(member);
 @@ -164,7 +151,7 @@
      return 0;
  
