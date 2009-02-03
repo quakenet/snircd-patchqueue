@@ -2,8 +2,10 @@ work in progress
 Add split functionality into ircd
 Add /split command
 Add /stats S/split (make /STATS s/S case sensitive, s spoofhosts)
-Add feature SPLIT
+Add feature SPLIT HIS_SPLIT
 Add split.c split.h m_split.c
+Add SPLIT priv
+Add LS_JUPE for logging
 
 NOTE: feature SPLIT is default enabled as that is just easier when working on this patch.
 

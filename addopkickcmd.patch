@@ -1,5 +1,5 @@
 add opkick command, similar to opmode command, but then for kicking
-priv controlled by LOCAL_OPMODE and OPMODE
+priv controlled by LOCAL_OPOPKICK and OPKICK
 feature controlled by OPKICK (disabled by default), new p10 token OK
 if implemented, it must not be enabled until ALL servers and services are upgraded
 generates HACK(4) snomask notice for accountability with oper as source

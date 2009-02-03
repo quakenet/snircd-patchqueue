@@ -71,6 +71,12 @@ add /STATS W/welcome
 ircd/s_user.c
 add showing of welcome messages on connect
 
+include/client.h
+ircd/client.c
+ircd/ircd_lexer.l
+ircd/ircd_parser.y
+add PRIV_LOCAL_WELCOME PRIV_WELCOME
+
 diff -r ed93c5ec7a2b include/client.h
 --- a/include/client.h	Tue Feb 03 18:41:29 2009 +0100
 +++ b/include/client.h	Tue Feb 03 19:05:37 2009 +0100
