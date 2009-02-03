@@ -71,9 +71,21 @@ add /STATS W/welcome
 ircd/s_user.c
 add showing of welcome messages on connect
 
-diff -r a37e456cd6d6 include/handlers.h
---- a/include/handlers.h	Sat Jan 31 18:54:23 2009 +0100
-+++ b/include/handlers.h	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b include/client.h
+--- a/include/client.h	Tue Feb 03 18:41:29 2009 +0100
++++ b/include/client.h	Tue Feb 03 19:05:37 2009 +0100
+@@ -144,6 +144,8 @@
+     PRIV_USER_PRIVACY,  /* oper can bypass user privacy +x etc gives i.e. see real ip's */
+     PRIV_CHANNEL_PRIVACY, /* oper can bypass channel privacy i.e. can see modes on channels they are not on and channel keys */ 
+     PRIV_SERVERINFO,     /* oper can use /get, /stats, /hash, retrieve remote information */
++    PRIV_WELCOME,        /* oper can WELCOME */
++    PRIV_LOCAL_WELCOME,  /* oper can local WELCOME */
+     PRIV_LAST_PRIV /**< number of privileges */
+   };
+ 
+diff -r ed93c5ec7a2b include/handlers.h
+--- a/include/handlers.h	Tue Feb 03 18:41:29 2009 +0100
++++ b/include/handlers.h	Tue Feb 03 19:05:37 2009 +0100
 @@ -151,6 +151,7 @@
  extern int m_version(struct Client*, struct Client*, int, char*[]);
  extern int m_wallchops(struct Client*, struct Client*, int, char*[]);
@@ -106,9 +118,9 @@ diff -r a37e456cd6d6 include/handlers.h
  extern int mh_who(struct Client*, struct Client*, int, char*[]);
  extern int mh_whois(struct Client*, struct Client*, int, char*[]);
  extern int mh_whowas(struct Client*, struct Client*, int, char*[]);
-diff -r a37e456cd6d6 include/ircd_features.h
---- a/include/ircd_features.h	Sat Jan 31 18:54:23 2009 +0100
-+++ b/include/ircd_features.h	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b include/ircd_features.h
+--- a/include/ircd_features.h	Tue Feb 03 18:41:29 2009 +0100
++++ b/include/ircd_features.h	Tue Feb 03 19:05:37 2009 +0100
 @@ -101,6 +101,7 @@
    FEAT_IRCD_RES_TIMEOUT,
    FEAT_AUTH_TIMEOUT,
@@ -125,9 +137,9 @@ diff -r a37e456cd6d6 include/ircd_features.h
    FEAT_HIS_STATS_w,
    FEAT_HIS_STATS_x,
    FEAT_HIS_STATS_y,
-diff -r a37e456cd6d6 include/msg.h
---- a/include/msg.h	Sat Jan 31 18:54:23 2009 +0100
-+++ b/include/msg.h	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b include/msg.h
+--- a/include/msg.h	Tue Feb 03 18:41:29 2009 +0100
++++ b/include/msg.h	Tue Feb 03 19:05:37 2009 +0100
 @@ -196,6 +196,10 @@
  #define TOK_NOTICE              "O"
  #define CMD_NOTICE		MSG_NOTICE, TOK_NOTICE
@@ -139,9 +151,9 @@ diff -r a37e456cd6d6 include/msg.h
  #define MSG_WALLCHOPS           "WALLCHOPS"     /* WC */
  #define TOK_WALLCHOPS           "WC"
  #define CMD_WALLCHOPS		MSG_WALLCHOPS, TOK_WALLCHOPS
-diff -r a37e456cd6d6 include/numeric.h
---- a/include/numeric.h	Sat Jan 31 18:54:23 2009 +0100
-+++ b/include/numeric.h	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b include/numeric.h
+--- a/include/numeric.h	Tue Feb 03 18:41:29 2009 +0100
++++ b/include/numeric.h	Tue Feb 03 19:05:37 2009 +0100
 @@ -116,6 +116,7 @@
  	RPL_STATSGLINE	     227	   Dalnet 
  	RPL_STATSVLINE	     227	   unreal */
@@ -159,9 +171,9 @@ diff -r a37e456cd6d6 include/numeric.h
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r a37e456cd6d6 include/welcome.h
+diff -r ed93c5ec7a2b include/welcome.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/include/welcome.h	Sat Jan 31 18:57:57 2009 +0100
++++ b/include/welcome.h	Tue Feb 03 19:05:37 2009 +0100
 @@ -0,0 +1,60 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
@@ -223,9 +235,9 @@ diff -r a37e456cd6d6 include/welcome.h
 +extern void welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param);
 +
 +#endif /* INCLUDED_welcome_h */
-diff -r a37e456cd6d6 ircd/Makefile.in
---- a/ircd/Makefile.in	Sat Jan 31 18:54:23 2009 +0100
-+++ b/ircd/Makefile.in	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b ircd/Makefile.in
+--- a/ircd/Makefile.in	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/Makefile.in	Tue Feb 03 19:05:37 2009 +0100
 @@ -187,6 +187,7 @@
  	m_wallops.c \
  	m_wallusers.c \
@@ -268,9 +280,36 @@ diff -r a37e456cd6d6 ircd/Makefile.in
  whocmds.o: whocmds.c ../config.h ../include/whocmds.h \
    ../include/channel.h ../include/ircd_defs.h ../include/res.h \
    ../config.h ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r a37e456cd6d6 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Sat Jan 31 18:54:23 2009 +0100
-+++ b/ircd/ircd_features.c	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b ircd/client.c
+--- a/ircd/client.c	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/client.c	Tue Feb 03 19:05:37 2009 +0100
+@@ -178,6 +178,7 @@
+     FlagSet(&privs_local, PRIV_WHOX);
+     FlagSet(&privs_local, PRIV_DISPLAY);
+     FlagSet(&privs_local, PRIV_FORCE_LOCAL_OPMODE);
++    FlagSet(&privs_local, PRIV_LOCAL_WELCOME);
+ 
+     privs_defaults_set = 1;
+   }
+@@ -225,6 +226,7 @@
+     ClrPriv(client, PRIV_OPMODE);
+     ClrPriv(client, PRIV_OPKICK);
+     ClrPriv(client, PRIV_BADCHAN);
++    ClrPriv(client, PRIV_WELCOME);
+   }
+ }
+ 
+@@ -248,6 +250,7 @@
+   P(PARANOID),       P(CHECK),          P(WALL),          P(CLOSE),
+   P(ROUTE),          P(ROUTEINFO),      P(SERVERINFO),    P(CHANNEL_PRIVACY),
+   P(USER_PRIVACY),
++  P(WELCOME),        P(LOCAL_WELCOME),
+ #undef P
+   { 0, 0 }
+ };
+diff -r ed93c5ec7a2b ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/ircd_features.c	Tue Feb 03 19:05:37 2009 +0100
 @@ -355,6 +355,7 @@
    F_I(IRCD_RES_TIMEOUT, 0, 4, 0),
    F_I(AUTH_TIMEOUT, 0, 9, 0),
@@ -287,10 +326,44 @@ diff -r a37e456cd6d6 ircd/ircd_features.c
    F_B(HIS_STATS_w, 0, 1, 0),
    F_B(HIS_STATS_x, 0, 1, 0),
    F_B(HIS_STATS_y, 0, 1, 0),
-diff -r a37e456cd6d6 ircd/m_welcome.c
+diff -r ed93c5ec7a2b ircd/ircd_lexer.l
+--- a/ircd/ircd_lexer.l	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/ircd_lexer.l	Tue Feb 03 19:05:37 2009 +0100
+@@ -168,6 +168,8 @@
+   { "serverinfo", TPRIV_SERVERINFO },
+   { "user_privacy", TPRIV_USER_PRIVACY },
+   { "channel_privacy", TPRIV_CHANNEL_PRIVACY },
++  { "local_welcome", TPRIV_LOCAL_WELCOME },
++  { "welcome", TPRIV_WELCOME },
+   { NULL, 0 }
+ };
+ static int ntokens;
+diff -r ed93c5ec7a2b ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/ircd_parser.y	Tue Feb 03 19:05:37 2009 +0100
+@@ -189,7 +189,8 @@
+ %token TPRIV_FORCE_OPMODE TPRIV_FORCE_LOCAL_OPMODE TPRIV_APASS_OPMODE
+ %token TPRIV_CHANSERV TPRIV_XTRA_OPER TPRIV_NOIDLE TPRIV_FREEFORM TPRIV_PARANOID
+ %token TPRIV_CHECK TPRIV_WALL TPRIV_CLOSE TPRIV_ROUTE TPRIV_ROUTEINFO TPRIV_SERVERINFO
+-%token TPRIV_CHANNEL_PRIVACY TPRIV_USER_PRIVACY TPRIV_LIST_CHAN 
++%token TPRIV_CHANNEL_PRIVACY TPRIV_USER_PRIVACY TPRIV_LIST_CHAN
++%token TPRIV_LOCAL_WELCOME TPRIV_WELCOME 
+ /* and some types... */
+ %type <num> sizespec
+ %type <num> timespec timefactor factoredtimes factoredtime
+@@ -704,6 +705,8 @@
+           TPRIV_SERVERINFO { $$ = PRIV_SERVERINFO ; } |
+           TPRIV_CHANNEL_PRIVACY { $$ = PRIV_CHANNEL_PRIVACY ; } |
+           TPRIV_USER_PRIVACY { $$ = PRIV_USER_PRIVACY ; } |
++          TPRIV_LOCAL_WELCOME { $$ = PRIV_LOCAL_WELCOME; } |
++          TPRIV_WELCOME { $$ = PRIV_WELCOME; } |
+           TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
+ yesorno: YES { $$ = 1; } | NO { $$ = 0; };
+ 
+diff -r ed93c5ec7a2b ircd/m_welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_welcome.c	Sat Jan 31 18:57:57 2009 +0100
-@@ -0,0 +1,301 @@
++++ b/ircd/m_welcome.c	Tue Feb 03 19:05:37 2009 +0100
+@@ -0,0 +1,308 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -453,18 +526,23 @@ diff -r a37e456cd6d6 ircd/m_welcome.c
 +  if (parc < 2)
 +    return welcome_list(sptr, 0);
 +
-+  /* TODO: add PRIV_WELCOME? */
-+  /* check PRIVS */
-+  if (!HasPriv(sptr,PRIV_SERVERINFO))
-+    return send_reply(sptr, ERR_NOPRIVILEGES);
-+
++  /* TODO: move feature check here? */
 +  /* remote listing request, see if it is for me or a remote server */
 +  if (parc == 2) {
 +    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C", 1, parc, parv) != HUNTED_ISME)
 +      return 0;
 +    return welcome_list(sptr, 0);
 +  }
-+  
++
++  /* check PRIVS */
++  /* local - need PRIV LOCAL_WELCOME or WELCOME */
++  if (parc == 3 && !HasPriv(sptr,PRIV_LOCAL_WELCOME) && !HasPriv(sptr,PRIV_WELCOME))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
++  /* global or remote - need PRIV WELCOME */
++  if (parc >= 4 && !HasPriv(sptr,PRIV_WELCOME))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
 +  /* set the parameters */
 +
 +  /* target not given, only name - setting local welcome */
@@ -498,6 +576,8 @@ diff -r a37e456cd6d6 ircd/m_welcome.c
 +  /* TODO: disallow global announcement from oper?
 +   * as PRIVMSG/NOTICE to $* is not allowed either by the ircd
 +   * when PRIV for that is added, use that here? PRIV_BROADCAST or something
++   *
++   * change prefix to $ ?
 +   */
 +  /* check for anounce prefix */
 +  if (*name == '!') {
@@ -592,9 +672,9 @@ diff -r a37e456cd6d6 ircd/m_welcome.c
 +  }
 +  return 0;
 +}
-diff -r a37e456cd6d6 ircd/parse.c
---- a/ircd/parse.c	Sat Jan 31 18:54:23 2009 +0100
-+++ b/ircd/parse.c	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b ircd/parse.c
+--- a/ircd/parse.c	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/parse.c	Tue Feb 03 19:05:37 2009 +0100
 @@ -667,6 +667,15 @@
      /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
      { m_unregistered, m_not_oper, ms_opkick, mo_opkick, m_ignore, mh_nohelp }
@@ -611,9 +691,9 @@ diff -r a37e456cd6d6 ircd/parse.c
  
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
-diff -r a37e456cd6d6 ircd/s_err.c
---- a/ircd/s_err.c	Sat Jan 31 18:54:23 2009 +0100
-+++ b/ircd/s_err.c	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b ircd/s_err.c
+--- a/ircd/s_err.c	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/s_err.c	Tue Feb 03 19:05:37 2009 +0100
 @@ -486,7 +486,7 @@
  /* 226 */
    { RPL_STATSALINE, "%s", "226" },
@@ -632,9 +712,9 @@ diff -r a37e456cd6d6 ircd/s_err.c
  /* 510 */
    { 0 },
  /* 511 */
-diff -r a37e456cd6d6 ircd/s_serv.c
---- a/ircd/s_serv.c	Sat Jan 31 18:54:23 2009 +0100
-+++ b/ircd/s_serv.c	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b ircd/s_serv.c
+--- a/ircd/s_serv.c	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/s_serv.c	Tue Feb 03 19:05:37 2009 +0100
 @@ -57,6 +57,7 @@
  #include "struct.h"
  #include "sys.h"
@@ -651,9 +731,9 @@ diff -r a37e456cd6d6 ircd/s_serv.c
  
    /*
     * Pass on my client information to the new server
-diff -r a37e456cd6d6 ircd/s_stats.c
---- a/ircd/s_stats.c	Sat Jan 31 18:54:23 2009 +0100
-+++ b/ircd/s_stats.c	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b ircd/s_stats.c
+--- a/ircd/s_stats.c	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/s_stats.c	Tue Feb 03 19:05:37 2009 +0100
 @@ -54,6 +54,7 @@
  #include "send.h"
  #include "struct.h"
@@ -676,9 +756,9 @@ diff -r a37e456cd6d6 ircd/s_stats.c
    { 'x', "memusage", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_x,
      stats_meminfo, 0,
      "List usage information." },
-diff -r a37e456cd6d6 ircd/s_user.c
---- a/ircd/s_user.c	Sat Jan 31 18:54:23 2009 +0100
-+++ b/ircd/s_user.c	Sat Jan 31 18:57:57 2009 +0100
+diff -r ed93c5ec7a2b ircd/s_user.c
+--- a/ircd/s_user.c	Tue Feb 03 18:41:29 2009 +0100
++++ b/ircd/s_user.c	Tue Feb 03 19:05:37 2009 +0100
 @@ -63,6 +63,7 @@
  #include "userload.h"
  #include "version.h"
@@ -697,9 +777,9 @@ diff -r a37e456cd6d6 ircd/s_user.c
    }
    else {
      struct Client *acptr = user->server;
-diff -r a37e456cd6d6 ircd/welcome.c
+diff -r ed93c5ec7a2b ircd/welcome.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/welcome.c	Sat Jan 31 18:57:57 2009 +0100
++++ b/ircd/welcome.c	Tue Feb 03 19:05:37 2009 +0100
 @@ -0,0 +1,373 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
