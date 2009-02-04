@@ -1,0 +1,1231 @@
+staffpriv
+
+give staff certain privs
+usermode +S (internally +S <staffname> just like usermode +o)
+add /STAFF command, mirrored after /OPER
+add priv STAFF used to determine whether the client becomes an OPER or STAFF
+
+add privs
+CLAIM_NICK     allows staff to use /KILL staffname to free their own staffnick? (not implemented yet)
+GLINE_LOOKUP   allows staff to lookup gline info using /GLINE
+HIDE_CHANS     allows staff/oper to set usermode +n
+CHECK_CHANNEL  allows staff to use /CHECK #channel (staff version respects hiddenhost, sethost, viewable topic, visible key, etc.)
+
+by default, staff gets all of the above privs + CHAN_LIMIT (no channel limit) and NOIDLE (set usermode +I)
+
+shows staff member count in /lusers
+shows staff in /trace, /stats l, /who <query> o,
+shows staff status in /WHOIS - show to IRC Operators the staffname
+staff can do /PRIVS to view their own privs - cannot view other user's privs
+
+TODO: treat staff a bit more favourable with regards to excess flood? add feature STAFF_CLIENT_FLOOD?
+TODO: allow staff to access oper configured spoof blocks with /SETHOST?
+TODO: set default staff spoof host in feature STAFF_SETHOST to e.g. staff.quakenet.org - set upon login
+TODO: allow staff to set usermode -h
+TODO: allow staff free'ing their nick? or else allow /NICK even when hit by a gline (that way we can reserve nicks using a nick!*@* gline)
+TODO: allow a search in /GLINE instead of requiring a perfect match?
+TODO: logging of /CHECK (for all)
+
+
+diff -r 773f8b3c49c1 include/check.h
+--- a/include/check.h	Wed Feb 04 17:24:29 2009 +0100
++++ b/include/check.h	Wed Feb 04 17:28:19 2009 +0100
+@@ -45,5 +45,6 @@
+ extern void checkClient(struct Client *sptr, struct Client *acptr);
+ extern void checkServer(struct Client *sptr, struct Client *acptr);
+ extern signed int checkHostmask(struct Client *sptr, char *hoststr, int flags);
++extern int client_can_check_channel(struct Client *sptr, struct Channel *chptr);
+ 
+ #endif /* INCLUDED_check_h */
+diff -r 773f8b3c49c1 include/client.h
+--- a/include/client.h	Wed Feb 04 17:24:29 2009 +0100
++++ b/include/client.h	Wed Feb 04 17:28:19 2009 +0100
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioOswkgxRXInPq"
++#define infousermodes "dioOswkgxRXInPqS"
+ 
+ /** Character to indicate no oper name available */
+ #define NOOPERNAMECHARACTER '-'
+@@ -144,6 +144,11 @@
+     PRIV_USER_PRIVACY,  /* oper can bypass user privacy +x etc gives i.e. see real ip's */
+     PRIV_CHANNEL_PRIVACY, /* oper can bypass channel privacy i.e. can see modes on channels they are not on and channel keys */ 
+     PRIV_SERVERINFO,     /* oper can use /get, /stats, /hash, retrieve remote information */
++    PRIV_STAFF,          /* staff */
++    PRIV_CLAIM_NICK,     /* staff can /KILL staffname to free own nick */
++    PRIV_GLINE_LOOKUP,   /* staff can use /GLINE to lookup a gline */
++    PRIV_HIDE_CHANS,     /* oper can set usermode +n */
++    PRIV_CHECK_CHANNEL,  /* staff can /CHECK #channel */
+     PRIV_LAST_PRIV /**< number of privileges */
+   };
+ 
+@@ -178,6 +183,7 @@
+     FLAG_LOCOP,                     /**< Local operator -- SRB */
+     FLAG_SERVNOTICE,                /**< server notices such as kill */
+     FLAG_OPER,                      /**< Operator */
++    FLAG_STAFF,                     /**< snircd: Staff - mode +S */
+     FLAG_INVISIBLE,                 /**< makes user invisible */
+     FLAG_WALLOP,                    /**< send wallops to them */
+     FLAG_DEAF,                      /**< Makes user deaf */
+@@ -591,6 +597,10 @@
+ #define IsLocOp(x)              (MyUser(x) && HasFlag(x, FLAG_LOCOP))
+ /** Return non-zero if the client has set mode +o (global operator). */
+ #define IsOper(x)               HasFlag(x, FLAG_OPER)
++/** Return non-zero if the client has set mode +S (staff). */
++#define IsStaff(x)              HasFlag(x, FLAG_STAFF)
++/** Return non-zero if the client has set mode +S, +O or +o.*/
++#define IsStaffOrAnOper(x)      (IsStaff(x) || IsAnOper(x))
+ /** Return non-zero if the client has an active UDP ping request. */
+ #define IsUPing(x)              HasFlag(x, FLAG_UPING)
+ /** Return non-zero if the client has no '\n' in its buffer. */
+@@ -660,6 +670,8 @@
+ #define SetLocOp(x)             SetFlag(x, FLAG_LOCOP)
+ /** Mark a client as having mode +o (global operator). */
+ #define SetOper(x)              SetFlag(x, FLAG_OPER)
++/** Mark a client as having mode +S (staff). */
++#define SetStaff(x)             SetFlag(x, FLAG_STAFF)
+ /** Mark a client as having a pending UDP ping. */
+ #define SetUPing(x)             SetFlag(x, FLAG_UPING)
+ /** Mark a client as having mode +w (wallops). */
+@@ -717,6 +729,8 @@
+ #define ClearLocOp(x)           ClrFlag(x, FLAG_LOCOP)
+ /** Remove mode +o (global operator) from the client. */
+ #define ClearOper(x)            ClrFlag(x, FLAG_OPER)
++/** Remove mode +S (staff) from the client. */
++#define ClearStaff(x)           ClrFlag(x, FLAG_STAFF)
+ /** Clear the client's pending UDP ping flag. */
+ #define ClearUPing(x)           ClrFlag(x, FLAG_UPING)
+ /** Remove mode +w (wallops) from the client. */
+diff -r 773f8b3c49c1 include/handlers.h
+--- a/include/handlers.h	Wed Feb 04 17:24:29 2009 +0100
++++ b/include/handlers.h	Wed Feb 04 17:28:19 2009 +0100
+@@ -100,6 +100,7 @@
+   */
+ 
+ extern int m_check(struct Client *cptr, struct Client *sptr, int parc, char *parv[]);
++extern int mo_check(struct Client *cptr, struct Client *sptr, int parc, char *parv[]);
+ 
+ extern int m_cap(struct Client*, struct Client*, int, char*[]);
+ extern int m_cnotice(struct Client*, struct Client*, int, char*[]);
+@@ -133,12 +134,14 @@
+ extern int m_pong(struct Client*, struct Client*, int, char*[]);
+ extern int m_private(struct Client*, struct Client*, int, char*[]);
+ extern int m_privmsg(struct Client*, struct Client*, int, char*[]);
++extern int m_privs(struct Client*, struct Client*, int, char*[]);
+ extern int m_proto(struct Client*, struct Client*, int, char*[]);
+ extern int m_pseudo(struct Client*, struct Client*, int, char*[]);
+ extern int m_quit(struct Client*, struct Client*, int, char*[]);
+ extern int m_registered(struct Client*, struct Client*, int, char*[]);
+ extern int m_sethost(struct Client*, struct Client*, int, char*[]);
+ extern int m_silence(struct Client*, struct Client*, int, char*[]);
++extern int m_staff(struct Client*, struct Client*, int, char*[]);
+ extern int m_stats(struct Client*, struct Client*, int, char*[]);
+ extern int m_time(struct Client*, struct Client*, int, char*[]);
+ extern int m_topic(struct Client*, struct Client*, int, char*[]);
+@@ -179,6 +182,7 @@
+ extern int mo_set(struct Client*, struct Client*, int, char*[]);
+ extern int mo_settime(struct Client*, struct Client*, int, char*[]);
+ extern int mo_squit(struct Client*, struct Client*, int, char*[]);
++extern int mo_staff(struct Client*, struct Client*, int, char*[]);
+ extern int mo_stats(struct Client*, struct Client*, int, char*[]);
+ extern int mo_trace(struct Client*, struct Client*, int, char*[]);
+ extern int mo_uping(struct Client*, struct Client*, int, char*[]);
+@@ -233,6 +237,7 @@
+ extern int ms_settime(struct Client*, struct Client*, int, char*[]);
+ extern int ms_silence(struct Client*, struct Client*, int, char*[]);
+ extern int ms_squit(struct Client*, struct Client*, int, char*[]);
++extern int ms_staff(struct Client*, struct Client*, int, char*[]);
+ extern int ms_stats(struct Client*, struct Client*, int, char*[]);
+ extern int ms_topic(struct Client*, struct Client*, int, char*[]);
+ extern int ms_trace(struct Client*, struct Client*, int, char*[]);
+diff -r 773f8b3c49c1 include/msg.h
+--- a/include/msg.h	Wed Feb 04 17:24:29 2009 +0100
++++ b/include/msg.h	Wed Feb 04 17:28:19 2009 +0100
+@@ -116,6 +116,10 @@
+ #define TOK_STATS               "R"
+ #define CMD_STATS		MSG_STATS, TOK_STATS
+ 
++#define MSG_STAFF                "STAFF"          /* STAF */
++#define TOK_STAFF                "STAFF"
++#define CMD_STAFF		MSG_STAFF, TOK_STAFF
++
+ #define MSG_HELP                "HELP"          /* HELP */
+ #define TOK_HELP                "HELP"
+ #define CMD_HELP		MSG_HELP, TOK_HELP
+diff -r 773f8b3c49c1 include/querycmds.h
+--- a/include/querycmds.h	Wed Feb 04 17:24:29 2009 +0100
++++ b/include/querycmds.h	Wed Feb 04 17:28:19 2009 +0100
+@@ -29,6 +29,7 @@
+   /* Global user mode changes: */
+   unsigned int inv_clients;     /**< Registered invisible users. */
+   unsigned int opers;           /**< Registered IRC operators. */
++  unsigned int staff;           /**< Registered Staff members. */
+ 
+   /* Misc: */
+   unsigned int channels;        /**< Existing channels. */
+diff -r 773f8b3c49c1 include/struct.h
+--- a/include/struct.h	Wed Feb 04 17:24:29 2009 +0100
++++ b/include/struct.h	Wed Feb 04 17:28:19 2009 +0100
+@@ -95,6 +95,7 @@
+   unsigned long      acc_id;                    /**< IRC account unique id */
+   uint64_t           acc_flags;                 /**< IRC account flags */
+   char*              opername;                  /**< IRC Oper Account name */
++  char*              staffname;                 /**< IRC Staff Account name */
+ };
+ 
+ #endif /* INCLUDED_struct_h */
+diff -r 773f8b3c49c1 ircd/Makefile.in
+--- a/ircd/Makefile.in	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/Makefile.in	Wed Feb 04 17:28:19 2009 +0100
+@@ -174,6 +174,7 @@
+ 	m_settime.c \
+ 	m_silence.c \
+ 	m_squit.c \
++	m_staff.c \
+ 	m_stats.c \
+ 	m_time.c \
+ 	m_topic.c \
+@@ -1060,6 +1061,17 @@
+   ../include/ircd_reply.h ../include/ircd_string.h ../include/numeric.h \
+   ../include/numnicks.h ../include/match.h ../include/s_debug.h \
+   ../include/s_misc.h ../include/s_user.h ../include/send.h
++m_staff.o: m_staff.c ../config.h ../include/client.h ../include/ircd_defs.h \
++  ../include/dbuf.h ../include/msgq.h ../include/ircd_events.h \
++  ../config.h ../include/ircd_handler.h ../include/res.h \
++  ../include/capab.h ../include/hash.h ../include/ircd.h \
++  ../include/struct.h ../include/ircd_alloc.h ../include/ircd_features.h \
++  ../include/ircd_log.h ../include/ircd_reply.h ../include/ircd_string.h \
++  ../include/ircd_chattr.h ../include/ircd_crypt.h ../include/msg.h \
++  ../include/numeric.h ../include/numnicks.h ../include/querycmds.h \
++  ../include/ircd_features.h ../include/s_conf.h ../include/client.h \
++  ../include/s_debug.h ../include/s_user.h ../include/s_misc.h \
++  ../include/send.h
+ m_stats.o: m_stats.c ../config.h ../include/client.h \
+   ../include/ircd_defs.h ../include/dbuf.h ../include/msgq.h \
+   ../include/ircd_events.h ../config.h ../include/ircd_handler.h \
+diff -r 773f8b3c49c1 ircd/client.c
+--- a/ircd/client.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/client.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -123,6 +123,8 @@
+ static struct Privs privs_global;
+ /** Default privilege set for local operators. */
+ static struct Privs privs_local;
++/** Default privilege set for staff. */
++static struct Privs privs_staff;
+ /** Non-zero if #privs_global and #privs_local have been initialized. */
+ static int privs_defaults_set;
+ 
+@@ -146,7 +148,7 @@
+   /* Clear out client's privileges. */
+   memset(cli_privs(client), 0, sizeof(struct Privs));
+ 
+-  if (!IsAnOper(client) || !oper)
++  if (!IsStaffOrAnOper(client) || !oper)
+       return;
+ 
+   if (!privs_defaults_set)
+@@ -163,6 +165,10 @@
+     FlagClr(&privs_global, PRIV_DIE);
+     FlagClr(&privs_global, PRIV_RESTART);
+     FlagClr(&privs_global, PRIV_JUPE);
++    FlagClr(&privs_global, PRIV_STAFF);
++    FlagClr(&privs_global, PRIV_CLAIM_NICK);
++    FlagClr(&privs_global, PRIV_GLINE_LOOKUP);
++    FlagClr(&privs_global, PRIV_CHECK_CHANNEL);
+ 
+     memset(&privs_local, 0, sizeof(privs_local));
+     FlagSet(&privs_local, PRIV_CHAN_LIMIT);
+@@ -178,12 +184,32 @@
+     FlagSet(&privs_local, PRIV_WHOX);
+     FlagSet(&privs_local, PRIV_DISPLAY);
+     FlagSet(&privs_local, PRIV_FORCE_LOCAL_OPMODE);
++    FlagClr(&privs_local, PRIV_STAFF);
++    FlagClr(&privs_local, PRIV_CLAIM_NICK);
++    FlagClr(&privs_local, PRIV_GLINE_LOOKUP);
++    FlagClr(&privs_local, PRIV_CHECK_CHANNEL);
++
++    /* set the defaults for privs for staff */
++    memset(&privs_staff, 0, sizeof(privs_staff));
++    /* TODO: PRIV_STAFF may not need to be here?
++     * since we use it to get to this set of privs in the first place?
++     */
++    FlagSet(&privs_staff, PRIV_STAFF);
++    FlagSet(&privs_staff, PRIV_CHAN_LIMIT);
++    FlagSet(&privs_staff, PRIV_CLAIM_NICK);
++    FlagSet(&privs_staff, PRIV_GLINE_LOOKUP);
++    FlagSet(&privs_staff, PRIV_NOIDLE);
++    FlagSet(&privs_staff, PRIV_HIDE_CHANS);
++    FlagSet(&privs_staff, PRIV_CHECK_CHANNEL);
+ 
+     privs_defaults_set = 1;
+   }
+ 
+-  /* Decide whether to use global or local oper defaults. */
+-  if (FlagHas(&oper->privs_dirty, PRIV_PROPAGATE))
++  /* Decide whether to use staff, global or local oper defaults. */
++  if (FlagHas(&oper->privs_dirty, PRIV_STAFF) ||
++    FlagHas(&oper->conn_class->privs_dirty, PRIV_STAFF))
++    defaults = &privs_staff;
++  else if (FlagHas(&oper->privs_dirty, PRIV_PROPAGATE))
+     defaults = FlagHas(&oper->privs, PRIV_PROPAGATE) ? &privs_global : &privs_local;
+   else if (FlagHas(&oper->conn_class->privs_dirty, PRIV_PROPAGATE))
+     defaults = FlagHas(&oper->conn_class->privs, PRIV_PROPAGATE) ? &privs_global : &privs_local;
+@@ -226,6 +252,19 @@
+     ClrPriv(client, PRIV_OPKICK);
+     ClrPriv(client, PRIV_BADCHAN);
+   }
++  /* TODO: long list, other way?
++   * save what we have now, clear, and go over which are allowed (which are 5?)
++   */
++  /* do not let staff have privs they should not have */
++  if (HasPriv(client, PRIV_STAFF)) {
++    ClrPriv(client, PRIV_LOCAL_KILL);
++    ClrPriv(client, PRIV_KILL);
++    ClrPriv(client, PRIV_GLINE);
++    ClrPriv(client, PRIV_JUPE);
++    ClrPriv(client, PRIV_OPMODE);
++    ClrPriv(client, PRIV_OPKICK);
++    ClrPriv(client, PRIV_BADCHAN);
++  }
+ }
+ 
+ /** Array mapping privilege values to names and vice versa. */
+@@ -248,6 +287,8 @@
+   P(PARANOID),       P(CHECK),          P(WALL),          P(CLOSE),
+   P(ROUTE),          P(ROUTEINFO),      P(SERVERINFO),    P(CHANNEL_PRIVACY),
+   P(USER_PRIVACY),
++  P(STAFF),          P(CLAIM_NICK),     P(GLINE_LOOKUP),  P(HIDE_CHANS),
++  P(CHECK_CHANNEL),
+ #undef P
+   { 0, 0 }
+ };
+diff -r 773f8b3c49c1 ircd/ircd_lexer.l
+--- a/ircd/ircd_lexer.l	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/ircd_lexer.l	Wed Feb 04 17:28:19 2009 +0100
+@@ -168,6 +168,11 @@
+   { "serverinfo", TPRIV_SERVERINFO },
+   { "user_privacy", TPRIV_USER_PRIVACY },
+   { "channel_privacy", TPRIV_CHANNEL_PRIVACY },
++  { "staff", TPRIV_STAFF },
++  { "claim_nick", TPRIV_CLAIM_NICK },
++  { "gline_lookup", TPRIV_GLINE_LOOKUP },
++  { "hide_chans", TPRIV_HIDE_CHANS },
++  { "check_channel", TPRIV_CHECK_CHANNEL },
+   { NULL, 0 }
+ };
+ static int ntokens;
+diff -r 773f8b3c49c1 ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/ircd_parser.y	Wed Feb 04 17:28:19 2009 +0100
+@@ -189,7 +189,9 @@
+ %token TPRIV_FORCE_OPMODE TPRIV_FORCE_LOCAL_OPMODE TPRIV_APASS_OPMODE
+ %token TPRIV_CHANSERV TPRIV_XTRA_OPER TPRIV_NOIDLE TPRIV_FREEFORM TPRIV_PARANOID
+ %token TPRIV_CHECK TPRIV_WALL TPRIV_CLOSE TPRIV_ROUTE TPRIV_ROUTEINFO TPRIV_SERVERINFO
+-%token TPRIV_CHANNEL_PRIVACY TPRIV_USER_PRIVACY TPRIV_LIST_CHAN 
++%token TPRIV_CHANNEL_PRIVACY TPRIV_USER_PRIVACY TPRIV_LIST_CHAN
++%token TPRIV_STAFF TPRIV_CLAIM_NICK TPRIV_GLINE_LOOKUP TPRIV_HIDE_CHANS
++%token TPRIV_CHECK_CHANNEL
+ /* and some types... */
+ %type <num> sizespec
+ %type <num> timespec timefactor factoredtimes factoredtime
+@@ -593,8 +595,10 @@
+   else if (c_class == NULL)
+     parse_error("Invalid or missing class in operator block");
+   else if (!FlagHas(&privs_dirty, PRIV_PROPAGATE)
+-           && !FlagHas(&c_class->privs_dirty, PRIV_PROPAGATE))
+-    parse_error("Operator block for %s and class %s have no LOCAL setting", name, c_class->cc_name);
++           && !FlagHas(&c_class->privs_dirty, PRIV_PROPAGATE)
++           && !FlagHas(&privs_dirty, PRIV_STAFF)
++           && !FlagHas(&c_class->privs_dirty, PRIV_STAFF))
++    parse_error("Operator block for %s and class %s have no LOCAL or STAFF setting", name, c_class->cc_name);
+   else for (link = hosts; link != NULL; link = link->next) {
+     aconf = make_conf(CONF_OPERATOR);
+     DupString(aconf->name, name);
+@@ -704,6 +708,11 @@
+           TPRIV_SERVERINFO { $$ = PRIV_SERVERINFO ; } |
+           TPRIV_CHANNEL_PRIVACY { $$ = PRIV_CHANNEL_PRIVACY ; } |
+           TPRIV_USER_PRIVACY { $$ = PRIV_USER_PRIVACY ; } |
++          TPRIV_STAFF { $$ = PRIV_STAFF; } |
++          TPRIV_CLAIM_NICK { $$ = PRIV_CLAIM_NICK; } |
++          TPRIV_GLINE_LOOKUP { $$ = PRIV_GLINE_LOOKUP; } |
++          TPRIV_CHECK_CHANNEL { $$ = PRIV_CHECK_CHANNEL; } |
++          TPRIV_HIDE_CHANS { $$ = PRIV_HIDE_CHANS; } |
+           TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
+ yesorno: YES { $$ = 1; } | NO { $$ = 0; };
+ 
+diff -r 773f8b3c49c1 ircd/m_check.c
+--- a/ircd/m_check.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_check.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -94,7 +94,12 @@
+   struct Client *acptr;
+   int flags = CHECK_SHOWUSERS, i;
+ 
+-  if (!HasPriv(sptr, PRIV_CHECK))
++  /* not an oper or staff */
++  if (!IsAnOper(sptr) && !IsStaff(sptr))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
++  /* no privs */
++  if (!HasPriv(sptr, PRIV_CHECK) && !HasPriv(sptr, PRIV_CHECK_CHANNEL))
+     return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
+   if (parc < 2) {
+@@ -104,7 +109,9 @@
+ 
+   if ( parc>=4 ||
+       (parc==3 && parv[2][0] != '-')) {
+-    /* remote query */
++    /* remote query - no need to restrict staff, 
++     *   hunt_server_cmd is told here that sptr needs to be an oper
++     */
+     if (hunt_server_cmd(sptr, CMD_CHECK, cptr,  0, parc==4 ? "%C %s %s" : "%C %s", 1, parc, parv) != HUNTED_ISME)
+       return 0;
+     parv++; parc--;
+@@ -152,11 +159,20 @@
+   if (IsChannelName(parv[1])) { /* channel */
+     if ((chptr = FindChannel(parv[1]))) {
+       checkChannel(sptr, chptr);
+-      checkUsers(sptr, chptr, flags);
++      if (client_can_check_channel(sptr, chptr))
++        checkUsers(sptr, chptr, flags);
++      else {
++        send_reply(sptr, SND_EXPLICIT | RPL_DATASTR,
++          ":Aborting - Channel %s has an IRC Operator on it.", chptr->chname);
++        send_reply(sptr, RPL_ENDOFCHECK, " ");
++      }
+     }
+     else
+       send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
+   }
++  /* staff can only check channel - stop here */
++  else if (IsStaff(sptr))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
+   else if ((acptr = FindClient(parv[1])) && !(FindServer(parv[1]))) { /* client and not a server */
+     if (!IsRegistered(acptr)) {
+       send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
+@@ -177,6 +193,36 @@
+ }
+ 
+ 
++/* test if a client can CHECK a channel
++ * return 1 when allowed, else 0
++ */
++int client_can_check_channel(struct Client *sptr, struct Channel *chptr) {
++  struct Membership *lp;
++
++  /* opers can */
++  if (IsAnOper(sptr))
++    return 1;
++
++  /* look at the channel modes
++   *   channel is not secret, private, invite only, or keyed
++   */
++  if (!(chptr->mode.mode & (MODE_SECRET | MODE_PRIVATE | MODE_INVITEONLY)) && (!*chptr->mode.key))
++    return 1;
++
++  /* the client is on the channel */
++  if (find_channel_member(sptr, chptr))
++    return 1;
++
++  /* look for opers on the channel - ignore channel services */
++  for (lp = chptr->members; lp; lp = lp->next_member) {
++    if (IsAnOper(lp->user) && !IsRealChannelService(lp->user))
++      return 0;
++  }
++
++  /* we made it, so it is allowed */
++  return 1;
++}
++
+ 
+ /* return number of clients from same IP on the channel */
+ static int checkClones(struct Channel *chptr, struct Client *cptr) {
+@@ -313,10 +359,33 @@
+ 
+     if ((flags & CHECK_SHOWUSERS) || ((flags & CHECK_OPSONLY) && opped)) {
+       ircd_snprintf(0, outbuf, sizeof(outbuf), "%s%c", acptr->cli_info, COLOR_OFF);
++
++      /* show IPs and hostnames */
+       if (flags & CHECK_SHOWHOSTIP) {
+-        ircd_snprintf(0, outbuf2, sizeof(outbuf2), " [%s]", ircd_ntoa(&(cli_ip(acptr))));
++        /* staff - do not show real IPs*/
++        if (IsStaff(sptr))
++          ircd_snprintf(0, outbuf2, sizeof(outbuf2), " [%s]",
++            (HasHiddenHost(acptr) || HasSetHost(acptr)) ?
++	         feature_str(FEAT_HIDDEN_IP) : ircd_ntoa(&(cli_ip(acptr))));
++	     else
++          ircd_snprintf(0, outbuf2, sizeof(outbuf2), " [%s]", ircd_ntoa(&(cli_ip(acptr))));
+       }
+-      send_reply(sptr, RPL_CHANUSER, ustat, acptr->cli_name, cli_user(acptr)->realusername,
++      /* staff - do not show real hostnames or IPs */
++      if (IsStaff(sptr))
++        send_reply(sptr, RPL_CHANUSER, ustat, acptr->cli_name, cli_user(acptr)->username,
++            /* show IPs instead of hostnames - respect hiddenhost and sethost */
++            ((flags & CHECK_SHOWIPS) ? 
++              ((HasHiddenHost(acptr) || HasSetHost(acptr)) ?
++                feature_str(FEAT_HIDDEN_IP) : ircd_ntoa(&(cli_ip(acptr)))) : cli_user(acptr)->host),
++            /* show IPs too - set above */
++            (flags & CHECK_SHOWHOSTIP) ? outbuf2 : "",
++            /* show servernames instead of realnames - respect HIS */
++            ((flags & CHECK_SHOWSERVER) && !feature_bool(FEAT_HIS_WHO_SERVERNAME)) ?
++              cli_name(cli_user(acptr)->server) : outbuf,
++            /* show account */
++            (c ? cli_user(acptr)->account : ""));
++      else
++        send_reply(sptr, RPL_CHANUSER, ustat, acptr->cli_name, cli_user(acptr)->realusername,
+             ((flags & CHECK_SHOWIPS) ? ircd_ntoa(&(cli_ip(acptr))) : cli_user(acptr)->realhost), (flags & CHECK_SHOWHOSTIP) ? outbuf2 : "", (flags & CHECK_SHOWSERVER) ? cli_name(cli_user(acptr)->server) : outbuf,
+             (c ? cli_user(acptr)->account : ""));
+     }
+@@ -379,6 +448,11 @@
+   /* Topic */
+   if (strlen(chptr->topic) <= 0)
+     send_reply(sptr, RPL_DATASTR, "          Topic:: <none>");
++
++  /* channel is +s - do not show the topic to staff, unless they are there */
++  else if (SecretChannel(chptr) && IsStaff(sptr) && !find_channel_member(sptr, chptr))
++    send_reply(sptr, RPL_DATASTR, "          Topic:: <hidden>");
++
+   else {
+     ircd_snprintf(sptr, outbuf, sizeof(outbuf), "          Topic:: %s", chptr->topic);
+     send_reply(sptr, RPL_DATASTR, outbuf);
+@@ -401,6 +475,7 @@
+   modebuf[0] = '\0';
+   parabuf[0] = '\0';
+ 
++  /* no need to check modes - this will hide the key from non-opers */
+   channel_modes(sptr, modebuf, parabuf, sizeof(modebuf), chptr, NULL);
+ 
+   if(modebuf[1] == '\0')
+@@ -464,6 +539,9 @@
+   } else if (IsAnOper(acptr)) {
+     ircd_snprintf(0, outbuf, sizeof(outbuf), "         Status:: IRC Operator (ID: %s)", cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
+     send_reply(sptr, RPL_DATASTR, outbuf);
++  } else if (IsStaff(acptr)) {
++    ircd_snprintf(0, outbuf, sizeof(outbuf), "         Status:: IRC Staff (ID: %s)", cli_user(acptr)->staffname ? cli_user(acptr)->staffname : "<unknown>");
++    send_reply(sptr, RPL_DATASTR, outbuf);
+   } else
+     send_reply(sptr, RPL_DATASTR, "         Status:: Client");
+ 
+diff -r 773f8b3c49c1 ircd/m_gline.c
+--- a/ircd/m_gline.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_gline.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -669,11 +669,13 @@
+ int
+ m_gline(struct Client *cptr, struct Client *sptr, int parc, char *parv[])
+ {
+-  if (feature_bool(FEAT_HIS_USERGLINE))
+-    return send_reply(sptr, ERR_DISABLED, "GLINE");
++
++  /* check feature HIS_USERGLINE, Staff and priv GLINE_LOOKUP */
++  if (feature_bool(FEAT_HIS_USERGLINE) && (!IsStaff(sptr) || !HasPriv(sptr, PRIV_GLINE_LOOKUP)))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
+   if (parc < 2)
+-    return send_reply(sptr, ERR_NOSUCHGLINE, "");
++    return send_reply(sptr, ERR_NOSUCHGLINE, "*");
+ 
+   return gline_list(sptr, parv[1]);
+ }
+diff -r 773f8b3c49c1 ircd/m_lusers.c
+--- a/ircd/m_lusers.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_lusers.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -120,6 +120,8 @@
+ 	     UserStats.inv_clients, UserStats.servers);
+   if (longoutput && UserStats.opers)
+     send_reply(sptr, RPL_LUSEROP, UserStats.opers);
++  if (longoutput && UserStats.staff)
++    send_reply(sptr, SND_EXPLICIT | RPL_LUSEROP, "%d :staff member(s) online", UserStats.staff);
+   if (UserStats.unknowns > 0)
+     send_reply(sptr, RPL_LUSERUNKNOWN, UserStats.unknowns);
+   if (longoutput && UserStats.channels > 0)
+@@ -154,6 +156,8 @@
+ 	     UserStats.inv_clients, UserStats.servers);
+   if (longoutput && UserStats.opers)
+     send_reply(sptr, RPL_LUSEROP, UserStats.opers);
++  if (longoutput && UserStats.staff)
++    send_reply(sptr, SND_EXPLICIT | RPL_LUSEROP, "%d :staff member(s) online", UserStats.staff);
+   if (UserStats.unknowns > 0)
+     send_reply(sptr, RPL_LUSERUNKNOWN, UserStats.unknowns);
+   if (longoutput && UserStats.channels > 0)
+diff -r 773f8b3c49c1 ircd/m_oper.c
+--- a/ircd/m_oper.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_oper.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -143,6 +143,10 @@
+   name     = parc > 1 ? parv[1] : 0;
+   password = parc > 2 ? parv[2] : 0;
+ 
++  /* staff doing OPER */
++  if (IsStaff(sptr))
++    return send_reply(sptr, SND_EXPLICIT | RPL_YOUREOPER, ":You are now IRC Staff");
++
+   if (EmptyString(name) || EmptyString(password))
+     return need_more_params(sptr, "OPER");
+ 
+@@ -169,6 +173,18 @@
+     }
+     SetLocOp(sptr);
+     client_set_privs(sptr, aconf);
++
++    /* staff - clear flag and privs, and reject it */
++    if (HasPriv(sptr, PRIV_STAFF)) {
++       ClearLocOp(sptr);
++       client_set_privs(sptr, NULL);
++       send_reply(sptr, ERR_NOOPERHOST);
++       sendto_opmask_butone(0, SNO_OLDREALOP, "Failed OPER attempt by %s (%s@%s) as %s",
++			 parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr), name);
++       return 0;       
++    }
++
++    /* oper */
+     if (HasPriv(sptr, PRIV_PROPAGATE))
+     {
+       ClearLocOp(sptr);
+diff -r 773f8b3c49c1 ircd/m_privs.c
+--- a/ircd/m_privs.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_privs.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -38,6 +38,27 @@
+ #include "numnicks.h"
+ #include "send.h"
+ 
++/** Handle a local staff's privilege query.
++ * @param[in] cptr Client that sent us the message.
++ * @param[in] sptr Original source of message.
++ * @param[in] parc Number of arguments.
++ * @param[in] parv Argument vector.
++ * @see \ref m_functions
++ */
++int m_privs(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  /* not staff */
++  if (!IsStaff(sptr))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
++  /* no parameters given, show own privs */
++  if (parc < 2)
++    return client_report_privs(sptr, sptr);
++
++  /* staff not allowed to view privs on other users */
++  return send_reply(sptr, ERR_NOPRIVILEGES);
++}
++
+ /** Handle a local operator's privilege query.
+  * @param[in] cptr Client that sent us the message.
+  * @param[in] sptr Original source of message.
+diff -r 773f8b3c49c1 ircd/m_staff.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ircd/m_staff.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -0,0 +1,252 @@
++/*
++ * IRC - Internet Relay Chat, ircd/m_oper.c
++ * Copyright (C) 1990 Jarkko Oikarinen and
++ *                    University of Oulu, Computing Center
++ *
++ * See file AUTHORS in IRC package for additional names of
++ * the programmers.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 1, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ *
++ * $Id: m_oper.c 1327 2005-03-19 22:52:33Z entrope $
++ */
++
++/*
++ * m_functions execute protocol messages on this server:
++ *
++ *    cptr    is always NON-NULL, pointing to a *LOCAL* client
++ *            structure (with an open socket connected!). This
++ *            identifies the physical socket where the message
++ *            originated (or which caused the m_function to be
++ *            executed--some m_functions may call others...).
++ *
++ *    sptr    is the source of the message, defined by the
++ *            prefix part of the message if present. If not
++ *            or prefix not found, then sptr==cptr.
++ *
++ *            (!IsServer(cptr)) => (cptr == sptr), because
++ *            prefixes are taken *only* from servers...
++ *
++ *            (IsServer(cptr))
++ *                    (sptr == cptr) => the message didn't
++ *                    have the prefix.
++ *
++ *                    (sptr != cptr && IsServer(sptr) means
++ *                    the prefix specified servername. (?)
++ *
++ *                    (sptr != cptr && !IsServer(sptr) means
++ *                    that message originated from a remote
++ *                    user (not local).
++ *
++ *            combining
++ *
++ *            (!IsServer(sptr)) means that, sptr can safely
++ *            taken as defining the target structure of the
++ *            message in this server.
++ *
++ *    *Always* true (if 'parse' and others are working correct):
++ *
++ *    1)      sptr->from == cptr  (note: cptr->from == cptr)
++ *
++ *    2)      MyConnect(sptr) <=> sptr == cptr (e.g. sptr
++ *            *cannot* be a local connection, unless it's
++ *            actually cptr!). [MyConnect(x) should probably
++ *            be defined as (x == x->from) --msa ]
++ *
++ *    parc    number of variable parameter strings (if zero,
++ *            parv is allowed to be NULL)
++ *
++ *    parv    a NULL terminated list of parameter pointers,
++ *
++ *                    parv[0], sender (prefix string), if not present
++ *                            this points to an empty string.
++ *                    parv[1]...parv[parc-1]
++ *                            pointers to additional parameters
++ *                    parv[parc] == NULL, *always*
++ *
++ *            note:   it is guaranteed that parv[0]..parv[parc-1] are all
++ *                    non-NULL pointers.
++ */
++#include "config.h"
++
++#include "client.h"
++#include "hash.h"
++#include "ircd.h"
++#include "ircd_alloc.h"
++#include "ircd_features.h"
++#include "ircd_log.h"
++#include "ircd_reply.h"
++#include "ircd_string.h"
++#include "ircd_crypt.h"
++#include "msg.h"
++#include "numeric.h"
++#include "numnicks.h"
++#include "querycmds.h"
++#include "s_conf.h"
++#include "s_debug.h"
++#include "s_user.h"
++#include "s_misc.h"
++#include "send.h"
++
++/* #include <assert.h> -- Now using assert in ircd_log.h */
++#include <stdlib.h>
++#include <string.h>
++
++
++/* TODO: from m_oper.c - use it from there? and not have a copy here? */
++int staff_password_match(const char* to_match, const char* passwd)
++{
++  char *crypted;
++  int res;
++  /*
++   * use first two chars of the password they send in as salt
++   *
++   * passwd may be NULL. Head it off at the pass...
++   */
++  if (!to_match || !passwd)
++    return 0;
++
++  /* we no longer do a CRYPT_OPER_PASSWORD check because a clear 
++     text passwords just handled by a fallback mechanism called 
++     crypt_clear if it's enabled -- hikari */
++  crypted = ircd_crypt(to_match, passwd);
++
++  if (!crypted)
++   return 0;
++  res = strcmp(crypted, passwd);
++  MyFree(crypted);
++  return 0 == res;
++}
++
++
++/*
++ * m_staff - generic message handler
++ */
++int m_staff(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  struct ConfItem* aconf;
++  char*            name;
++  char*            password;
++
++  assert(0 != cptr);
++  assert(cptr == sptr);
++
++  name     = parc > 1 ? parv[1] : 0;
++  password = parc > 2 ? parv[2] : 0;
++
++  /* staff doing STAFF */
++  if (IsStaff(sptr))
++    return send_reply(sptr, SND_EXPLICIT | RPL_YOUREOPER, ":You are now IRC Staff");
++
++  /* check input */
++  if (EmptyString(name) || EmptyString(password))
++    return need_more_params(sptr, "STAFF");
++
++  /* attempt to find the operator block */
++  aconf = find_conf_exact(name, sptr, CONF_OPERATOR);
++  if (!aconf || IsIllegal(aconf)) {
++    send_reply(sptr, ERR_NOOPERHOST);
++    sendto_opmask_butone(0, SNO_OLDREALOP, "Failed STAFF attempt by %s (%s@%s) as %s",
++      parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr), name);
++    return 0;
++  }
++
++  /* we should have it by now */
++  assert(0 != (aconf->status & CONF_OPERATOR));
++
++  /* compare passwords */
++  if (staff_password_match(password, aconf->passwd)) {
++    struct Flags old_mode = cli_flags(sptr);
++
++    /* mismatch */
++    if (ACR_OK != attach_conf(sptr, aconf)) {
++      send_reply(sptr, ERR_NOOPERHOST);
++      sendto_opmask_butone(0, SNO_OLDREALOP, "Failed STAFF attempt by %s "
++        "(%s@%s) as %s", parv[0], cli_user(sptr)->realusername,
++        cli_sockhost(sptr), aconf->name);
++      return 0;
++    }
++
++    /* set privs */
++    SetStaff(sptr);
++    client_set_privs(sptr, aconf);
++
++    /* are they staff? */
++    if (HasPriv(sptr, PRIV_STAFF)) {
++      ++UserStats.staff;
++
++      /* set staffname */
++      if (cli_user(sptr)->staffname)
++        MyFree(cli_user(sptr)->staffname);
++      cli_user(sptr)->staffname = (char*) MyMalloc(strlen(name) + 1);
++      assert(0 != cli_user(sptr)->staffname);
++      ircd_strncpy(cli_user(sptr)->staffname, aconf->name, ACCOUNTLEN);
++
++      /* TODO: check sendQ */
++      /* send out the mode and confirmation */
++      cli_max_sendq(sptr) = 0; /* Get the sendq from the oper's class */
++      send_umode_out(cptr, sptr, &old_mode, 0);
++      /* TODO: create own numeric for this? */
++      send_reply(sptr, SND_EXPLICIT | RPL_YOUREOPER, ":You are now IRC Staff");
++
++      /* inform ops and log it */
++      sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now staff (S) as %s",
++			 parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr),
++			 cli_user(sptr)->staffname);
++      log_write(LS_OPER, L_INFO, 0, "STAFF (%s) by (%#R)", name, sptr);
++
++    /* not staff - clear flag and privs, and reject */
++    } else {
++      client_set_privs(sptr, NULL);
++      ClearStaff(sptr);
++      send_reply(sptr, ERR_NOOPERHOST);
++      sendto_opmask_butone(0, SNO_OLDREALOP, "Failed STAFF attempt by %s (%s@%s) as %s",
++        parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr), name);
++      return 0;
++    }    
++
++  /* failed */  
++  } else {
++    send_reply(sptr, ERR_PASSWDMISMATCH);
++    sendto_opmask_butone(0, SNO_OLDREALOP, "Failed STAFF attempt by %s (%s@%s) as %s",
++      parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr), aconf->name);
++  }
++  return 0;
++}
++
++
++/*
++ * ms_staff - server message handler
++ */
++int ms_staff(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  assert(0 != cptr);
++  assert(IsServer(cptr));
++  /* TODO: KILL sptr (if user KILL, if server SQUIT?) */
++  protocol_violation(sptr, "Received STAFF message from %C", sptr);
++  return 0;
++}
++
++
++/*
++ * mo_staff - oper message handler
++ */
++int mo_staff(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  assert(0 != cptr);
++  assert(cptr == sptr);
++  send_reply(sptr, RPL_YOUREOPER);
++  return 0;
++}
+diff -r 773f8b3c49c1 ircd/m_trace.c
+--- a/ircd/m_trace.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_trace.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -198,7 +198,7 @@
+     if (!(acptr = LocalClientArray[i])) /* Local Connection? */
+       continue;
+     if (IsInvisible(acptr) && dow && !(MyConnect(sptr) && IsOper(sptr)) &&
+-        !IsAnOper(acptr) && (acptr != sptr))
++        !IsStaffOrAnOper(acptr) && (acptr != sptr))
+       continue;
+     if (!doall && wilds && match(tname, cli_name(acptr)))
+       continue;
+@@ -232,11 +232,15 @@
+         /* Only opers see users if there is a wildcard
+            but anyone can see all the opers. */
+         if ((IsAnOper(sptr) && (MyUser(sptr) ||
+-            !(dow && IsInvisible(acptr)))) || !dow || IsAnOper(acptr)) {
++            !(dow && IsInvisible(acptr)))) || !dow || IsStaffOrAnOper(acptr)) {
+           if (IsAnOper(acptr))
+ 	    send_reply(sptr, RPL_TRACEOPERATOR, conClass,
+ 		       get_client_name(acptr, SHOW_IP),
+ 		       CurrentTime - cli_lasttime(acptr));
++		    else if (IsStaff(acptr))
++	    send_reply(sptr, SND_EXPLICIT | RPL_TRACEOPERATOR, "Staff %s %s %ld ", conClass,
++		       get_client_name(acptr, SHOW_IP),
++		       CurrentTime - cli_lasttime(acptr));
+           else
+ 	    send_reply(sptr, RPL_TRACEUSER, conClass,
+ 		       get_client_name(acptr, SHOW_IP),
+diff -r 773f8b3c49c1 ircd/m_who.c
+--- a/ircd/m_who.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_who.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -319,7 +319,7 @@
+           for (member = chptr->members; member; member = member->next_member)
+           {
+             acptr = member->user;
+-            if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr))
++            if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr) && !IsStaff(acptr))
+               continue;
+             if ((acptr != sptr)
+                 && ((member->status & CHFL_ZOMBIE)
+@@ -341,7 +341,7 @@
+       else
+       {
+         if ((acptr = FindUser(nick)) &&
+-            ((!(bitsel & WHOSELECT_OPER)) || SeeOper(sptr,acptr)) &&
++            ((!(bitsel & WHOSELECT_OPER)) || SeeOper(sptr,acptr) || IsStaff(acptr)) &&
+             Process(acptr) && SHOW_MORE(sptr, counter))
+         {
+           do_who(sptr, acptr, 0, fields, qrt);
+@@ -389,7 +389,7 @@
+           if (!(IsUser(acptr) && Process(acptr)))
+             continue;           /* Now Process() is at the beginning, if we fail
+                                    we'll never have to show this acptr in this query */
+- 	  if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr))
++ 	  if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr) && !IsStaff(acptr))
+ 	    continue;
+           if ((mask) &&
+               ((!(matchsel & WHO_FIELD_NIC))
+@@ -426,7 +426,7 @@
+       {
+         if (!(IsUser(acptr) && Process(acptr)))
+           continue;
+-	if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr))
++	if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr) && !IsStaff(acptr))
+ 	  continue;
+         if (!(SEE_USER(sptr, acptr, bitsel)))
+           continue;
+diff -r 773f8b3c49c1 ircd/m_whois.c
+--- a/ircd/m_whois.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/m_whois.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -216,6 +216,20 @@
+          send_reply(sptr, RPL_WHOISOPERNAME, name, user->opername);
+     }
+ 
++    /* user is staff */
++    if (IsStaff(acptr)) {
++      /* TODO: use new numeric for this?
++       */
++      send_reply(sptr, SND_EXPLICIT | RPL_WHOISOPERATOR, "%s :is %s Staff",
++        name, feature_str(FEAT_NETWORK));
++      /* TODO: allow staff to see eachother's staffname? IsStaffOrAnOper()
++       * TODO: user->staffname not always true?
++       * TODO: "is staff as" ..?
++       */
++      if (IsAnOper(sptr) && user->staffname)
++        send_reply(sptr, SND_EXPLICIT | RPL_WHOISOPERNAME, "%s %s :is staff as", name, user->staffname);
++    }
++
+     if (IsAccount(acptr))
+       send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
+ 
+diff -r 773f8b3c49c1 ircd/parse.c
+--- a/ircd/parse.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/parse.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -443,6 +443,13 @@
+     { m_unregistered, m_stats, m_stats, m_stats, m_ignore, mh_stats }
+   },
+   {
++    MSG_STAFF,
++    TOK_STAFF,
++    0, MAXPARA, MFLG_SLOW, 0, NULL,
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
++    { m_unregistered, m_staff, ms_staff, mo_staff, m_ignore, mh_nohelp }
++  },
++  {
+     MSG_LINKS,
+     TOK_LINKS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+@@ -608,7 +615,7 @@
+     TOK_PRIVS,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+     /* UNREG, CLIENT, SERVER, OPER, SERVICE, HELP */
+-    { m_unregistered, m_not_oper, ms_privs, mo_privs, m_ignore, mh_privs }
++    { m_unregistered, m_privs, ms_privs, mo_privs, m_ignore, mh_privs }
+   },
+   {
+     MSG_ACCOUNT,
+@@ -654,7 +661,7 @@
+     MSG_CHECK,
+     TOK_CHECK,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    { m_unregistered, m_not_oper, m_check, m_check, m_ignore, mh_check }
++    { m_unregistered, m_check, m_check, m_check, m_ignore, mh_check }
+   },
+   
+   /*
+diff -r 773f8b3c49c1 ircd/s_stats.c
+--- a/ircd/s_stats.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/s_stats.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -339,7 +339,7 @@
+       if (!name && IsUser(acptr))
+         continue;
+       /* Don't show invisible people to non opers unless they know the nick */
+-      if (IsInvisible(acptr) && (!name || wilds) && !IsAnOper(acptr) &&
++      if (IsInvisible(acptr) && (!name || wilds) && !IsStaffOrAnOper(acptr) &&
+           (acptr != sptr))
+         continue;
+       /* Only show the ones that match the given mask - if any */
+diff -r 773f8b3c49c1 ircd/s_user.c
+--- a/ircd/s_user.c	Wed Feb 04 17:24:29 2009 +0100
++++ b/ircd/s_user.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -115,6 +115,8 @@
+       MyFree(user->away);
+     if (user->opername)
+       MyFree(user->opername);
++    if (user->staffname)
++      MyFree(user->staffname);
+     /*
+      * sanity check
+      */
+@@ -460,6 +462,8 @@
+     ++UserStats.inv_clients;
+   if (IsOper(sptr))
+     ++UserStats.opers;
++  if (IsStaff(sptr))
++    ++UserStats.staff;
+ 
+   tmpstr = umode_str(sptr, UMODE_ALL_PARAMS_BUT_OPERID);
+ 
+@@ -547,7 +551,8 @@
+   { FLAG_NOIDLE,      'I' },
+   { FLAG_SETHOST,     'h' },
+   { FLAG_PARANOID,    'P' },
+-  { FLAG_COMMONCHANSONLY, 'q' }
++  { FLAG_COMMONCHANSONLY, 'q' },
++  { FLAG_STAFF, 'S' }
+ };
+ 
+ /** Length of #userModeList. */
+@@ -1228,8 +1233,8 @@
+   int prop = 0;
+   int do_host_hiding = 0;
+   int do_set_host = 0;
+-  size_t opernamelen;
+-  char *opername = 0;
++  size_t opernamelen, staffnamelen;
++  char *opername = 0, *staffname = 0;
+   char* account = NULL;
+ 
+   hostmask = password = NULL;
+@@ -1445,6 +1450,35 @@
+ 	}
+ 	/* There is no -r */
+ 	break;
++
++      /* Staff - +S mode */
++      case 'S':
++        if (what == MODE_ADD) {
++          SetStaff(sptr);
++          if (IsServer(cptr)) {
++            if (*(p + 1)) {
++              staffname = *++p;
++               if (cli_user(sptr)->staffname)
++                MyFree(cli_user(sptr)->staffname);
++              staffnamelen = strlen(staffname);
++              if (staffnamelen > ACCOUNTLEN) {
++                protocol_violation(cptr, "Received staffname (%s) longer than %d for %s; ignoring.", staffname, ACCOUNTLEN, cli_name(sptr));
++                cli_user(sptr)->staffname = NULL;
++               } else {
++                cli_user(sptr)->staffname = (char*) MyMalloc(staffnamelen + 1);
++                assert(0 != cli_user(sptr)->staffname);
++                ircd_strncpy(cli_user(sptr)->staffname, staffname, ACCOUNTLEN);
++              }
++            } else {
++              /* TODO: KILL sptr to resolve desynch? */
++              protocol_violation(cptr, "Received usermode +S for %C but no staffname parameter; ignoring.", sptr);
++              ClearStaff(sptr);
++            }
++          }
++        } else
++          ClearStaff(sptr);
++        break;
++
+       default:
+         send_reply(sptr, ERR_UMODEUNKNOWNFLAG, *m);
+         break;
+@@ -1461,6 +1495,8 @@
+       ClearOper(sptr);
+     if (!FlagHas(&setflags, FLAG_LOCOP) && IsLocOp(sptr))
+       ClearLocOp(sptr);
++    if (!FlagHas(&setflags, FLAG_STAFF) && IsStaff(sptr))
++      ClearStaff(sptr);
+     if (!FlagHas(&setflags, FLAG_ACCOUNT) && IsAccount(sptr))
+       ClrFlag(sptr, FLAG_ACCOUNT);
+     /*
+@@ -1471,9 +1507,9 @@
+       ClearChannelService(sptr);
+     if (!FlagHas(&setflags, FLAG_XTRAOP) && !(IsOper(sptr) && HasPriv(sptr, PRIV_XTRA_OPER)))
+       ClearXtraOp(sptr);
+-    if (!FlagHas(&setflags, FLAG_NOCHAN) && !(IsOper(sptr) || feature_bool(FEAT_USER_HIDECHANS)))
++    if (!FlagHas(&setflags, FLAG_NOCHAN) && !((IsStaffOrAnOper(sptr) && HasPriv(sptr, PRIV_HIDE_CHANS)) || feature_bool(FEAT_USER_HIDECHANS)))
+       ClearNoChan(sptr);
+-    if (!FlagHas(&setflags, FLAG_NOIDLE) && !((IsOper(sptr) && HasPriv(sptr, PRIV_NOIDLE)) || feature_bool(FEAT_USER_HIDEIDLETIME)))
++    if (!FlagHas(&setflags, FLAG_NOIDLE) && !((IsStaffOrAnOper(sptr) && HasPriv(sptr, PRIV_NOIDLE)) || feature_bool(FEAT_USER_HIDEIDLETIME)))
+       ClearNoIdle(sptr);
+     if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
+       ClearParanoid(sptr);
+@@ -1496,8 +1532,8 @@
+   }
+   if (MyConnect(sptr))
+   {
+-    if ((FlagHas(&setflags, FLAG_OPER) || FlagHas(&setflags, FLAG_LOCOP)) &&
+-        !IsAnOper(sptr))
++    if ((FlagHas(&setflags, FLAG_OPER) || FlagHas(&setflags, FLAG_LOCOP) || FlagHas(&setflags, FLAG_STAFF)) &&
++        !IsStaffOrAnOper(sptr))
+       det_confs_butmask(sptr, CONF_CLIENT & ~CONF_OPERATOR);
+ 
+     if (SendServNotice(sptr))
+@@ -1578,6 +1614,43 @@
+         cli_user(sptr)->opername = NULL;
+       }
+     }
++
++
++    /* user becomes staff */
++    if (!FlagHas(&setflags, FLAG_STAFF) && IsStaff(sptr)) {
++      ++UserStats.staff;
++      client_set_privs(sptr, NULL); /* may set propagate privilege */
++
++      /* notify my operators a user has STAFFed on a remote server */
++      if (!MyConnect(sptr))
++         sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now staff (S) as %s on %s",
++         cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++         cli_user(sptr)->staffname, cli_name(cli_user(sptr)->server));
++    }
++
++    /* no longer staff */
++    if (FlagHas(&setflags, FLAG_STAFF) && !IsStaff(sptr)) {
++      assert(UserStats.staff > 0);
++      --UserStats.staff;
++
++      /* notify my operators an staff member has deSTAFFed on the network */
++      if (MyConnect(sptr))
++        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer staff (S) as %s",
++        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++        cli_user(sptr)->staffname);
++      else 
++        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer staff (S) as %s on %s",
++        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++        cli_user(sptr)->staffname, cli_name(cli_user(sptr)->server));
++
++      client_set_privs(sptr, NULL); /* will clear propagate privilege */
++      if (cli_user(sptr)->staffname) {
++        MyFree(cli_user(sptr)->staffname);
++        cli_user(sptr)->staffname = NULL;
++      }
++    }
++
++
+     if (FlagHas(&setflags, FLAG_INVISIBLE) && !IsInvisible(sptr)) {
+       assert(UserStats.inv_clients > 0);
+       --UserStats.inv_clients;
+@@ -1586,6 +1659,7 @@
+       ++UserStats.inv_clients;
+     }
+     assert(UserStats.opers <= UserStats.clients + UserStats.unknowns);
++    assert(UserStats.staff <= UserStats.clients + UserStats.unknowns);
+     assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
+     send_umode_out(cptr, sptr, &setflags, prop);
+   }
+@@ -1628,6 +1702,19 @@
+     }
+   }
+ 
++  /* staffname is wanted */
++  if ((type != UMODE_AND_ACCOUNT && type != UMODE_AND_ACCOUNT_SHORT) && IsStaff(cptr)) {
++    *m++ = ' ';
++    if (cli_user(cptr)->staffname) {
++      char* t = cli_user(cptr)->staffname;
++      while ((*m++ = *t++))
++        ; /* Empty loop */
++      m--; /* Step back over the '\0' */
++    } else {
++      *m++ = NOOPERNAMECHARACTER;
++    }
++  }
++
+   if (IsAccount(cptr))
+   {
+     char *t, nbuf[64+ACCOUNTLEN];
+@@ -1670,6 +1757,7 @@
+   int flag;
+   int needhost = 0;
+   int needoper = 0;
++  int needstaff = 0;
+   char *m;
+   int what = MODE_NULL;
+ 
+@@ -1705,6 +1793,12 @@
+       if (!FlagHas(old, flag))
+       	needoper++;
+     }
++    /* Special case for STAFF.. */
++    if (flag == FLAG_STAFF) {
++      /* If we're setting +S, add the staffname later */
++      if (!FlagHas(old, flag))
++      	needstaff++;
++    }
+     /* Special case for SETHOST.. */
+     if (flag == FLAG_SETHOST) {
+       /* Don't send to users */
+@@ -1749,6 +1843,17 @@
+       *m++ = NOOPERNAMECHARACTER;
+     }
+   }
++  if (sptr != cptr && needstaff) {
++    *m++ = ' ';
++    if (cli_user(sptr)->staffname) {
++      char* t = cli_user(sptr)->staffname;
++      while ((*m++ = *t++))
++        ; /* Empty loop */
++      m--; /* Step back over the '\0' */
++    } else {
++      *m++ = NOOPERNAMECHARACTER;
++    }
++  }
+   if (needhost) {
+     *m++ = ' ';
+     ircd_snprintf(0, m, USERLEN + HOSTLEN + 1, "%s@%s", cli_user(sptr)->username,

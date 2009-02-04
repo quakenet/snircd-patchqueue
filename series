@@ -31,6 +31,7 @@ operglinenick.patch
 operping.patch
 minoplevel.patch
 oplevelforward.patch
+staffpriv.patch
 welcome.patch
 accountcollision.patch
 split.patch
