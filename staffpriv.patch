@@ -17,19 +17,19 @@ shows staff member count in /lusers
 shows staff in /trace, /stats l, /who <query> o,
 shows staff status in /WHOIS - show to IRC Operators the staffname
 staff can do /PRIVS to view their own privs - cannot view other user's privs
+allow staff to set usermode -h (remove sethost)
+allow staff to see through usermode +I (so they can see idle/signon time on fellow staff/opers)
 
 TODO: treat staff a bit more favourable with regards to excess flood? add feature STAFF_CLIENT_FLOOD?
 TODO: allow staff to access oper configured spoof blocks with /SETHOST?
 TODO: set default staff spoof host in feature STAFF_SETHOST to e.g. staff.quakenet.org - set upon login
-TODO: allow staff to set usermode -h
 TODO: allow staff free'ing their nick? or else allow /NICK even when hit by a gline (that way we can reserve nicks using a nick!*@* gline)
 TODO: allow a search in /GLINE instead of requiring a perfect match?
 TODO: logging of /CHECK (for all)
 
-
-diff -r 773f8b3c49c1 include/check.h
---- a/include/check.h	Wed Feb 04 17:24:29 2009 +0100
-+++ b/include/check.h	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c include/check.h
+--- a/include/check.h	Wed Feb 04 18:16:54 2009 +0100
++++ b/include/check.h	Wed Feb 04 19:54:28 2009 +0100
 @@ -45,5 +45,6 @@
  extern void checkClient(struct Client *sptr, struct Client *acptr);
  extern void checkServer(struct Client *sptr, struct Client *acptr);
@@ -37,9 +37,9 @@ diff -r 773f8b3c49c1 include/check.h
 +extern int client_can_check_channel(struct Client *sptr, struct Channel *chptr);
  
  #endif /* INCLUDED_check_h */
-diff -r 773f8b3c49c1 include/client.h
---- a/include/client.h	Wed Feb 04 17:24:29 2009 +0100
-+++ b/include/client.h	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c include/client.h
+--- a/include/client.h	Wed Feb 04 18:16:54 2009 +0100
++++ b/include/client.h	Wed Feb 04 19:54:28 2009 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -98,9 +98,9 @@ diff -r 773f8b3c49c1 include/client.h
  /** Clear the client's pending UDP ping flag. */
  #define ClearUPing(x)           ClrFlag(x, FLAG_UPING)
  /** Remove mode +w (wallops) from the client. */
-diff -r 773f8b3c49c1 include/handlers.h
---- a/include/handlers.h	Wed Feb 04 17:24:29 2009 +0100
-+++ b/include/handlers.h	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c include/handlers.h
+--- a/include/handlers.h	Wed Feb 04 18:16:54 2009 +0100
++++ b/include/handlers.h	Wed Feb 04 19:54:28 2009 +0100
 @@ -100,6 +100,7 @@
    */
  
@@ -140,9 +140,9 @@ diff -r 773f8b3c49c1 include/handlers.h
  extern int ms_stats(struct Client*, struct Client*, int, char*[]);
  extern int ms_topic(struct Client*, struct Client*, int, char*[]);
  extern int ms_trace(struct Client*, struct Client*, int, char*[]);
-diff -r 773f8b3c49c1 include/msg.h
---- a/include/msg.h	Wed Feb 04 17:24:29 2009 +0100
-+++ b/include/msg.h	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c include/msg.h
+--- a/include/msg.h	Wed Feb 04 18:16:54 2009 +0100
++++ b/include/msg.h	Wed Feb 04 19:54:28 2009 +0100
 @@ -116,6 +116,10 @@
  #define TOK_STATS               "R"
  #define CMD_STATS		MSG_STATS, TOK_STATS
@@ -154,9 +154,9 @@ diff -r 773f8b3c49c1 include/msg.h
  #define MSG_HELP                "HELP"          /* HELP */
  #define TOK_HELP                "HELP"
  #define CMD_HELP		MSG_HELP, TOK_HELP
-diff -r 773f8b3c49c1 include/querycmds.h
---- a/include/querycmds.h	Wed Feb 04 17:24:29 2009 +0100
-+++ b/include/querycmds.h	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c include/querycmds.h
+--- a/include/querycmds.h	Wed Feb 04 18:16:54 2009 +0100
++++ b/include/querycmds.h	Wed Feb 04 19:54:28 2009 +0100
 @@ -29,6 +29,7 @@
    /* Global user mode changes: */
    unsigned int inv_clients;     /**< Registered invisible users. */
@@ -165,9 +165,9 @@ diff -r 773f8b3c49c1 include/querycmds.h
  
    /* Misc: */
    unsigned int channels;        /**< Existing channels. */
-diff -r 773f8b3c49c1 include/struct.h
---- a/include/struct.h	Wed Feb 04 17:24:29 2009 +0100
-+++ b/include/struct.h	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c include/struct.h
+--- a/include/struct.h	Wed Feb 04 18:16:54 2009 +0100
++++ b/include/struct.h	Wed Feb 04 19:54:28 2009 +0100
 @@ -95,6 +95,7 @@
    unsigned long      acc_id;                    /**< IRC account unique id */
    uint64_t           acc_flags;                 /**< IRC account flags */
@@ -176,9 +176,9 @@ diff -r 773f8b3c49c1 include/struct.h
  };
  
  #endif /* INCLUDED_struct_h */
-diff -r 773f8b3c49c1 ircd/Makefile.in
---- a/ircd/Makefile.in	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/Makefile.in	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/Makefile.in
+--- a/ircd/Makefile.in	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/Makefile.in	Wed Feb 04 19:54:28 2009 +0100
 @@ -174,6 +174,7 @@
  	m_settime.c \
  	m_silence.c \
@@ -205,9 +205,9 @@ diff -r 773f8b3c49c1 ircd/Makefile.in
  m_stats.o: m_stats.c ../config.h ../include/client.h \
    ../include/ircd_defs.h ../include/dbuf.h ../include/msgq.h \
    ../include/ircd_events.h ../config.h ../include/ircd_handler.h \
-diff -r 773f8b3c49c1 ircd/client.c
---- a/ircd/client.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/client.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/client.c
+--- a/ircd/client.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/client.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -123,6 +123,8 @@
  static struct Privs privs_global;
  /** Default privilege set for local operators. */
@@ -237,7 +237,7 @@ diff -r 773f8b3c49c1 ircd/client.c
  
      memset(&privs_local, 0, sizeof(privs_local));
      FlagSet(&privs_local, PRIV_CHAN_LIMIT);
-@@ -178,12 +184,32 @@
+@@ -178,17 +184,33 @@
      FlagSet(&privs_local, PRIV_WHOX);
      FlagSet(&privs_local, PRIV_DISPLAY);
      FlagSet(&privs_local, PRIV_FORCE_LOCAL_OPMODE);
@@ -246,12 +246,8 @@ diff -r 773f8b3c49c1 ircd/client.c
 +    FlagClr(&privs_local, PRIV_GLINE_LOOKUP);
 +    FlagClr(&privs_local, PRIV_CHECK_CHANNEL);
 +
-+    /* set the defaults for privs for staff */
++    /* set the default for privs for staff */
 +    memset(&privs_staff, 0, sizeof(privs_staff));
-+    /* TODO: PRIV_STAFF may not need to be here?
-+     * since we use it to get to this set of privs in the first place?
-+     */
-+    FlagSet(&privs_staff, PRIV_STAFF);
 +    FlagSet(&privs_staff, PRIV_CHAN_LIMIT);
 +    FlagSet(&privs_staff, PRIV_CLAIM_NICK);
 +    FlagSet(&privs_staff, PRIV_GLINE_LOOKUP);
@@ -272,27 +268,31 @@ diff -r 773f8b3c49c1 ircd/client.c
      defaults = FlagHas(&oper->privs, PRIV_PROPAGATE) ? &privs_global : &privs_local;
    else if (FlagHas(&oper->conn_class->privs_dirty, PRIV_PROPAGATE))
      defaults = FlagHas(&oper->conn_class->privs, PRIV_PROPAGATE) ? &privs_global : &privs_local;
-@@ -226,6 +252,19 @@
+   else {
+-    assert(0 && "Oper has no propagation and neither does connection class");
++    assert(0 && "Oper has no propagation/staff and neither does connection class");
+     return;
+   }
+ 
+@@ -226,6 +248,17 @@
      ClrPriv(client, PRIV_OPKICK);
      ClrPriv(client, PRIV_BADCHAN);
    }
-+  /* TODO: long list, other way?
-+   * save what we have now, clear, and go over which are allowed (which are 5?)
-+   */
++  /* TODO: better way than this? */
 +  /* do not let staff have privs they should not have */
 +  if (HasPriv(client, PRIV_STAFF)) {
-+    ClrPriv(client, PRIV_LOCAL_KILL);
-+    ClrPriv(client, PRIV_KILL);
-+    ClrPriv(client, PRIV_GLINE);
-+    ClrPriv(client, PRIV_JUPE);
-+    ClrPriv(client, PRIV_OPMODE);
-+    ClrPriv(client, PRIV_OPKICK);
-+    ClrPriv(client, PRIV_BADCHAN);
++    for (priv = 0; priv < PRIV_LAST_PRIV; ++priv) {
++      if (priv == PRIV_STAFF || priv == PRIV_CHAN_LIMIT || priv == PRIV_CLAIM_NICK ||
++        priv == PRIV_GLINE_LOOKUP || priv == PRIV_NOIDLE || priv == PRIV_HIDE_CHANS ||
++        priv == PRIV_CHECK_CHANNEL)
++        continue;
++      ClrPriv(client, priv);
++    }
 +  }
  }
  
  /** Array mapping privilege values to names and vice versa. */
-@@ -248,6 +287,8 @@
+@@ -248,6 +281,8 @@
    P(PARANOID),       P(CHECK),          P(WALL),          P(CLOSE),
    P(ROUTE),          P(ROUTEINFO),      P(SERVERINFO),    P(CHANNEL_PRIVACY),
    P(USER_PRIVACY),
@@ -301,9 +301,9 @@ diff -r 773f8b3c49c1 ircd/client.c
  #undef P
    { 0, 0 }
  };
-diff -r 773f8b3c49c1 ircd/ircd_lexer.l
---- a/ircd/ircd_lexer.l	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/ircd_lexer.l	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/ircd_lexer.l
+--- a/ircd/ircd_lexer.l	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/ircd_lexer.l	Wed Feb 04 19:54:28 2009 +0100
 @@ -168,6 +168,11 @@
    { "serverinfo", TPRIV_SERVERINFO },
    { "user_privacy", TPRIV_USER_PRIVACY },
@@ -316,9 +316,9 @@ diff -r 773f8b3c49c1 ircd/ircd_lexer.l
    { NULL, 0 }
  };
  static int ntokens;
-diff -r 773f8b3c49c1 ircd/ircd_parser.y
---- a/ircd/ircd_parser.y	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/ircd_parser.y	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/ircd_parser.y	Wed Feb 04 19:54:28 2009 +0100
 @@ -189,7 +189,9 @@
  %token TPRIV_FORCE_OPMODE TPRIV_FORCE_LOCAL_OPMODE TPRIV_APASS_OPMODE
  %token TPRIV_CHANSERV TPRIV_XTRA_OPER TPRIV_NOIDLE TPRIV_FREEFORM TPRIV_PARANOID
@@ -355,9 +355,9 @@ diff -r 773f8b3c49c1 ircd/ircd_parser.y
            TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
  yesorno: YES { $$ = 1; } | NO { $$ = 0; };
  
-diff -r 773f8b3c49c1 ircd/m_check.c
---- a/ircd/m_check.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_check.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_check.c
+--- a/ircd/m_check.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_check.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -94,7 +94,12 @@
    struct Client *acptr;
    int flags = CHECK_SHOWUSERS, i;
@@ -508,9 +508,9 @@ diff -r 773f8b3c49c1 ircd/m_check.c
    } else
      send_reply(sptr, RPL_DATASTR, "         Status:: Client");
  
-diff -r 773f8b3c49c1 ircd/m_gline.c
---- a/ircd/m_gline.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_gline.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_gline.c
+--- a/ircd/m_gline.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_gline.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -669,11 +669,13 @@
  int
  m_gline(struct Client *cptr, struct Client *sptr, int parc, char *parv[])
@@ -528,9 +528,9 @@ diff -r 773f8b3c49c1 ircd/m_gline.c
  
    return gline_list(sptr, parv[1]);
  }
-diff -r 773f8b3c49c1 ircd/m_lusers.c
---- a/ircd/m_lusers.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_lusers.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_lusers.c
+--- a/ircd/m_lusers.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_lusers.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -120,6 +120,8 @@
  	     UserStats.inv_clients, UserStats.servers);
    if (longoutput && UserStats.opers)
@@ -549,9 +549,9 @@ diff -r 773f8b3c49c1 ircd/m_lusers.c
    if (UserStats.unknowns > 0)
      send_reply(sptr, RPL_LUSERUNKNOWN, UserStats.unknowns);
    if (longoutput && UserStats.channels > 0)
-diff -r 773f8b3c49c1 ircd/m_oper.c
---- a/ircd/m_oper.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_oper.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_oper.c
+--- a/ircd/m_oper.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_oper.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -143,6 +143,10 @@
    name     = parc > 1 ? parv[1] : 0;
    password = parc > 2 ? parv[2] : 0;
@@ -582,9 +582,9 @@ diff -r 773f8b3c49c1 ircd/m_oper.c
      if (HasPriv(sptr, PRIV_PROPAGATE))
      {
        ClearLocOp(sptr);
-diff -r 773f8b3c49c1 ircd/m_privs.c
---- a/ircd/m_privs.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_privs.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_privs.c
+--- a/ircd/m_privs.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_privs.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -38,6 +38,27 @@
  #include "numnicks.h"
  #include "send.h"
@@ -613,9 +613,9 @@ diff -r 773f8b3c49c1 ircd/m_privs.c
  /** Handle a local operator's privilege query.
   * @param[in] cptr Client that sent us the message.
   * @param[in] sptr Original source of message.
-diff -r 773f8b3c49c1 ircd/m_staff.c
+diff -r 15ed6b097d0c ircd/m_staff.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_staff.c	Wed Feb 04 17:28:19 2009 +0100
++++ b/ircd/m_staff.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -0,0 +1,252 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_oper.c
@@ -869,9 +869,9 @@ diff -r 773f8b3c49c1 ircd/m_staff.c
 +  send_reply(sptr, RPL_YOUREOPER);
 +  return 0;
 +}
-diff -r 773f8b3c49c1 ircd/m_trace.c
---- a/ircd/m_trace.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_trace.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_trace.c
+--- a/ircd/m_trace.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_trace.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -198,7 +198,7 @@
      if (!(acptr = LocalClientArray[i])) /* Local Connection? */
        continue;
@@ -898,9 +898,9 @@ diff -r 773f8b3c49c1 ircd/m_trace.c
            else
  	    send_reply(sptr, RPL_TRACEUSER, conClass,
  		       get_client_name(acptr, SHOW_IP),
-diff -r 773f8b3c49c1 ircd/m_who.c
---- a/ircd/m_who.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_who.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_who.c
+--- a/ircd/m_who.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_who.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -319,7 +319,7 @@
            for (member = chptr->members; member; member = member->next_member)
            {
@@ -937,9 +937,9 @@ diff -r 773f8b3c49c1 ircd/m_who.c
  	  continue;
          if (!(SEE_USER(sptr, acptr, bitsel)))
            continue;
-diff -r 773f8b3c49c1 ircd/m_whois.c
---- a/ircd/m_whois.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/m_whois.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/m_whois.c
+--- a/ircd/m_whois.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/m_whois.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -216,6 +216,20 @@
           send_reply(sptr, RPL_WHOISOPERNAME, name, user->opername);
      }
@@ -951,7 +951,7 @@ diff -r 773f8b3c49c1 ircd/m_whois.c
 +      send_reply(sptr, SND_EXPLICIT | RPL_WHOISOPERATOR, "%s :is %s Staff",
 +        name, feature_str(FEAT_NETWORK));
 +      /* TODO: allow staff to see eachother's staffname? IsStaffOrAnOper()
-+       * TODO: user->staffname not always true?
++       * TODO: is user->staffname not always set?
 +       * TODO: "is staff as" ..?
 +       */
 +      if (IsAnOper(sptr) && user->staffname)
@@ -961,9 +961,37 @@ diff -r 773f8b3c49c1 ircd/m_whois.c
      if (IsAccount(acptr))
        send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
  
-diff -r 773f8b3c49c1 ircd/parse.c
---- a/ircd/parse.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/parse.c	Wed Feb 04 17:28:19 2009 +0100
+@@ -223,16 +237,24 @@
+       send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
+                  user->realhost, ircd_ntoa(&cli_ip(acptr)));
+ 
+-    if (!IsAnOper(sptr) && IsParanoid(acptr) && IsAnOper(acptr))
++    /* TODO: exclude staff from paranoia? */
++    if (!IsStaffOrAnOper(sptr) && IsParanoid(acptr) && IsAnOper(acptr))
+       sendcmdto_one(&me, CMD_NOTICE, acptr, "%C :whois: %s performed a /WHOIS on you.", acptr, cli_name(sptr));
+     
+     /* Hint: if your looking to add more flags to a user, eg +h, here's
+      *       probably a good place to add them :)
+      */
+-
++    /* TODO: allow staff to see through +I?
++     *   (this is priv stuff is getting out of hand,
++     *     oper needs priv USER_PRIVACY to see through +I ???)
++     *  remove that priv requirement for opers to keep things consistent
++     *  also 'user_privacy' makes not much sense here, +I is for privileged users
++     *  opers and staff, to hide idle time from ordinary users
++     *  not from eachother
++     */
+     if (MyConnect(acptr) &&
+         ((IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) ||
+-         (!IsNoIdle(acptr) && (!feature_bool(FEAT_HIS_WHOIS_IDLETIME) ||
++         ((!IsNoIdle(acptr) || IsStaff(sptr)) && (!feature_bool(FEAT_HIS_WHOIS_IDLETIME) ||
+                               sptr == acptr || parc >= 3))))
+        send_reply(sptr, RPL_WHOISIDLE, name, CurrentTime - user->last,
+                   cli_firsttime(acptr));
+diff -r 15ed6b097d0c ircd/parse.c
+--- a/ircd/parse.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/parse.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -443,6 +443,13 @@
      { m_unregistered, m_stats, m_stats, m_stats, m_ignore, mh_stats }
    },
@@ -996,9 +1024,9 @@ diff -r 773f8b3c49c1 ircd/parse.c
    },
    
    /*
-diff -r 773f8b3c49c1 ircd/s_stats.c
---- a/ircd/s_stats.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/s_stats.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/s_stats.c
+--- a/ircd/s_stats.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/s_stats.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -339,7 +339,7 @@
        if (!name && IsUser(acptr))
          continue;
@@ -1008,9 +1036,9 @@ diff -r 773f8b3c49c1 ircd/s_stats.c
            (acptr != sptr))
          continue;
        /* Only show the ones that match the given mask - if any */
-diff -r 773f8b3c49c1 ircd/s_user.c
---- a/ircd/s_user.c	Wed Feb 04 17:24:29 2009 +0100
-+++ b/ircd/s_user.c	Wed Feb 04 17:28:19 2009 +0100
+diff -r 15ed6b097d0c ircd/s_user.c
+--- a/ircd/s_user.c	Wed Feb 04 18:16:54 2009 +0100
++++ b/ircd/s_user.c	Wed Feb 04 19:54:28 2009 +0100
 @@ -115,6 +115,8 @@
        MyFree(user->away);
      if (user->opername)
@@ -1039,6 +1067,25 @@ diff -r 773f8b3c49c1 ircd/s_user.c
  };
  
  /** Length of #userModeList. */
+@@ -1024,15 +1029,15 @@
+   }
+ 
+   /* sethost enabled for users? */
+-  if (MyConnect(cptr) && !IsAnOper(cptr) && !feature_bool(FEAT_SETHOST_USER)) {
++  if (MyConnect(cptr) && !IsStaffOrAnOper(cptr) && !feature_bool(FEAT_SETHOST_USER)) {
+     send_reply(cptr, ERR_NOPRIVILEGES);
+     return 0;
+   }
+  
+   /* MODE_DEL: restore original hostmask */
+   if (EmptyString(hostmask)) {
+-    /* is already sethost'ed? and only opers can remove a sethost */
+-    if (IsSetHost(cptr) && IsAnOper(cptr)) {
++    /* is already sethost'ed? and only opers and staff can remove a sethost */
++    if (IsSetHost(cptr) && IsStaffOrAnOper(cptr)) {
+       restore = 1;
+       sendcmdto_common_channels_butone(cptr, CMD_QUIT, cptr, ":Host change");
+       /* If they are +rx, we need to return to their +x host, not their "real" host */
 @@ -1228,8 +1233,8 @@
    int prop = 0;
    int do_host_hiding = 0;
