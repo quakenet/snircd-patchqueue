@@ -1,0 +1,25 @@
+Use realusername when looking for Operator blocks, Kill blocks, and G-lines.
+
+diff -r 0d42b86bc341 ircd/s_conf.c
+--- a/ircd/s_conf.c	Tue Feb 10 13:31:34 2009 +0100
++++ b/ircd/s_conf.c	Tue Feb 10 14:35:31 2009 +0100
+@@ -646,8 +646,8 @@
+         0 != ircd_strcmp(tmp->name, name))
+       continue;
+     if (tmp->username
+-        && (EmptyString(cli_username(cptr))
+-            || match(tmp->username, cli_username(cptr))))
++        && (EmptyString(cli_user(cptr)->realusername)
++            || match(tmp->username, cli_user(cptr)->realusername)))
+       continue;
+     if (tmp->addrbits < 0)
+     {
+@@ -1060,7 +1060,7 @@
+     return 0;
+ 
+   host = cli_sockhost(cptr);
+-  name = cli_user(cptr)->username;
++  name = cli_user(cptr)->realusername;
+   realname = cli_info(cptr);
+ 
+   assert(strlen(host) <= HOSTLEN);

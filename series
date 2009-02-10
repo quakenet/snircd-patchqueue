@@ -1,5 +1,6 @@
 who-accountid.patch
 statsheader.patch
+realusernamesethost.patch
 cprivmsgerracconly.patch
 badchanzombie.patch
 nserverflag.patch
