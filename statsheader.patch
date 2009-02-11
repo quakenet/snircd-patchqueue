@@ -1,9 +1,9 @@
 Add header to /STATS output and make TOTAL: line in /STATS z more clear,
 so that we do not need to guess or lookup what exactly some of the output means.
 
-diff -r 92f6cb6562e2 include/numeric.h
---- a/include/numeric.h	Tue Jan 13 22:17:04 2009 +0000
-+++ b/include/numeric.h	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 include/numeric.h
+--- a/include/numeric.h	Wed Feb 11 13:52:40 2009 +0100
++++ b/include/numeric.h	Wed Feb 11 14:27:58 2009 +0100
 @@ -117,6 +117,7 @@
  	RPL_STATSVLINE	     227	   unreal */
  #define RPL_STATSALINE       226        /* Hybrid, Undernet */
@@ -12,9 +12,9 @@ diff -r 92f6cb6562e2 include/numeric.h
  
  /*      RPL_SERVICEINFO      231	unused */
  /*      RPL_ENDOFSERVICES    232	unused */
-diff -r 92f6cb6562e2 ircd/class.c
---- a/ircd/class.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/class.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/class.c
+--- a/ircd/class.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/class.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -257,6 +257,10 @@
  {
    struct ConnectionClass *cltmp;
@@ -26,9 +26,9 @@ diff -r 92f6cb6562e2 ircd/class.c
    for (cltmp = connClassList; cltmp; cltmp = cltmp->next)
      send_reply(sptr, RPL_STATSYLINE, (cltmp->valid ? 'Y' : 'y'),
                 ConClass(cltmp), PingFreq(cltmp), ConFreq(cltmp),
-diff -r 92f6cb6562e2 ircd/gline.c
---- a/ircd/gline.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/gline.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/gline.c
+--- a/ircd/gline.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/gline.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -1295,6 +1295,10 @@
    struct Gline *gline;
    struct Gline *sgline;
@@ -40,9 +40,9 @@ diff -r 92f6cb6562e2 ircd/gline.c
    gliter(GlobalGlineList, gline, sgline) {
      send_reply(sptr, RPL_STATSGLINE, 'G', 
                 gline->gl_nick ? gline->gl_nick : "",
-diff -r 92f6cb6562e2 ircd/hash.c
---- a/ircd/hash.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/hash.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/hash.c
+--- a/ircd/hash.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/hash.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -421,6 +421,10 @@
  stats_nickjupes(struct Client* to, const struct StatDesc* sd, char* param)
  {
@@ -54,9 +54,9 @@ diff -r 92f6cb6562e2 ircd/hash.c
    for (i = 0; i < JUPEHASHSIZE; i++)
      if (jupeTable[i][0])
        send_reply(to, RPL_STATSJLINE, jupeTable[i]);
-diff -r 92f6cb6562e2 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/ircd_features.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/ircd_features.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -827,6 +827,10 @@
  {
    int i;
@@ -68,37 +68,37 @@ diff -r 92f6cb6562e2 ircd/ircd_features.c
    for (i = 0; features[i].type; i++) {
      if ((features[i].flags & FEAT_NODISP) ||
  	(features[i].flags & FEAT_MYOPER && !MyOper(to)) ||
-diff -r 92f6cb6562e2 ircd/ircd_res.c
---- a/ircd/ircd_res.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/ircd_res.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/ircd_res.c
+--- a/ircd/ircd_res.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/ircd_res.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -917,6 +917,10 @@
    int i;
    char ipaddr[128];
  
 +  /* send header so the client knows what we are showing */
 +  send_reply(source_p, SND_EXPLICIT | RPL_STATSHEADER,
-+    "A DNS-Server");
++    "DNS-Server");
 +
    for (i = 0; i < irc_nscount; i++)
    {
      ircd_ntoa_r(ipaddr, &irc_nsaddr_list[i].addr);
-diff -r 92f6cb6562e2 ircd/listener.c
---- a/ircd/listener.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/listener.c	Mon Jan 19 00:27:57 2009 +0100
-@@ -138,6 +138,10 @@
-   int len;
+diff -r d93ebdf15bd2 ircd/listener.c
+--- a/ircd/listener.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/listener.c	Wed Feb 11 14:27:58 2009 +0100
+@@ -139,6 +139,10 @@
  
    assert(0 != sptr);
-+
+ 
 +  /* send header so the client knows what we are showing */
 +  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
 +    "P Port Conns Flags Status");
- 
++
    if (param)
      port = atoi(param);
-diff -r 92f6cb6562e2 ircd/motd.c
---- a/ircd/motd.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/motd.c	Mon Jan 19 00:27:57 2009 +0100
+ 
+diff -r d93ebdf15bd2 ircd/motd.c
+--- a/ircd/motd.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/motd.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -433,6 +433,10 @@
  {
    struct Motd *ptr;
@@ -110,9 +110,9 @@ diff -r 92f6cb6562e2 ircd/motd.c
    for (ptr = MotdList.other; ptr; ptr = ptr->next)
      send_reply(to, SND_EXPLICIT | RPL_STATSTLINE, "T %s %s",
                 ptr->hostmask, ptr->path);
-diff -r 92f6cb6562e2 ircd/s_auth.c
---- a/ircd/s_auth.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/s_auth.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/s_auth.c
+--- a/ircd/s_auth.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/s_auth.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -2189,6 +2189,10 @@
  {
      struct SLink *link;
@@ -135,9 +135,9 @@ diff -r 92f6cb6562e2 ircd/s_auth.c
      if (iauth) for (link = iauth->i_stats; link; link = link->next)
      {
          send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG, ":%s",
-diff -r 92f6cb6562e2 ircd/s_debug.c
---- a/ircd/s_debug.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/s_debug.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/s_debug.c
+--- a/ircd/s_debug.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/s_debug.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -389,7 +389,7 @@
  #endif
  
@@ -147,9 +147,9 @@ diff -r 92f6cb6562e2 ircd/s_debug.c
  	     totww, totch, totcl, com, dbufs_allocated, msg_allocated,
  	     msgbuf_allocated);
  }
-diff -r 92f6cb6562e2 ircd/s_err.c
---- a/ircd/s_err.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/s_err.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/s_err.c
+--- a/ircd/s_err.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/s_err.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -492,7 +492,7 @@
  /* 229 */
    { 0 },
@@ -159,9 +159,9 @@ diff -r 92f6cb6562e2 ircd/s_err.c
  /* 231 */
    { 0 },
  /* 232 */
-diff -r 92f6cb6562e2 ircd/s_stats.c
---- a/ircd/s_stats.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/s_stats.c	Mon Jan 19 00:27:57 2009 +0100
+diff -r d93ebdf15bd2 ircd/s_stats.c
+--- a/ircd/s_stats.c	Wed Feb 11 13:52:40 2009 +0100
++++ b/ircd/s_stats.c	Wed Feb 11 14:27:58 2009 +0100
 @@ -92,6 +92,16 @@
    int maximum;
    char *host, *pass, *name, *username, *hub_limit;
@@ -213,36 +213,45 @@ diff -r 92f6cb6562e2 ircd/s_stats.c
    for ( ; p; p = p->next)
      send_reply(to, RPL_STATSKLINE, p->bits > 0 ? 'k' : 'K',
                 p->usermask ? p->usermask : "*",
-@@ -251,6 +274,10 @@
-   }
+@@ -252,6 +275,10 @@
    else
      host = mask;
-+
+ 
 +  /* send header so the client knows what we are showing */
 +  send_reply(sptr, SND_EXPLICIT | RPL_STATSHEADER,
 +    "K Mask \"Message/File\" \"Realname\" 0 0");
- 
++
    for (conf = conf_get_deny_list(); conf; conf = conf->next)
    {
+     /* Skip this block if the user is searching for a user-matching
 @@ -377,6 +404,10 @@
  {
    struct Message *mptr;
  
 +  /* send header so the client knows what we are showing */
 +  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
-+    "m Command Count Bytes");
++    "Command Count Bytes");
 +
    for (mptr = msgtab; mptr->cmd; mptr++)
      if (mptr->count)
        send_reply(to, RPL_STATSCOMMANDS, mptr->cmd, mptr->count, mptr->bytes);
-@@ -391,6 +422,10 @@
- stats_quarantine(struct Client* to, const struct StatDesc* sd, char* param)
+@@ -392,6 +423,10 @@
  {
    struct qline *qline;
-+
+ 
 +  /* send header so the client knows what we are showing */
 +  send_reply(to, SND_EXPLICIT | RPL_STATSHEADER,
-+    "Q Channel Reason");
- 
++    "Q Channel :Reason");
++
    for (qline = GlobalQuarantineList; qline; qline = qline->next)
    {
+     if (param && match(param, qline->chname)) /* narrow search */
+@@ -406,6 +441,8 @@
+   int y = 1, i = 1;
+   struct sline *sline;
+ 
++
++  /* TODO: use RPL_STATSHEADER here too instead of RPL_TEXT? */
+   if (IsAnOper(to))
+     send_reply(to, SND_EXPLICIT | RPL_TEXT, "# Type Spoofhost Realhost Ident");
+   else
