@@ -27,9 +27,9 @@ TODO: allow staff free'ing their nick? or else allow /NICK even when hit by a gl
 TODO: allow a search in /GLINE instead of requiring a perfect match?
 TODO: logging of /CHECK (for all)
 
-diff -r 15ed6b097d0c include/check.h
---- a/include/check.h	Wed Feb 04 18:16:54 2009 +0100
-+++ b/include/check.h	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 include/check.h
+--- a/include/check.h	Thu Feb 12 14:05:21 2009 +0100
++++ b/include/check.h	Thu Feb 12 14:18:31 2009 +0100
 @@ -45,5 +45,6 @@
  extern void checkClient(struct Client *sptr, struct Client *acptr);
  extern void checkServer(struct Client *sptr, struct Client *acptr);
@@ -37,9 +37,9 @@ diff -r 15ed6b097d0c include/check.h
 +extern int client_can_check_channel(struct Client *sptr, struct Channel *chptr);
  
  #endif /* INCLUDED_check_h */
-diff -r 15ed6b097d0c include/client.h
---- a/include/client.h	Wed Feb 04 18:16:54 2009 +0100
-+++ b/include/client.h	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 include/client.h
+--- a/include/client.h	Thu Feb 12 14:05:21 2009 +0100
++++ b/include/client.h	Thu Feb 12 14:18:31 2009 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -98,9 +98,9 @@ diff -r 15ed6b097d0c include/client.h
  /** Clear the client's pending UDP ping flag. */
  #define ClearUPing(x)           ClrFlag(x, FLAG_UPING)
  /** Remove mode +w (wallops) from the client. */
-diff -r 15ed6b097d0c include/handlers.h
---- a/include/handlers.h	Wed Feb 04 18:16:54 2009 +0100
-+++ b/include/handlers.h	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 include/handlers.h
+--- a/include/handlers.h	Thu Feb 12 14:05:21 2009 +0100
++++ b/include/handlers.h	Thu Feb 12 14:18:31 2009 +0100
 @@ -100,6 +100,7 @@
    */
  
@@ -140,9 +140,9 @@ diff -r 15ed6b097d0c include/handlers.h
  extern int ms_stats(struct Client*, struct Client*, int, char*[]);
  extern int ms_topic(struct Client*, struct Client*, int, char*[]);
  extern int ms_trace(struct Client*, struct Client*, int, char*[]);
-diff -r 15ed6b097d0c include/msg.h
---- a/include/msg.h	Wed Feb 04 18:16:54 2009 +0100
-+++ b/include/msg.h	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 include/msg.h
+--- a/include/msg.h	Thu Feb 12 14:05:21 2009 +0100
++++ b/include/msg.h	Thu Feb 12 14:18:31 2009 +0100
 @@ -116,6 +116,10 @@
  #define TOK_STATS               "R"
  #define CMD_STATS		MSG_STATS, TOK_STATS
@@ -154,9 +154,9 @@ diff -r 15ed6b097d0c include/msg.h
  #define MSG_HELP                "HELP"          /* HELP */
  #define TOK_HELP                "HELP"
  #define CMD_HELP		MSG_HELP, TOK_HELP
-diff -r 15ed6b097d0c include/querycmds.h
---- a/include/querycmds.h	Wed Feb 04 18:16:54 2009 +0100
-+++ b/include/querycmds.h	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 include/querycmds.h
+--- a/include/querycmds.h	Thu Feb 12 14:05:21 2009 +0100
++++ b/include/querycmds.h	Thu Feb 12 14:18:31 2009 +0100
 @@ -29,6 +29,7 @@
    /* Global user mode changes: */
    unsigned int inv_clients;     /**< Registered invisible users. */
@@ -165,9 +165,9 @@ diff -r 15ed6b097d0c include/querycmds.h
  
    /* Misc: */
    unsigned int channels;        /**< Existing channels. */
-diff -r 15ed6b097d0c include/struct.h
---- a/include/struct.h	Wed Feb 04 18:16:54 2009 +0100
-+++ b/include/struct.h	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 include/struct.h
+--- a/include/struct.h	Thu Feb 12 14:05:21 2009 +0100
++++ b/include/struct.h	Thu Feb 12 14:18:31 2009 +0100
 @@ -95,6 +95,7 @@
    unsigned long      acc_id;                    /**< IRC account unique id */
    uint64_t           acc_flags;                 /**< IRC account flags */
@@ -176,9 +176,9 @@ diff -r 15ed6b097d0c include/struct.h
  };
  
  #endif /* INCLUDED_struct_h */
-diff -r 15ed6b097d0c ircd/Makefile.in
---- a/ircd/Makefile.in	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/Makefile.in	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/Makefile.in
+--- a/ircd/Makefile.in	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/Makefile.in	Thu Feb 12 14:18:31 2009 +0100
 @@ -174,6 +174,7 @@
  	m_settime.c \
  	m_silence.c \
@@ -205,9 +205,9 @@ diff -r 15ed6b097d0c ircd/Makefile.in
  m_stats.o: m_stats.c ../config.h ../include/client.h \
    ../include/ircd_defs.h ../include/dbuf.h ../include/msgq.h \
    ../include/ircd_events.h ../config.h ../include/ircd_handler.h \
-diff -r 15ed6b097d0c ircd/client.c
---- a/ircd/client.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/client.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/client.c
+--- a/ircd/client.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/client.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -123,6 +123,8 @@
  static struct Privs privs_global;
  /** Default privilege set for local operators. */
@@ -301,9 +301,9 @@ diff -r 15ed6b097d0c ircd/client.c
  #undef P
    { 0, 0 }
  };
-diff -r 15ed6b097d0c ircd/ircd_lexer.l
---- a/ircd/ircd_lexer.l	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/ircd_lexer.l	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/ircd_lexer.l
+--- a/ircd/ircd_lexer.l	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/ircd_lexer.l	Thu Feb 12 14:18:31 2009 +0100
 @@ -168,6 +168,11 @@
    { "serverinfo", TPRIV_SERVERINFO },
    { "user_privacy", TPRIV_USER_PRIVACY },
@@ -316,9 +316,9 @@ diff -r 15ed6b097d0c ircd/ircd_lexer.l
    { NULL, 0 }
  };
  static int ntokens;
-diff -r 15ed6b097d0c ircd/ircd_parser.y
---- a/ircd/ircd_parser.y	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/ircd_parser.y	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/ircd_parser.y	Thu Feb 12 14:18:31 2009 +0100
 @@ -189,7 +189,9 @@
  %token TPRIV_FORCE_OPMODE TPRIV_FORCE_LOCAL_OPMODE TPRIV_APASS_OPMODE
  %token TPRIV_CHANSERV TPRIV_XTRA_OPER TPRIV_NOIDLE TPRIV_FREEFORM TPRIV_PARANOID
@@ -355,9 +355,9 @@ diff -r 15ed6b097d0c ircd/ircd_parser.y
            TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
  yesorno: YES { $$ = 1; } | NO { $$ = 0; };
  
-diff -r 15ed6b097d0c ircd/m_check.c
---- a/ircd/m_check.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_check.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_check.c
+--- a/ircd/m_check.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_check.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -94,7 +94,12 @@
    struct Client *acptr;
    int flags = CHECK_SHOWUSERS, i;
@@ -508,9 +508,9 @@ diff -r 15ed6b097d0c ircd/m_check.c
    } else
      send_reply(sptr, RPL_DATASTR, "         Status:: Client");
  
-diff -r 15ed6b097d0c ircd/m_gline.c
---- a/ircd/m_gline.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_gline.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_gline.c
+--- a/ircd/m_gline.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_gline.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -669,11 +669,13 @@
  int
  m_gline(struct Client *cptr, struct Client *sptr, int parc, char *parv[])
@@ -528,9 +528,9 @@ diff -r 15ed6b097d0c ircd/m_gline.c
  
    return gline_list(sptr, parv[1]);
  }
-diff -r 15ed6b097d0c ircd/m_lusers.c
---- a/ircd/m_lusers.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_lusers.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_lusers.c
+--- a/ircd/m_lusers.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_lusers.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -120,6 +120,8 @@
  	     UserStats.inv_clients, UserStats.servers);
    if (longoutput && UserStats.opers)
@@ -549,9 +549,9 @@ diff -r 15ed6b097d0c ircd/m_lusers.c
    if (UserStats.unknowns > 0)
      send_reply(sptr, RPL_LUSERUNKNOWN, UserStats.unknowns);
    if (longoutput && UserStats.channels > 0)
-diff -r 15ed6b097d0c ircd/m_oper.c
---- a/ircd/m_oper.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_oper.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_oper.c
+--- a/ircd/m_oper.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_oper.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -143,6 +143,10 @@
    name     = parc > 1 ? parv[1] : 0;
    password = parc > 2 ? parv[2] : 0;
@@ -582,9 +582,9 @@ diff -r 15ed6b097d0c ircd/m_oper.c
      if (HasPriv(sptr, PRIV_PROPAGATE))
      {
        ClearLocOp(sptr);
-diff -r 15ed6b097d0c ircd/m_privs.c
---- a/ircd/m_privs.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_privs.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_privs.c
+--- a/ircd/m_privs.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_privs.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -38,6 +38,27 @@
  #include "numnicks.h"
  #include "send.h"
@@ -613,9 +613,9 @@ diff -r 15ed6b097d0c ircd/m_privs.c
  /** Handle a local operator's privilege query.
   * @param[in] cptr Client that sent us the message.
   * @param[in] sptr Original source of message.
-diff -r 15ed6b097d0c ircd/m_staff.c
+diff -r b6cf63c513c5 ircd/m_staff.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_staff.c	Wed Feb 04 19:54:28 2009 +0100
++++ b/ircd/m_staff.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -0,0 +1,252 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_oper.c
@@ -869,9 +869,9 @@ diff -r 15ed6b097d0c ircd/m_staff.c
 +  send_reply(sptr, RPL_YOUREOPER);
 +  return 0;
 +}
-diff -r 15ed6b097d0c ircd/m_trace.c
---- a/ircd/m_trace.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_trace.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_trace.c
+--- a/ircd/m_trace.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_trace.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -198,7 +198,7 @@
      if (!(acptr = LocalClientArray[i])) /* Local Connection? */
        continue;
@@ -898,9 +898,9 @@ diff -r 15ed6b097d0c ircd/m_trace.c
            else
  	    send_reply(sptr, RPL_TRACEUSER, conClass,
  		       get_client_name(acptr, SHOW_IP),
-diff -r 15ed6b097d0c ircd/m_who.c
---- a/ircd/m_who.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_who.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_who.c
+--- a/ircd/m_who.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_who.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -319,7 +319,7 @@
            for (member = chptr->members; member; member = member->next_member)
            {
@@ -937,9 +937,9 @@ diff -r 15ed6b097d0c ircd/m_who.c
  	  continue;
          if (!(SEE_USER(sptr, acptr, bitsel)))
            continue;
-diff -r 15ed6b097d0c ircd/m_whois.c
---- a/ircd/m_whois.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/m_whois.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/m_whois.c
+--- a/ircd/m_whois.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/m_whois.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -216,6 +216,20 @@
           send_reply(sptr, RPL_WHOISOPERNAME, name, user->opername);
      }
@@ -989,9 +989,9 @@ diff -r 15ed6b097d0c ircd/m_whois.c
                                sptr == acptr || parc >= 3))))
         send_reply(sptr, RPL_WHOISIDLE, name, CurrentTime - user->last,
                    cli_firsttime(acptr));
-diff -r 15ed6b097d0c ircd/parse.c
---- a/ircd/parse.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/parse.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/parse.c
+--- a/ircd/parse.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/parse.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -443,6 +443,13 @@
      { m_unregistered, m_stats, m_stats, m_stats, m_ignore, mh_stats }
    },
@@ -1024,9 +1024,23 @@ diff -r 15ed6b097d0c ircd/parse.c
    },
    
    /*
-diff -r 15ed6b097d0c ircd/s_stats.c
---- a/ircd/s_stats.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/s_stats.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/s_misc.c
+--- a/ircd/s_misc.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/s_misc.c	Thu Feb 12 14:18:31 2009 +0100
+@@ -245,6 +245,10 @@
+       assert(UserStats.opers > 0);
+       --UserStats.opers;
+     }
++    if (IsStaff(bcptr)) {
++      assert(UserStats.staff > 0);
++      --UserStats.staff;
++    }
+     if (MyConnect(bcptr))
+       Count_clientdisconnects(bcptr, UserStats);
+     else
+diff -r b6cf63c513c5 ircd/s_stats.c
+--- a/ircd/s_stats.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/s_stats.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -339,7 +339,7 @@
        if (!name && IsUser(acptr))
          continue;
@@ -1036,9 +1050,9 @@ diff -r 15ed6b097d0c ircd/s_stats.c
            (acptr != sptr))
          continue;
        /* Only show the ones that match the given mask - if any */
-diff -r 15ed6b097d0c ircd/s_user.c
---- a/ircd/s_user.c	Wed Feb 04 18:16:54 2009 +0100
-+++ b/ircd/s_user.c	Wed Feb 04 19:54:28 2009 +0100
+diff -r b6cf63c513c5 ircd/s_user.c
+--- a/ircd/s_user.c	Thu Feb 12 14:05:21 2009 +0100
++++ b/ircd/s_user.c	Thu Feb 12 14:18:31 2009 +0100
 @@ -115,6 +115,8 @@
        MyFree(user->away);
      if (user->opername)
