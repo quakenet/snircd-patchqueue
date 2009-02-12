@@ -1,8 +1,27 @@
 Add accountid field 'b' to /who, we don't allow selecting by it though.
 
+diff -r 92f6cb6562e2 doc/readme.who
+--- a/doc/readme.who	Tue Jan 13 22:17:04 2009 +0000
++++ b/doc/readme.who	Thu Feb 12 15:06:28 2009 +0100
+@@ -100,6 +100,7 @@
+    t : Include the querytype in the reply
+    u : Include userID with eventual ~
+    a : Include account name
++   b : Include account ID [snircd 1.4.0]
+    o : Include oplevel (shows 999 to users without ops in the channel)
+ 
+ And the ,<querytype> final option can be used to specify what you want the
+@@ -116,6 +117,7 @@
+ :"source" 354 "target" ["querytype"] ["channel"] ["user"] 
+                        ["IP"] ["host"] ["server"] ["nick"] 
+                        ["flags"] ["hops"] ["idle"] ["account"]
++                       ["accountID"] ["oplevel"]
+                        [:"realname"]
+ 
+ Where only the fields specified in the %fields options are present.
 diff -r 92f6cb6562e2 include/whocmds.h
 --- a/include/whocmds.h	Tue Jan 13 22:17:04 2009 +0000
-+++ b/include/whocmds.h	Sun Jan 18 19:13:32 2009 +0000
++++ b/include/whocmds.h	Thu Feb 12 15:06:28 2009 +0100
 @@ -38,6 +38,7 @@
  #define WHO_FIELD_IDL 1024 /**< Show idle time. */
  #define WHO_FIELD_ACC 2048 /**< Show account name. */
@@ -13,7 +32,7 @@ diff -r 92f6cb6562e2 include/whocmds.h
  #define WHO_FIELD_DEF ( WHO_FIELD_NIC | WHO_FIELD_UID | WHO_FIELD_HOS | WHO_FIELD_SER )
 diff -r 92f6cb6562e2 ircd/m_who.c
 --- a/ircd/m_who.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/m_who.c	Sun Jan 18 19:13:32 2009 +0000
++++ b/ircd/m_who.c	Thu Feb 12 15:06:28 2009 +0100
 @@ -205,6 +205,10 @@
          counter++;
          switch (ch)
@@ -27,7 +46,7 @@ diff -r 92f6cb6562e2 ircd/m_who.c
              fields |= WHO_FIELD_CHA;
 diff -r 92f6cb6562e2 ircd/whocmds.c
 --- a/ircd/whocmds.c	Tue Jan 13 22:17:04 2009 +0000
-+++ b/ircd/whocmds.c	Sun Jan 18 19:13:32 2009 +0000
++++ b/ircd/whocmds.c	Thu Feb 12 15:06:28 2009 +0100
 @@ -251,6 +251,15 @@
        *(p1++) = '0';
    }
