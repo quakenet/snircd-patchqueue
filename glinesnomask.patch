@@ -17,9 +17,9 @@ as that would be cheating :-)
 This prefix must not be used until the entire network
 and services are upgraded to handle it!
 
-diff -r a9d96ac08a2c include/gline.h
---- a/include/gline.h	Fri Jan 30 18:28:17 2009 +0100
-+++ b/include/gline.h	Fri Jan 30 18:52:10 2009 +0100
+diff -r 8dcf56ed67b9 include/gline.h
+--- a/include/gline.h	Sun Feb 15 15:31:50 2009 +0100
++++ b/include/gline.h	Sun Feb 15 15:59:10 2009 +0100
 @@ -88,8 +88,10 @@
  #define GLINE_LIFETIME	0x2000	/**< Record lifetime update */
  #define GLINE_REASON	0x4000	/**< Reason update */
@@ -41,9 +41,9 @@ diff -r a9d96ac08a2c include/gline.h
  
  /** Return nick mask of a G-line. */
  #define GlineNick(g)		((g)->gl_nick)
-diff -r a9d96ac08a2c ircd/gline.c
---- a/ircd/gline.c	Fri Jan 30 18:28:17 2009 +0100
-+++ b/ircd/gline.c	Fri Jan 30 18:52:10 2009 +0100
+diff -r 8dcf56ed67b9 ircd/gline.c
+--- a/ircd/gline.c	Sun Feb 15 15:31:50 2009 +0100
++++ b/ircd/gline.c	Sun Feb 15 15:59:10 2009 +0100
 @@ -278,7 +278,7 @@
          	   gline->gl_reason);
  
@@ -63,18 +63,19 @@ diff -r a9d96ac08a2c ircd/gline.c
  			GlineIsRemActive(gline) ? '+' : '-',
                          GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
                          GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
-@@ -555,8 +556,8 @@
+@@ -555,9 +556,8 @@
    /* lifetime is already an absolute timestamp */
  
    /* Inform ops... */
 -  sendto_opmask_butone(0, ircd_strncmp(reason, "AUTO", 4) ? SNO_GLINE :
--                       SNO_AUTO, "%s adding %s %s for %s%s%s%s%s, expiring at "
+-                       SNO_AUTO, "%s adding %s%s %s for %s%s%s%s%s, expiring at "
+-                       "%Tu: %s",
 +  sendto_opmask_butone(0, (flags & GLINE_AUTO) ? SNO_AUTO : SNO_GLINE,
-+                       "%s adding %s %s for %s%s%s%s%s, expiring at "
-                        "%Tu: %s",
++                       "%s adding %s%s %s for %s%s%s%s%s, expiring at %Tu: %s",
                         (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
                           cli_name(sptr) :
-@@ -630,7 +631,8 @@
+                          cli_name((cli_user(sptr))->server),
+@@ -631,7 +631,8 @@
      return 0; /* was active to begin with */
  
    /* Inform ops and log it */
@@ -84,27 +85,18 @@ diff -r a9d96ac08a2c ircd/gline.c
                         "expiring at %Tu: %s",
                         (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
                           cli_name(sptr) :
-@@ -756,7 +758,8 @@
-     lifetime = expire;
+@@ -704,8 +705,8 @@
+   }
  
    /* Inform ops and log it */
--  sendto_opmask_butone(0, SNO_GLINE, "%s %s GLINE for %s, expiring at %Tu",
-+  sendto_opmask_butone(0, (flags & GLINE_AUTO) ? SNO_AUTO : SNO_GLINE,
-+                       "%s %s GLINE for %s, expiring at %Tu",
+-  sendto_opmask_butone(0, SNO_GLINE, "%s %s %s for %s%s%s%s%s, expiring at %Tu: "
+-		       "%s",
++  sendto_opmask_butone(0, GlineIsAuto(gline) ? SNO_AUTO : SNO_GLINE,
++		       "%s %s %s for %s%s%s%s%s, expiring at %Tu: %s",
                         (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-                          cli_name(sptr) : cli_name((cli_user(sptr))->server),
- 		       msg, userhost, expire + TSoffset);
-@@ -765,7 +768,8 @@
- 	    "%#C %s GLINE for %s, expiring at %Tu", sptr, msg, userhost,
- 	    expire);
- 
--  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* -%s %Tu %Tu %Tu",
-+  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %s-%s %Tu %Tu %Tu",
-+                        (flags & GLINE_AUTO) ? "=" : "",
-                         userhost, expire, lastmod, lifetime);
- 
-   return 0;
-@@ -912,6 +916,12 @@
+                          cli_name(sptr) :
+                          cli_name((cli_user(sptr))->server),
+@@ -877,6 +878,12 @@
      break;
    }
  
@@ -117,27 +109,37 @@ diff -r a9d96ac08a2c ircd/gline.c
    /* Handle expiration changes... */
    if (flags & GLINE_EXPIRE) {
      gline->gl_expire = expire; /* save new expiration time */
-@@ -944,7 +954,8 @@
+@@ -909,7 +916,8 @@
    }
  
    /* All right, inform ops... */
 -  sendto_opmask_butone(0, SNO_GLINE, "%s modifying global %s for %s%s%s%s%s:%s",
-+  sendto_opmask_butone(0, flags & GLINE_AUTO ? SNO_GLINE : SNO_GLINE,
++  sendto_opmask_butone(0, GlineIsAuto(gline) ? SNO_AUTO : SNO_GLINE,
 +		       "%s modifying global %s for %s%s%s%s%s:%s",
  		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
  		       cli_name(sptr) : cli_name((cli_user(sptr))->server),
  		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
-@@ -965,7 +976,8 @@
+@@ -930,7 +938,8 @@
     */
    if (action != GLINE_LOCAL_ACTIVATE && action != GLINE_LOCAL_DEACTIVATE)
      sendcmdto_serv_butone(sptr, CMD_GLINE, cptr,
 -			  "* %s%s%s%s%s%s%s %Tu %Tu %Tu :%s",
 +			  "* %s%s%s%s%s%s%s%s %Tu %Tu %Tu :%s",
-+			  (flags & GLINE_AUTO) ? "=" : "",
++			  GlineIsAuto(gline) ? "=" : "",
  			  flags & GLINE_OPERFORCE ? "!" : "", op,
                            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
                            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
-@@ -1179,8 +1191,9 @@
+@@ -956,7 +965,8 @@
+   assert(GlineIsLocal(gline));
+ 
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s removing local %s for %s%s%s%s%s",
++  sendto_opmask_butone(0, GlineIsAuto(gline) ? SNO_AUTO : SNO_GLINE,
++		       "%s removing local %s for %s%s%s%s%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+ 		       cli_name(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+@@ -1144,8 +1154,9 @@
  
    gliter(GlobalGlineList, gline, sgline) {
      if (!GlineIsLocal(gline) && gline->gl_lastmod)
@@ -149,7 +151,7 @@ diff -r a9d96ac08a2c ircd/gline.c
                      gline->gl_nick ? gline->gl_nick : "",
                      gline->gl_nick ? "!" : "",
                      gline->gl_user,
-@@ -1192,7 +1205,8 @@
+@@ -1157,7 +1168,8 @@
  
    gliter(BadChanGlineList, gline, sgline) {
      if (!GlineIsLocal(gline) && gline->gl_lastmod)
@@ -159,7 +161,7 @@ diff -r a9d96ac08a2c ircd/gline.c
  		    GlineIsRemActive(gline) ? '+' : '-', gline->gl_user,
  		    gline->gl_expire - CurrentTime, gline->gl_lastmod,
  		    gline->gl_lifetime, gline->gl_reason);
-@@ -1210,7 +1224,8 @@
+@@ -1175,7 +1187,8 @@
    if (GlineIsLocal(gline) || !gline->gl_lastmod)
      return 0;
  
@@ -169,7 +171,7 @@ diff -r a9d96ac08a2c ircd/gline.c
  		GlineIsRemActive(gline) ? '+' : '-', 
                  GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
                  GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
-@@ -1249,6 +1264,7 @@
+@@ -1214,6 +1227,7 @@
  	       gline->gl_expire + TSoffset, gline->gl_lastmod,
  	       gline->gl_lifetime + TSoffset,
  	       GlineIsLocal(gline) ? cli_name(&me) : "*",
@@ -177,7 +179,7 @@ diff -r a9d96ac08a2c ircd/gline.c
  	       gline->gl_state == GLOCAL_ACTIVATED ? ">" :
  	       (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
  	       GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
-@@ -1263,6 +1279,7 @@
+@@ -1228,6 +1242,7 @@
  		 gline->gl_expire + TSoffset, gline->gl_lastmod,
  		 gline->gl_lifetime + TSoffset,
  		 GlineIsLocal(gline) ? cli_name(&me) : "*",
@@ -185,7 +187,7 @@ diff -r a9d96ac08a2c ircd/gline.c
  		 gline->gl_state == GLOCAL_ACTIVATED ? ">" :
  		 (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
  		 GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
-@@ -1273,6 +1290,7 @@
+@@ -1238,6 +1253,7 @@
  		 gline->gl_expire + TSoffset, gline->gl_lastmod,
  		 gline->gl_lifetime + TSoffset,
  		 GlineIsLocal(gline) ? cli_name(&me) : "*",
@@ -193,7 +195,7 @@ diff -r a9d96ac08a2c ircd/gline.c
  		 gline->gl_state == GLOCAL_ACTIVATED ? ">" :
  		 (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
  		 GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
-@@ -1308,6 +1326,7 @@
+@@ -1273,6 +1289,7 @@
  	       gline->gl_host ? gline->gl_host : "",
  	       gline->gl_expire + TSoffset, gline->gl_lastmod,
  	       gline->gl_lifetime + TSoffset,
@@ -201,7 +203,7 @@ diff -r a9d96ac08a2c ircd/gline.c
  	       gline->gl_state == GLOCAL_ACTIVATED ? ">" :
  	       (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
  	       GlineIsRemActive(gline) ? '+' : '-',
-@@ -1318,6 +1337,7 @@
+@@ -1283,6 +1300,7 @@
      send_reply(sptr, RPL_STATSGLINE, 'G', gline->gl_user, "", "", "", "",
                 gline->gl_expire + TSoffset, gline->gl_lastmod,
                 gline->gl_lifetime + TSoffset,
@@ -209,9 +211,9 @@ diff -r a9d96ac08a2c ircd/gline.c
                 gline->gl_state == GLOCAL_ACTIVATED ? ">" :
                 (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
                 GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
-diff -r a9d96ac08a2c ircd/m_gline.c
---- a/ircd/m_gline.c	Fri Jan 30 18:28:17 2009 +0100
-+++ b/ircd/m_gline.c	Fri Jan 30 18:52:10 2009 +0100
+diff -r 8dcf56ed67b9 ircd/m_gline.c
+--- a/ircd/m_gline.c	Sun Feb 15 15:31:50 2009 +0100
++++ b/ircd/m_gline.c	Sun Feb 15 15:59:10 2009 +0100
 @@ -140,6 +140,11 @@
    if (IsServer(sptr))
      flags |= GLINE_FORCE;
@@ -319,9 +321,9 @@ diff -r a9d96ac08a2c ircd/m_gline.c
    if (*mask == '!') {
      mask++;
  
-diff -r a9d96ac08a2c ircd/s_err.c
---- a/ircd/s_err.c	Fri Jan 30 18:28:17 2009 +0100
-+++ b/ircd/s_err.c	Fri Jan 30 18:52:10 2009 +0100
+diff -r 8dcf56ed67b9 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Feb 15 15:31:50 2009 +0100
++++ b/ircd/s_err.c	Sun Feb 15 15:59:10 2009 +0100
 @@ -526,7 +526,7 @@
  /* 246 */
    { RPL_STATSTLINE, "%c %s %s", "246" },
