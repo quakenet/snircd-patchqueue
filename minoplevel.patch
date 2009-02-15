@@ -25,10 +25,10 @@ enforcement of the value between old and new servers.
 
 NOTE: previously MINOPLEVEL was also enforced on /OPMODE - it is no longer in this patch (should it?)
 
-diff -r 8beb89412410 ircd/channel.c
---- a/ircd/channel.c	Fri Jan 23 15:27:21 2009 +0100
-+++ b/ircd/channel.c	Fri Jan 23 17:08:56 2009 +0100
-@@ -3367,18 +3367,34 @@
+diff -r 041543097dfa ircd/channel.c
+--- a/ircd/channel.c	Sun Feb 15 16:28:56 2009 +0100
++++ b/ircd/channel.c	Sun Feb 15 16:36:34 2009 +0100
+@@ -3355,18 +3355,34 @@
         * Otherwise, get state->member's oplevel+1.
         */
        if (state->cli_change[i].oplevel <= MAXOPLEVEL) {
@@ -61,7 +61,7 @@ diff -r 8beb89412410 ircd/channel.c
 +        /* MINOPLEVEL - snircd
 +         * change state->cli_change[i].oplevel - see above.
 +         */
-+        if (!(state->flags & MODE_PARSE_FORCE) && OpLevel(state->member) <= MINOPLEVEL)
++        if (!(state->flags & MODE_PARSE_FORCE) && OpLevel(state->member) < MINOPLEVEL)
 +          state->cli_change[i].oplevel = MINOPLEVEL;
 +        else
 +          state->cli_change[i].oplevel = OpLevel(state->member) + 1;
