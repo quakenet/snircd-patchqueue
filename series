@@ -9,6 +9,7 @@ who-accountid.patch
 hiskgline.patch
 opername.patch
 noticepluschan.patch
+autosethost.patch
 whomatch.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ulined.patch

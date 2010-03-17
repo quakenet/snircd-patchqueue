@@ -1,0 +1,49 @@
+when autoapplying spoof blocks notify user what their hidden host is (same as /sethost or +rx)
+update numeric reply to reflect new conf format, blocks instead of lines
+
+diff -r 6eb88b2e3b90 ircd/s_conf.c
+--- a/ircd/s_conf.c	Wed Mar 17 17:18:13 2010 +0100
++++ b/ircd/s_conf.c	Wed Mar 17 17:40:43 2010 +0100
+@@ -1270,8 +1270,11 @@
+         continue;
+ 
+       ircd_strncpy(cli_user(cptr)->host, hostonly, HOSTLEN);
+-      log_write(LS_USER, L_INFO, LOG_NOSNOTICE, "S-Line (%s@%s) by (%#R)",
++      log_write(LS_USER, L_INFO, LOG_NOSNOTICE, "Spoofhost (%s@%s) by (%#R)",
+           cli_user(cptr)->username, hostonly, cptr);
++      send_reply(cptr, RPL_USINGSLINE);
++      send_reply(cptr, RPL_HOSTHIDDEN, cli_user(cptr)->host);
++      SetSetHost(cptr);
+       return 1;
+     }
+   }
+diff -r 6eb88b2e3b90 ircd/s_err.c
+--- a/ircd/s_err.c	Wed Mar 17 17:18:13 2010 +0100
++++ b/ircd/s_err.c	Wed Mar 17 17:40:43 2010 +0100
+@@ -830,7 +830,7 @@
+ /* 398 */
+   { RPL_STATSSLINE, "%d %s %s %s %s", "398" },
+ /* 399 */
+-  { RPL_USINGSLINE, ":Using S-line privilege", "399" },
++  { RPL_USINGSLINE, ":Using Spoof block privilege", "399" },
+ /* 400 */
+   { 0 },
+ /* 401 */
+diff -r 6eb88b2e3b90 ircd/s_user.c
+--- a/ircd/s_user.c	Wed Mar 17 17:18:13 2010 +0100
++++ b/ircd/s_user.c	Wed Mar 17 17:40:43 2010 +0100
+@@ -374,12 +374,8 @@
+     if (feature_bool(FEAT_AUTOINVISIBLE))
+       SetInvisible(sptr);
+     
+-    if(feature_bool(FEAT_SETHOST_AUTO)) {
+-      if (conf_check_slines(sptr)) {
+-        send_reply(sptr, RPL_USINGSLINE);
+-        SetSetHost(sptr);
+-      }
+-    }
++    if(feature_bool(FEAT_SETHOST_AUTO))
++      conf_check_slines(sptr);
+ 
+     SetUser(sptr);
+     cli_handler(sptr) = CLIENT_HANDLER;
