@@ -6,7 +6,6 @@ badchanzombie.patch
 nserverflag.patch
 addnickchasetomodenick.patch
 chanopaccountabilityforkickdelayedjoin.patch
-addopkickcmd.patch
 addhacktypetohackkick.patch
 ischannelservice.patch
 ulined.patch
