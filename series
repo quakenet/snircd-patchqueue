@@ -2,8 +2,8 @@ realusernamesethost.patch
 cprivmsgerracconly.patch
 badchanzombie.patch
 nserverflag.patch
-ischannelservice.patch
 minoplevel.patch
+ischannelservice.patch
 commonchansumode.patch
 who-accountid.patch
 hiskgline.patch
