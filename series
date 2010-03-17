@@ -4,7 +4,6 @@ realusernamesethost.patch
 cprivmsgerracconly.patch
 badchanzombie.patch
 nserverflag.patch
-addnickchasetomodenick.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ischannelservice.patch
 ulined.patch
