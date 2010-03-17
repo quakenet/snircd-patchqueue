@@ -9,7 +9,6 @@ chanopaccountabilityforkickdelayedjoin.patch
 addhacktypetohackkick.patch
 ischannelservice.patch
 ulined.patch
-hidebanowner.patch #+hidebanowner
 hisadmin.patch
 hisversionremote.patch
 glinesnomask.patch
