@@ -4,7 +4,6 @@ realusernamesethost.patch
 cprivmsgerracconly.patch
 badchanzombie.patch
 nserverflag.patch
-checkoutput.patch #+check
 addnickchasetomodenick.patch
 chanopaccountabilityforkickdelayedjoin.patch
 addopkickcmd.patch
