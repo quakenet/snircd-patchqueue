@@ -10,6 +10,7 @@ hiskgline.patch
 opername.patch
 noticepluschan.patch
 autosethost.patch
+netriderkickoutsideburst.patch
 whomatch.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ulined.patch

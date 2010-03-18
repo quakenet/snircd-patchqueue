@@ -1,0 +1,39 @@
+make anti net rider code use better fitting kick message when receiving burst from service outside of net.burst (e.g. Q)
+
+diff -r 6503d2edd3c3 ircd/m_burst.c
+--- a/ircd/m_burst.c	Thu Mar 18 11:04:02 2010 +0100
++++ b/ircd/m_burst.c	Thu Mar 18 11:47:15 2010 +0100
+@@ -212,6 +212,7 @@
+   unsigned int parse_flags = (MODE_PARSE_FORCE | MODE_PARSE_BURST);
+   int param, nickpos = 0, banpos = 0;
+   char modestr[BUFSIZE], nickstr[BUFSIZE], banstr[BUFSIZE];
++  char *kickmsg = "Net Rider";
+ 
+   if (parc < 3)
+     return protocol_violation(sptr,"Too few parameters for BURST");
+@@ -294,6 +295,14 @@
+       {
+         /* Clear any outstanding rogue invites */
+         mode_invite_clear(chptr);
++
++        /* burst is from a services server outside of netburst 
++         * or from a user on one, unusual, but not impossible, handle just in case
++         */
++        if ((IsServer(sptr) && !IsBurst(sptr) && IsService(sptr)) ||
++            (!IsServer(sptr) && !IsBurst(cli_user(sptr)->server) && IsService(cli_user(sptr)->server)))
++          kickmsg = "Channel Registered";
++
+         for (member = chptr->members; member; member = nmember)
+         {
+           nmember = member->next_member;
+@@ -313,8 +322,8 @@
+               && (!(check_modes & MODE_INVITEONLY) || IsAnOper(member->user))
+               && (!(check_modes & MODE_REGONLY) || IsAccount(member->user)))
+             continue;
+-          sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :Net Rider", chptr, member->user);
+-          sendcmdto_channel_butserv_butone(&his, CMD_KICK, chptr, NULL, 0, "%H %C :Net Rider", chptr, member->user);
++          sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :%s", chptr, member->user, kickmsg);
++          sendcmdto_channel_butserv_butone(&his, CMD_KICK, chptr, NULL, 0, "%H %C :%s", chptr, member->user, kickmsg);
+           make_zombie(member, member->user, &me, &me, chptr);
+         }
+       }
