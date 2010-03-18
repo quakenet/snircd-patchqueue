@@ -4,6 +4,7 @@ badchanzombie.patch
 nserverflag.patch
 minoplevel.patch
 ischannelservice.patch
+invalidatebanssethost.patch
 commonchansumode.patch
 who-accountid.patch
 hiskgline.patch

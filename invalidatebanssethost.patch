@@ -1,0 +1,22 @@
+invalidate bans when the user sets +h or -h so they are checked again
+
+diff -r 7223692af752 ircd/s_user.c
+--- a/ircd/s_user.c	Thu Mar 18 12:14:01 2010 +0100
++++ b/ircd/s_user.c	Thu Mar 18 12:35:00 2010 +0100
+@@ -1173,12 +1173,15 @@
+     }
+   }
+ #endif
+-
+   /*
+    * Go through all channels the client was on, rejoin him
+    * and set the modes, if any
+    */
+   for (chan = cli_user(cptr)->channel; chan; chan = chan->next_channel) {
++
++    /* Invalidate bans against the user so we check them again */
++    ClearBanValid(chan);
++
+     if (IsZombie(chan))
+       continue;
+     /* If this channel has delayed joins and the user has no modes, just set
