@@ -15,6 +15,7 @@ autosethost.patch
 netriderkickoutsideburst.patch
 killalwaysshowvictimuip.patch
 whomatch.patch
+whousermodes.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ulined.patch
 remoteglinejupe.patch

@@ -1,0 +1,26 @@
+show all of the snircd usermodes in who to opers
+
+diff -r b6538352b946 ircd/whocmds.c
+--- a/ircd/whocmds.c	Thu Mar 18 14:06:31 2010 +0100
++++ b/ircd/whocmds.c	Thu Mar 18 14:15:13 2010 +0100
+@@ -212,6 +212,20 @@
+         *(p1++) = 'g';
+       if (HasSetHost(acptr))
+         *(p1++) = 'h';
++      if (IsNoChan(acptr))
++        *(p1++) = 'n';
++      if (IsNoIdle(acptr))
++        *(p1++) = 'I';
++      if (IsAccountOnly(acptr))
++        *(p1++) = 'R';
++      if (IsCommonChansOnly(acptr))
++        *(p1++) = 'q';
++      if (IsParanoid(acptr))
++        *(p1++) = 'P';
++      if (IsXtraOp(acptr))
++        *(p1++) = 'X';
++      if (IsChannelService(acptr))
++        *(p1++) = 'k';
+     }
+     if (HasHiddenHost(acptr))
+       *(p1++) = 'x';
