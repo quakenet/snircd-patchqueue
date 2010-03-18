@@ -12,6 +12,7 @@ opername.patch
 noticepluschan.patch
 autosethost.patch
 netriderkickoutsideburst.patch
+killalwaysshowvictimuip.patch
 whomatch.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ulined.patch
