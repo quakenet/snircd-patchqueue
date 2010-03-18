@@ -5,6 +5,7 @@ nserverflag.patch
 minoplevel.patch
 ischannelservice.patch
 invalidatebanssethost.patch
+localoperkill.patch
 commonchansumode.patch
 who-accountid.patch
 hiskgline.patch
