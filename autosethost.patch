@@ -1,9 +1,21 @@
 when autoapplying spoof blocks notify user what their hidden host is (same as /sethost or +rx)
 update numeric reply to reflect new conf format, blocks instead of lines
 
+diff -r b03d03214a42 include/numeric.h
+--- a/include/numeric.h	Thu Mar 18 09:57:00 2010 +0100
++++ b/include/numeric.h	Thu Mar 18 10:59:37 2010 +0100
+@@ -314,7 +314,7 @@
+ /*      RPL_NOUSERS          395        Dalnet/EFnet/IRCnet */
+ #define RPL_HOSTHIDDEN       396	/* UMODE +x completed succesfuly */
+ #define RPL_STATSSLINE       398	/* QuakeNet extension -froo */
+-#define RPL_USINGSLINE       399	/* QuakeNet extension -froo */
++/*      RPL_USINGSLINE       399	   QuakeNet extension -froo */
+ 
+ /*
+  * Errors are in the range from 400-599 currently and are grouped by what
 diff -r b03d03214a42 ircd/s_conf.c
 --- a/ircd/s_conf.c	Thu Mar 18 09:57:00 2010 +0100
-+++ b/ircd/s_conf.c	Thu Mar 18 10:45:13 2010 +0100
++++ b/ircd/s_conf.c	Thu Mar 18 10:59:37 2010 +0100
 @@ -1270,8 +1270,9 @@
          continue;
  
@@ -17,7 +29,7 @@ diff -r b03d03214a42 ircd/s_conf.c
    }
 diff -r b03d03214a42 ircd/s_err.c
 --- a/ircd/s_err.c	Thu Mar 18 09:57:00 2010 +0100
-+++ b/ircd/s_err.c	Thu Mar 18 10:45:13 2010 +0100
++++ b/ircd/s_err.c	Thu Mar 18 10:59:37 2010 +0100
 @@ -830,7 +830,7 @@
  /* 398 */
    { RPL_STATSSLINE, "%d %s %s %s %s", "398" },
@@ -29,7 +41,7 @@ diff -r b03d03214a42 ircd/s_err.c
  /* 401 */
 diff -r b03d03214a42 ircd/s_user.c
 --- a/ircd/s_user.c	Thu Mar 18 09:57:00 2010 +0100
-+++ b/ircd/s_user.c	Thu Mar 18 10:45:13 2010 +0100
++++ b/ircd/s_user.c	Thu Mar 18 10:59:37 2010 +0100
 @@ -373,12 +373,11 @@
  
      if (feature_bool(FEAT_AUTOINVISIBLE))
