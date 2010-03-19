@@ -1,6 +1,7 @@
 realusernamesethost.patch
 cprivmsgerracconly.patch
 badchanzombie.patch
+badchanlocalkick.patch
 nserverflag.patch
 minoplevel.patch
 ischannelservice.patch
