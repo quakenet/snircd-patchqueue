@@ -1,0 +1,16 @@
+show 'BADCHAN active for #channel' to opers for each channel the badchan matches
+
+diff -r f612e56d5dd9 ircd/gline.c
+--- a/ircd/gline.c	Fri Mar 19 16:58:56 2010 +0100
++++ b/ircd/gline.c	Fri Mar 19 17:33:22 2010 +0100
+@@ -229,6 +229,10 @@
+       nchptr=chptr->next;
+       if (match(gline->gl_user, chptr->chname))
+         continue;
++
++      /* let the ops know about it */
++      sendto_opmask_butone(0, SNO_GLINE, "BADCHAN active for %H", chptr);
++
+       for (member=chptr->members;member;member=nmember) {
+         nmember=member->next_member;
+         if (!MyUser(member->user) || IsAnOper(member->user))

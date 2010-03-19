@@ -16,6 +16,7 @@ netriderkickoutsideburst.patch
 killalwaysshowvictimuip.patch
 whomatch.patch
 whousermodes.patch
+badchanactivefor.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ulined.patch
 remoteglinejupe.patch
