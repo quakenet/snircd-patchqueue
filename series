@@ -10,6 +10,7 @@ localoperkill.patch
 freetargetcheckaftermodechecks.patch
 commonchansumode.patch
 who-accountid.patch
+centralizemodecccheck.patch
 hiskgline.patch
 opername.patch
 noticepluschan.patch
