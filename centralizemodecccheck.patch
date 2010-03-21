@@ -2,12 +2,13 @@ centralize mode checks for +c (no control codes) and +C (no CTCPs)
 
 add client_can_send_controlcode_or_ctcp_to_channel() function in channel.c
 and use that (2x ircd_relay.c, m_wallchops.c, m_wallvoices.c), instead of duplicating code 4 times
+function uses a table to check for control codes, which is faster than what was used before
 also corrects that an error is returned in WALLVOICES and WALLCHOPS in case +c or +C blocks the message, which is also done for other modes there
-function loops over the text one time to check for control codes or CTCP chars, instead of twice as the old code did
+also corrects that CTCP ACTION is only allowed for PRIVMSG, and not for NOTICE WALLCHOPS and WALLVOICES
 
 diff -r e80591f05c47 include/channel.h
 --- a/include/channel.h	Sat Mar 20 17:57:13 2010 +0100
-+++ b/include/channel.h	Sat Mar 20 18:16:22 2010 +0100
++++ b/include/channel.h	Sun Mar 21 15:49:28 2010 +0100
 @@ -398,6 +398,7 @@
  extern struct Membership* find_channel_member(struct Client* cptr, struct Channel* chptr);
  extern int member_can_send_to_channel(struct Membership* member, int reveal);
@@ -18,11 +19,23 @@ diff -r e80591f05c47 include/channel.h
  extern void remove_user_from_all_channels(struct Client* cptr);
 diff -r e80591f05c47 ircd/channel.c
 --- a/ircd/channel.c	Sat Mar 20 17:57:13 2010 +0100
-+++ b/ircd/channel.c	Sat Mar 20 18:16:22 2010 +0100
-@@ -778,6 +778,48 @@
++++ b/ircd/channel.c	Sun Mar 21 15:49:28 2010 +0100
+@@ -778,6 +778,63 @@
    return member_can_send_to_channel(member, reveal);
  }
  
++/** Table with control chars that should be blocked by chanmode +c
++ *
++ * codes: bold 2, colour 3, reverse 22, ansi escape 27, underline 31
++ *
++ */
++static int control_codes[256] = {
++  0, 0, 1, 1, 0, 0, 0, 0,
++  0, 0, 0, 0, 0, 0, 0, 0,
++  0, 0, 0, 0, 0, 0, 1, 0,
++  0, 0, 0, 1, 0, 0, 0, 1,
++};
++
 +/** Check if a client can send control codes or CTCP to a channel
 + *
 + * @param cptr The client to check
@@ -38,7 +51,10 @@ diff -r e80591f05c47 ircd/channel.c
 +int client_can_send_controlcode_or_ctcp_to_channel(struct Client *cptr, struct Channel *chptr, const char *text, int action)
 +{
 +  int control = 0, ctcp = 0;
-+  const char *chr;
++  const unsigned char *chr;
++
++  assert(0 != cptr);
++  assert(0 != chptr);  
 +
 +  /* dont check this for remote users or servers - fail safe */
 +  if (!MyUser(cptr) || IsServer(cptr))
@@ -58,7 +74,7 @@ diff -r e80591f05c47 ircd/channel.c
 +  
 +  /* search for control codes and/or CTCP chars */
 +  for (chr=text;*chr;chr++) {
-+    if ((ctcp && *chr==1) || (control && (*chr==2 || *chr==3 || *chr==22 || *chr==27 || *chr==31))) 
++    if ((ctcp && *chr==1) || (control && control_codes[*chr])) 
 +      return 0;
 +  }
 +  
@@ -70,7 +86,7 @@ diff -r e80591f05c47 ircd/channel.c
   * the name of the first channel banned on.
 diff -r e80591f05c47 ircd/ircd_relay.c
 --- a/ircd/ircd_relay.c	Sat Mar 20 17:57:13 2010 +0100
-+++ b/ircd/ircd_relay.c	Sat Mar 20 18:16:22 2010 +0100
++++ b/ircd/ircd_relay.c	Sun Mar 21 15:49:28 2010 +0100
 @@ -87,7 +87,6 @@
  void relay_channel_message(struct Client* sptr, const char* name, const char* text, const int targetc)
  {
@@ -131,7 +147,7 @@ diff -r e80591f05c47 ircd/ircd_relay.c
        check_target_limit(sptr, chptr, chptr->chname, 0))
 diff -r e80591f05c47 ircd/m_wallchops.c
 --- a/ircd/m_wallchops.c	Sat Mar 20 17:57:13 2010 +0100
-+++ b/ircd/m_wallchops.c	Sat Mar 20 18:16:22 2010 +0100
++++ b/ircd/m_wallchops.c	Sun Mar 21 15:49:28 2010 +0100
 @@ -103,7 +103,6 @@
  {
    struct Channel *chptr;
@@ -166,7 +182,7 @@ diff -r e80591f05c47 ircd/m_wallchops.c
            check_target_limit(sptr, chptr, chptr->chname, 0))
 diff -r e80591f05c47 ircd/m_wallvoices.c
 --- a/ircd/m_wallvoices.c	Sat Mar 20 17:57:13 2010 +0100
-+++ b/ircd/m_wallvoices.c	Sat Mar 20 18:16:22 2010 +0100
++++ b/ircd/m_wallvoices.c	Sun Mar 21 15:49:28 2010 +0100
 @@ -102,7 +102,6 @@
  {
    struct Channel *chptr;
