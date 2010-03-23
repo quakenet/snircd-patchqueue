@@ -14,9 +14,9 @@ Should we then save Q.users.quakenet.org, or simply stick to Q
 Q, or rather in general, a channel service normally does not change nicks?
 and since Q does set quite a lot of bans (and topics), this might save a bit on bandwidth.
 
-diff -r bde54f5247bf include/channel.h
---- a/include/channel.h	Mon Jan 12 18:28:44 2009 +0100
-+++ b/include/channel.h	Mon Jan 12 18:45:19 2009 +0100
+diff -r 92e1c6ea0f59 include/channel.h
+--- a/include/channel.h	Tue Mar 23 13:53:03 2010 +0100
++++ b/include/channel.h	Tue Mar 23 13:55:09 2010 +0100
 @@ -266,7 +266,8 @@
    unsigned short flags;       /**< modifier flags for the ban */
    unsigned char nu_len;       /**< length of nick!user part of banstr */
@@ -27,10 +27,10 @@ diff -r bde54f5247bf include/channel.h
    char banstr[NICKLEN+USERLEN+HOSTLEN+3];  /**< hostmask that the ban matches */
  };
  
-diff -r bde54f5247bf ircd/channel.c
---- a/ircd/channel.c	Mon Jan 12 18:28:44 2009 +0100
-+++ b/ircd/channel.c	Mon Jan 12 18:45:19 2009 +0100
-@@ -1249,7 +1249,10 @@
+diff -r 92e1c6ea0f59 ircd/channel.c
+--- a/ircd/channel.c	Tue Mar 23 13:53:03 2010 +0100
++++ b/ircd/channel.c	Tue Mar 23 13:55:09 2010 +0100
+@@ -1304,7 +1304,10 @@
  
    for (lp = chptr->banlist; lp; lp = lp->next)
      send_reply(cptr, RPL_BANLIST, chptr->chname, lp->banstr,
@@ -42,7 +42,7 @@ diff -r bde54f5247bf ircd/channel.c
  
    send_reply(cptr, RPL_ENDOFBANLIST, chptr->chname);
  }
-@@ -2965,8 +2968,12 @@
+@@ -3005,8 +3008,12 @@
    if (!IsUser(state->sptr) || 
      (feature_bool(FEAT_HIS_MODEWHO) && state->mbuf != NULL && (state->mbuf->mb_dest & MODEBUF_DEST_OPMODE))) {
      ircd_strncpy(newban->who, "*", NICKLEN);
@@ -56,7 +56,7 @@ diff -r bde54f5247bf ircd/channel.c
    }
  
    newban->when = TStime();
-@@ -3054,6 +3061,7 @@
+@@ -3095,6 +3102,7 @@
  	  if (state->flags & MODE_PARSE_SET) { /* create a new ban */
  	    newban = make_ban(ban->banstr);
              strcpy(newban->who, ban->who);
@@ -64,27 +64,25 @@ diff -r bde54f5247bf ircd/channel.c
  	    newban->when = ban->when;
  	    newban->flags = ban->flags & BAN_IPMASK;
  
-diff -r bde54f5247bf ircd/m_check.c
---- a/ircd/m_check.c	Mon Jan 12 18:28:44 2009 +0100
-+++ b/ircd/m_check.c	Mon Jan 12 18:45:19 2009 +0100
-@@ -348,8 +348,12 @@
-     send_reply(sptr, RPL_DATASTR, "Bans on channel::");
+diff -r 92e1c6ea0f59 ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 13:53:03 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 13:55:09 2010 +0100
+@@ -348,8 +348,10 @@
  
      for (ban = chptr->banlist; ban; ban = ban->next) {
--      ircd_snprintf(0, outbuf, sizeof(outbuf),  "[%d] - %s - Set by %s, on %s (%Tu)",
+       send_reply(sptr, SND_EXPLICIT | RPL_DATASTR,
+-        ":[%d] - %s - Set by %s, on %s (%Tu)",
 -        ++bans, ban->banstr, ban->who, myctime(ban->when), ban->when);
-+      ircd_snprintf(0, outbuf, sizeof(outbuf),  "[%d] - %s - Set by %s%s%s, on %s (%Tu)",
++        ":[%d] - %s - Set by %s%s%s, on %s (%Tu)",
 +        ++bans, ban->banstr,
-+        ban->who,
-+        ban->who_is_account ? "." : "",
-+        ban->who_is_account ? feature_str(FEAT_HIDDEN_HOST) : "",
++        ban->who, ban->who_is_account ? "." : "", ban->who_is_account ? feature_str(FEAT_HIDDEN_HOST) : "",
 +        myctime(ban->when), ban->when);
-       send_reply(sptr, RPL_DATASTR, outbuf);
      }
  
-diff -r bde54f5247bf ircd/s_err.c
---- a/ircd/s_err.c	Mon Jan 12 18:28:44 2009 +0100
-+++ b/ircd/s_err.c	Mon Jan 12 18:45:19 2009 +0100
+     if (bans == 0)
+diff -r 92e1c6ea0f59 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Mar 23 13:53:03 2010 +0100
++++ b/ircd/s_err.c	Tue Mar 23 13:55:09 2010 +0100
 @@ -766,7 +766,7 @@
  /* 366 */
    { RPL_ENDOFNAMES, "%s :End of /NAMES list.", "366" },
