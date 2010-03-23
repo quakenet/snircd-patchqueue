@@ -6,9 +6,9 @@ added zombie and delayedjoin prefix to header for check channel
 changed all (timestamp) output to [timestamp] seems more consistent with other places (e.g. snomask HACK MODEs)
 added [<remote server>] param to syntax of command in the comments
 
-diff -r 6d652e23a2fb ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 20:14:14 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 20:14:59 2010 +0100
+diff -r 7eae4cf8f270 ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 21:53:21 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 21:56:26 2010 +0100
 @@ -71,7 +71,7 @@
   */
  
@@ -286,10 +286,11 @@ diff -r 6d652e23a2fb ircd/m_check.c
    if (MyUser(acptr)) {
      os_get_peername(con_fd(cli_connect(sptr)), &sin);
  
-     send_reply(sptr, RPL_DATASTR, " ");
+-    send_reply(sptr, RPL_DATASTR, " ");
 -    ircd_snprintf(0, outbuf, sizeof(outbuf), "          Ports:: %d -> %d (client -> server)",
 -        sin.port, cli_listener(acptr)->addr.port);
 -    send_reply(sptr, RPL_DATASTR, outbuf);
++    send_reply(sptr, RPL_DATASTR, ": ");
 +    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":          Ports:: %d -> %d (client -> server)",
 +      sin.port, cli_listener(acptr)->addr.port);
      if (feature_bool(FEAT_EXTENDED_CHECKCMD)) {
@@ -520,9 +521,9 @@ diff -r 6d652e23a2fb ircd/m_check.c
      send_reply(sptr, RPL_ENDOFCHECK, " ");
    }
  
-diff -r 6d652e23a2fb ircd/s_err.c
---- a/ircd/s_err.c	Tue Mar 23 20:14:14 2010 +0100
-+++ b/ircd/s_err.c	Tue Mar 23 20:14:59 2010 +0100
+diff -r 7eae4cf8f270 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Mar 23 21:53:21 2010 +0100
++++ b/ircd/s_err.c	Tue Mar 23 21:56:26 2010 +0100
 @@ -612,7 +612,7 @@
  /* 289 */
    { 0 },
