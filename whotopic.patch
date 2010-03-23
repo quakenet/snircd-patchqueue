@@ -2,9 +2,9 @@ Topic by info is either 'nick' or 'account.users.quakenet.org'
 
 See info in whoban.patch
 
-diff -r 63c8cdb5dc47 include/channel.h
---- a/include/channel.h	Tue Mar 23 13:48:36 2010 +0100
-+++ b/include/channel.h	Tue Mar 23 13:56:29 2010 +0100
+diff -r 98e2da930476 include/channel.h
+--- a/include/channel.h	Tue Mar 23 14:38:30 2010 +0100
++++ b/include/channel.h	Tue Mar 23 14:39:07 2010 +0100
 @@ -285,9 +285,10 @@
    struct Mode        mode;	   /**< This channels mode */
    unsigned int       marker;       /**< Channel marker */
@@ -17,9 +17,9 @@ diff -r 63c8cdb5dc47 include/channel.h
    char               chname[1];	   /**< Dynamically allocated string of the 
  				     * channel name
  				     */
-diff -r 63c8cdb5dc47 ircd/m_burst.c
---- a/ircd/m_burst.c	Tue Mar 23 13:48:36 2010 +0100
-+++ b/ircd/m_burst.c	Tue Mar 23 13:56:29 2010 +0100
+diff -r 98e2da930476 ircd/m_burst.c
+--- a/ircd/m_burst.c	Tue Mar 23 14:38:30 2010 +0100
++++ b/ircd/m_burst.c	Tue Mar 23 14:39:07 2010 +0100
 @@ -361,7 +361,8 @@
      /* clear topic set by netrider (if set) */
      if (*chptr->topic) {
@@ -30,9 +30,9 @@ diff -r 63c8cdb5dc47 ircd/m_burst.c
        chptr->topic_time = 0;
        sendcmdto_channel_butserv_butone(&his, CMD_TOPIC, chptr, NULL, 0,
                                         "%H :%s", chptr, chptr->topic);
-diff -r 63c8cdb5dc47 ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 13:48:36 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 13:56:29 2010 +0100
+diff -r 98e2da930476 ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 14:38:30 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 14:39:07 2010 +0100
 @@ -378,7 +378,8 @@
      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":          Topic:: %s", chptr->topic);
  
@@ -41,11 +41,11 @@ diff -r 63c8cdb5dc47 ircd/m_check.c
 +    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":         Set by:: %s%s%s",
 +      chptr->topic_who, chptr->topic_who_is_account ? "." : "", chptr->topic_who_is_account ? feature_str(FEAT_HIDDEN_HOST) : "");
  
-     send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":         Set at:: %s (%Tu)", myctime(chptr->topic_time), chptr->topic_time); 
+     send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":         Set at:: %s [%Tu]", myctime(chptr->topic_time), chptr->topic_time); 
    }
-diff -r 63c8cdb5dc47 ircd/m_join.c
---- a/ircd/m_join.c	Tue Mar 23 13:48:36 2010 +0100
-+++ b/ircd/m_join.c	Tue Mar 23 13:56:29 2010 +0100
+diff -r 98e2da930476 ircd/m_join.c
+--- a/ircd/m_join.c	Tue Mar 23 14:38:30 2010 +0100
++++ b/ircd/m_join.c	Tue Mar 23 14:39:07 2010 +0100
 @@ -283,7 +283,10 @@
  
      if (chptr->topic[0]) {
@@ -58,9 +58,9 @@ diff -r 63c8cdb5dc47 ircd/m_join.c
  		 chptr->topic_time);
      }
  
-diff -r 63c8cdb5dc47 ircd/m_topic.c
---- a/ircd/m_topic.c	Tue Mar 23 13:48:36 2010 +0100
-+++ b/ircd/m_topic.c	Tue Mar 23 13:56:29 2010 +0100
+diff -r 98e2da930476 ircd/m_topic.c
+--- a/ircd/m_topic.c	Tue Mar 23 14:38:30 2010 +0100
++++ b/ircd/m_topic.c	Tue Mar 23 14:39:07 2010 +0100
 @@ -65,7 +65,10 @@
     newtopic=ircd_strncmp(chptr->topic,topic,TOPICLEN)!=0;
     /* setting a topic */
@@ -85,9 +85,9 @@ diff -r 63c8cdb5dc47 ircd/m_topic.c
  		   chptr->topic_time);
        }
      }
-diff -r 63c8cdb5dc47 ircd/s_err.c
---- a/ircd/s_err.c	Tue Mar 23 13:48:36 2010 +0100
-+++ b/ircd/s_err.c	Tue Mar 23 13:56:29 2010 +0100
+diff -r 98e2da930476 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Mar 23 14:38:30 2010 +0100
++++ b/ircd/s_err.c	Tue Mar 23 14:39:07 2010 +0100
 @@ -698,7 +698,7 @@
  /* 332 */
    { RPL_TOPIC, "%s :%s", "332" },
