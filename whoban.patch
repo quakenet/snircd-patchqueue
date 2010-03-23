@@ -14,9 +14,9 @@ Should we then save Q.users.quakenet.org, or simply stick to Q
 Q, or rather in general, a channel service normally does not change nicks?
 and since Q does set quite a lot of bans (and topics), this might save a bit on bandwidth.
 
-diff -r 92e1c6ea0f59 include/channel.h
---- a/include/channel.h	Tue Mar 23 13:53:03 2010 +0100
-+++ b/include/channel.h	Tue Mar 23 13:55:09 2010 +0100
+diff -r 3ce73eae4fd5 include/channel.h
+--- a/include/channel.h	Tue Mar 23 14:15:58 2010 +0100
++++ b/include/channel.h	Tue Mar 23 14:18:15 2010 +0100
 @@ -266,7 +266,8 @@
    unsigned short flags;       /**< modifier flags for the ban */
    unsigned char nu_len;       /**< length of nick!user part of banstr */
@@ -27,9 +27,9 @@ diff -r 92e1c6ea0f59 include/channel.h
    char banstr[NICKLEN+USERLEN+HOSTLEN+3];  /**< hostmask that the ban matches */
  };
  
-diff -r 92e1c6ea0f59 ircd/channel.c
---- a/ircd/channel.c	Tue Mar 23 13:53:03 2010 +0100
-+++ b/ircd/channel.c	Tue Mar 23 13:55:09 2010 +0100
+diff -r 3ce73eae4fd5 ircd/channel.c
+--- a/ircd/channel.c	Tue Mar 23 14:15:58 2010 +0100
++++ b/ircd/channel.c	Tue Mar 23 14:18:15 2010 +0100
 @@ -1304,7 +1304,10 @@
  
    for (lp = chptr->banlist; lp; lp = lp->next)
@@ -64,25 +64,25 @@ diff -r 92e1c6ea0f59 ircd/channel.c
  	    newban->when = ban->when;
  	    newban->flags = ban->flags & BAN_IPMASK;
  
-diff -r 92e1c6ea0f59 ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 13:53:03 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 13:55:09 2010 +0100
+diff -r 3ce73eae4fd5 ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 14:15:58 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 14:18:15 2010 +0100
 @@ -348,8 +348,10 @@
  
      for (ban = chptr->banlist; ban; ban = ban->next) {
        send_reply(sptr, SND_EXPLICIT | RPL_DATASTR,
--        ":[%d] - %s - Set by %s, on %s (%Tu)",
+-        ":[%d] - %s - Set by %s, on %s [%Tu]",
 -        ++bans, ban->banstr, ban->who, myctime(ban->when), ban->when);
-+        ":[%d] - %s - Set by %s%s%s, on %s (%Tu)",
++        ":[%d] - %s - Set by %s%s%s, on %s [%Tu]",
 +        ++bans, ban->banstr,
 +        ban->who, ban->who_is_account ? "." : "", ban->who_is_account ? feature_str(FEAT_HIDDEN_HOST) : "",
 +        myctime(ban->when), ban->when);
      }
  
      if (bans == 0)
-diff -r 92e1c6ea0f59 ircd/s_err.c
---- a/ircd/s_err.c	Tue Mar 23 13:53:03 2010 +0100
-+++ b/ircd/s_err.c	Tue Mar 23 13:55:09 2010 +0100
+diff -r 3ce73eae4fd5 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Mar 23 14:15:58 2010 +0100
++++ b/ircd/s_err.c	Tue Mar 23 14:18:15 2010 +0100
 @@ -766,7 +766,7 @@
  /* 366 */
    { RPL_ENDOFNAMES, "%s :End of /NAMES list.", "366" },
