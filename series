@@ -9,6 +9,7 @@ invalidatebanssethost.patch
 localoperkill.patch
 freetargetcheckaftermodechecks.patch
 checkoutput.patch
+checkendof.patch
 commonchansumode.patch
 who-accountid.patch
 centralizemodecccheck.patch

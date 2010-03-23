@@ -1,0 +1,53 @@
+make RPL_ENDOFCHECK consistent with other end of replies, changed text and feed back the input from the client
+
+diff -r cb747bd739fe ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 13:58:42 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 14:03:15 2010 +0100
+@@ -356,7 +356,7 @@
+       send_reply(sptr, RPL_DATASTR, ":<none>");
+   }
+ 
+-  send_reply(sptr, RPL_ENDOFCHECK, " ");
++  send_reply(sptr, RPL_ENDOFCHECK, chptr->chname);
+ }
+ 
+ void checkChannel(struct Client *sptr, struct Channel *chptr) {
+@@ -532,7 +532,7 @@
+   }
+ 
+   /* Send 'END OF CHECK' message */
+-  send_reply(sptr, RPL_ENDOFCHECK, " ");
++  send_reply(sptr, RPL_ENDOFCHECK, cli_name(acptr));
+ }
+ 
+ void checkServer(struct Client *sptr, struct Client *acptr) {
+@@ -583,7 +583,7 @@
+   }
+ 
+   /* Send 'END OF CHECK' message */
+-  send_reply(sptr, RPL_ENDOFCHECK, " ");
++  send_reply(sptr, RPL_ENDOFCHECK, acptr->cli_name);
+ }
+ 
+ signed int checkHostmask(struct Client *sptr, char *orighoststr, int flags) {
+@@ -772,7 +772,7 @@
+   if (count > 0) {
+     send_reply(sptr, RPL_DATASTR, ": ");
+     send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":Matching records found:: %d", count);
+-    send_reply(sptr, RPL_ENDOFCHECK, " ");
++    send_reply(sptr, RPL_ENDOFCHECK, orighoststr);
+   }
+ 
+   return count;
+diff -r cb747bd739fe ircd/s_err.c
+--- a/ircd/s_err.c	Tue Mar 23 13:58:42 2010 +0100
++++ b/ircd/s_err.c	Tue Mar 23 14:03:15 2010 +0100
+@@ -614,7 +614,7 @@
+ /* 290 */
+   { RPL_DATASTR, "%s", "290" },
+ /* 291 */
+-  { RPL_ENDOFCHECK, ":%s", "291" },
++  { RPL_ENDOFCHECK, "%s :End of /CHECK list.", "291" },
+ /* 292 */
+   { 0 },
+ /* 293 */
