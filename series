@@ -1,4 +1,5 @@
 realusernamesethost.patch
+sethostoldcode.patch
 cprivmsgerracconly.patch
 badchanzombie.patch
 badchanlocalkick.patch
