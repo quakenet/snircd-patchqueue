@@ -1,8 +1,8 @@
 split m_check into mo_check (oper) and ms_check (server) message functions
 
-diff -r 21e3439c861c include/handlers.h
---- a/include/handlers.h	Tue Mar 23 16:01:41 2010 +0100
-+++ b/include/handlers.h	Tue Mar 23 20:09:34 2010 +0100
+diff -r 3a5d0499141a include/handlers.h
+--- a/include/handlers.h	Tue Mar 23 21:30:55 2010 +0100
++++ b/include/handlers.h	Tue Mar 23 21:31:57 2010 +0100
 @@ -88,19 +88,6 @@
  
  extern int m_admin(struct Client*, struct Client*, int, char*[]);
@@ -39,9 +39,9 @@ diff -r 21e3439c861c include/handlers.h
  extern int ms_clearmode(struct Client*, struct Client*, int, char*[]);
  extern int ms_connect(struct Client*, struct Client*, int, char*[]);
  extern int ms_create(struct Client*, struct Client*, int, char*[]);
-diff -r 21e3439c861c ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 16:01:41 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 20:09:34 2010 +0100
+diff -r 3a5d0499141a ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 21:30:55 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 21:31:57 2010 +0100
 @@ -31,6 +31,7 @@
  #include "ircd_alloc.h"
  #include "ircd_defs.h"
@@ -123,7 +123,7 @@ diff -r 21e3439c861c ircd/m_check.c
 +
 +  /* check params */
 +  if (parc < 3) {
-+    protocol_violation(sptr, "Too few parameters for CHECK (got %d - need 3)", parc)
++    protocol_violation(sptr, "Too few parameters for CHECK (got %d - need 3)", parc);
 +    return send_reply(sptr, ERR_NEEDMOREPARAMS, "CHECK");
 +  }
 +
@@ -213,9 +213,9 @@ diff -r 21e3439c861c ircd/m_check.c
   
    return 1;
  }
-diff -r 21e3439c861c ircd/parse.c
---- a/ircd/parse.c	Tue Mar 23 16:01:41 2010 +0100
-+++ b/ircd/parse.c	Tue Mar 23 20:09:34 2010 +0100
+diff -r 3a5d0499141a ircd/parse.c
+--- a/ircd/parse.c	Tue Mar 23 21:30:55 2010 +0100
++++ b/ircd/parse.c	Tue Mar 23 21:31:57 2010 +0100
 @@ -654,21 +654,12 @@
      { m_cap, m_cap, m_ignore, m_cap, m_ignore }
    },
