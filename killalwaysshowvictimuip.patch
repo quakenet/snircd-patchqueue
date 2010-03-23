@@ -1,8 +1,8 @@
-show nick[user@host] in kills for remote users
+show nick[user@host] in kills for remote users (user part is not shown in case the user did not have an ident reply)
 
-diff -r 8273a0f68e66 ircd/m_kill.c
---- a/ircd/m_kill.c	Thu Mar 18 12:44:52 2010 +0100
-+++ b/ircd/m_kill.c	Thu Mar 18 13:23:51 2010 +0100
+diff -r 2139c147d1ab ircd/m_kill.c
+--- a/ircd/m_kill.c	Tue Mar 23 23:04:59 2010 +0100
++++ b/ircd/m_kill.c	Tue Mar 23 23:15:21 2010 +0100
 @@ -125,10 +125,17 @@
     * Note: "victim->name" is used instead of "user" because we may
     *       have changed the target because of the nickname change.
@@ -16,7 +16,7 @@ diff -r 8273a0f68e66 ircd/m_kill.c
 +  else
 +    sendto_opmask_butone(0, snomask,
 +                       "Received KILL message for %s[%s@%s] from %s Path: %s!%s %s",
-+                       cli_name(victim), cli_username(victim), ircd_ntoa(&cli_ip(victim)),
++                       cli_name(victim), cli_user(victim)->realusername[0] != '~' ? cli_user(victim)->realusername : "", ircd_ntoa(&cli_ip(victim)),
 +                       get_client_name_and_opername(sptr),
 +                       inpath, path, msg);
    log_write_kill(victim, sptr, inpath, path, msg);
