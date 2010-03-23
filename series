@@ -10,6 +10,7 @@ localoperkill.patch
 freetargetcheckaftermodechecks.patch
 checkoutput.patch
 checkendof.patch
+checkmscheck.patch
 commonchansumode.patch
 who-accountid.patch
 centralizemodecccheck.patch

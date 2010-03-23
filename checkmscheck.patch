@@ -1,0 +1,242 @@
+split m_check into mo_check (oper) and ms_check (server) message functions
+
+diff -r 21e3439c861c include/handlers.h
+--- a/include/handlers.h	Tue Mar 23 16:01:41 2010 +0100
++++ b/include/handlers.h	Tue Mar 23 20:09:34 2010 +0100
+@@ -88,19 +88,6 @@
+ 
+ extern int m_admin(struct Client*, struct Client*, int, char*[]);
+ extern int m_away(struct Client*, struct Client*, int, char*[]);
+-
+-/*
+-  * - ASUKA ---------------------------------------------------------------------
+-  * Add the command for CHECK.
+-  * This was adapted from Lain for use in Asuka.
+-  * Original code by Durzel (durzel@quakenet.org).
+-  *
+-  * qoreQ (qoreQ@quakenet.org) - 08/30/2002
+-  * -----------------------------------------------------------------------------
+-  */
+-
+-extern int m_check(struct Client *cptr, struct Client *sptr, int parc, char *parv[]);
+-
+ extern int m_cap(struct Client*, struct Client*, int, char*[]);
+ extern int m_cnotice(struct Client*, struct Client*, int, char*[]);
+ extern int m_cprivmsg(struct Client*, struct Client*, int, char*[]);
+@@ -156,6 +143,7 @@
+ extern int m_whowas(struct Client*, struct Client*, int, char*[]);
+ extern int mo_admin(struct Client*, struct Client*, int, char*[]);
+ extern int mo_asll(struct Client*, struct Client*, int, char*[]);
++extern int mo_check(struct Client*, struct Client*, int, char*[]);
+ extern int mo_clearmode(struct Client*, struct Client*, int, char*[]);
+ extern int mo_close(struct Client*, struct Client*, int, char*[]);
+ extern int mo_connect(struct Client*, struct Client*, int, char*[]);
+@@ -194,6 +182,7 @@
+ extern int ms_asll(struct Client*, struct Client*, int, char*[]);
+ extern int ms_away(struct Client*, struct Client*, int, char*[]);
+ extern int ms_burst(struct Client*, struct Client*, int, char*[]);
++extern int ms_check(struct Client*, struct Client*, int, char*[]);
+ extern int ms_clearmode(struct Client*, struct Client*, int, char*[]);
+ extern int ms_connect(struct Client*, struct Client*, int, char*[]);
+ extern int ms_create(struct Client*, struct Client*, int, char*[]);
+diff -r 21e3439c861c ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 16:01:41 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 20:09:34 2010 +0100
+@@ -31,6 +31,7 @@
+ #include "ircd_alloc.h"
+ #include "ircd_defs.h"
+ #include "ircd_features.h"
++#include "ircd_log.h"
+ #include "ircd_reply.h"
+ #include "ircd_string.h"
+ #include "ircd_snprintf.h"
+@@ -87,33 +88,105 @@
+  * <hostmask> can be of the form host, user@host, nick!user@host, 
+  * with host being host.domain.cc, 127.0.0.1 or 127.0.0.0/24.
+  * Wildcards are supported.
++ *
++ *
+  */
+ 
+-int m_check(struct Client *cptr, struct Client *sptr, int parc, char *parv[]) {
++/*
++ * mo_check - oper message handler
++ *
++ * parv[0] = Send prefix
++ * parv[1] = mask
++ * parv[2] = -flags
++ *
++ * or for remote query
++ *
++ * parv[0] = Send prefix
++ * parv[1] = remote server
++ * parv[2] = mask
++ * parv[3] = -flags
++ *
++ */
++int mo_check(struct Client *cptr, struct Client *sptr, int parc, char *parv[]) {
++  char *mask;
++  char *doflags = NULL;
++
++  assert(0 != IsAnOper(sptr));
++
++  /* check privs */
++  if (!HasPriv(sptr, PRIV_CHECK))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
++  /* check params */
++  if (parc < 2)
++    return send_reply(sptr, ERR_NEEDMOREPARAMS, "CHECK");
++
++  mask = parv[1];
++  if (parc > 2)
++    doflags = parv[2];
++
++  /* remote query? */
++  if ( parc > 3 || (parc == 3 && parv[2][0] != '-')) {
++    if (hunt_server_cmd(sptr, CMD_CHECK, cptr,  0, parc > 3 ? "%C %s %s" : "%C %s", 1, parc, parv) != HUNTED_ISME)
++      return 0;
++    mask = parv[2];
++    if (parc > 3)
++      doflags = parv[3];
++  }
++  
++  return do_check(sptr, mask, doflags);
++}
++
++
++
++/*
++ * ms_check - server message handler
++ *
++ * parv[0] = Send prefix
++ * parv[1] = target server
++ * parv[2] = mask
++ * parv[3] = -flags
++ *
++ */
++int ms_check(struct Client *cptr, struct Client *sptr, int parc, char *parv[]) {
++  char *mask;
++  char *doflags = NULL;
++
++  assert(0 != IsServer(cptr));
++
++  /* check params */
++  if (parc < 3) {
++    protocol_violation(sptr, "Too few parameters for CHECK (got %d - need 3)", parc)
++    return send_reply(sptr, ERR_NEEDMOREPARAMS, "CHECK");
++  }
++
++  /* remote query for me? */
++  if (hunt_server_cmd(sptr, CMD_CHECK, cptr,  0, parc > 3 ? "%C %s %s" : "%C %s", 1, parc, parv) != HUNTED_ISME)
++    return 0;
++
++  mask = parv[2];
++  if (parc > 3)
++    doflags = parv[3];
++
++  return do_check(sptr, mask, doflags);
++}
++
++
++
++/*
++ * do_check
++ *
++ */
++int do_check(struct Client *sptr, char *mask, char *doflags) {
+   struct Channel *chptr;
+   struct Client *acptr;
+   int flags = CHECK_SHOWUSERS, i;
+ 
+-  if (!HasPriv(sptr, PRIV_CHECK))
+-    return send_reply(sptr, ERR_NOPRIVILEGES);
+-
+-  if (parc < 2) {
+-    send_reply(sptr, ERR_NEEDMOREPARAMS, "CHECK");
+-    return 0;
+-  }
+-
+-  if ( parc>=4 ||
+-      (parc==3 && parv[2][0] != '-')) {
+-    /* remote query */
+-    if (hunt_server_cmd(sptr, CMD_CHECK, cptr,  0, parc==4 ? "%C %s %s" : "%C %s", 1, parc, parv) != HUNTED_ISME)
+-      return 0;
+-    parv++; parc--;
+-  }
+ 
+   /* This checks to see if any flags have been supplied */
+-  if ((parc >= 3) && (parv[2][0] == '-')) {
+-    for (i = 0; parv[2][i]; i++) {
+-      switch (parv[2][i]) {
++  if (doflags && doflags[0] == '-') {
++    for (i = 0; doflags[i]; i++) {
++      switch (doflags[i]) {
+       case 'c':
+         flags |= CHECK_CHECKCHAN;
+         break;
+@@ -149,29 +222,29 @@
+     }
+   }
+ 
+-  if (IsChannelName(parv[1])) { /* channel */
+-    if ((chptr = FindChannel(parv[1]))) {
++  if (IsChannelName(mask)) { /* channel */
++    if ((chptr = FindChannel(mask))) {
+       checkChannel(sptr, chptr);
+       checkUsers(sptr, chptr, flags);
+     }
+     else
+-      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
++      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", mask);
+   }
+-  else if ((acptr = FindClient(parv[1])) && !(FindServer(parv[1]))) { /* client and not a server */
++  else if ((acptr = FindClient(mask)) && !(FindServer(mask))) { /* client and not a server */
+     if (!IsRegistered(acptr)) {
+-      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
++      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", mask);
+       return 0;
+     }
+ 
+     checkClient(sptr, acptr);
+   }
+-  else if ((acptr = FindServer(parv[1]))) { /* server */
++  else if ((acptr = FindServer(mask))) { /* server */
+     checkServer(sptr, acptr);
+   }
+-  else if (checkHostmask(sptr, parv[1], flags) > 0) /* hostmask */
++  else if (checkHostmask(sptr, mask, flags) > 0) /* hostmask */
+     return 1;
+   else /* no match */
+-    send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
++    send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", mask);
+  
+   return 1;
+ }
+diff -r 21e3439c861c ircd/parse.c
+--- a/ircd/parse.c	Tue Mar 23 16:01:41 2010 +0100
++++ b/ircd/parse.c	Tue Mar 23 20:09:34 2010 +0100
+@@ -654,21 +654,12 @@
+     { m_cap, m_cap, m_ignore, m_cap, m_ignore }
+   },
+ #endif
+-
+-  /*
+-   * - ASUKA ---------------------------------------------------------------------
+-   * Add the command for CHECK.
+-   * This was adapted from Lain for use in Asuka.
+-   * Original code by Durzel (durzel@quakenet.org).
+-   *
+-   * qoreQ (qoreQ@quakenet.org) - 08/14/2002
+-   * -----------------------------------------------------------------------------
+-   */
+   {
+     MSG_CHECK,
+     TOK_CHECK,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+-    { m_unregistered, m_not_oper, m_check, m_check, m_ignore }
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
++    { m_unregistered, m_not_oper, ms_check, mo_check, m_ignore }
+   },
+ 
+   /* This command is an alias for QUIT during the unregistered part of
