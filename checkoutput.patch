@@ -4,10 +4,20 @@ changed hidden to delayedjoin,
 changed no modes <none> to just + same as /MODE shows
 added zombie and delayedjoin prefix to header for check channel
 changed all (timestamp) output to [timestamp] seems more consistent with other places (e.g. snomask HACK MODEs)
+added [<remote server>] param to syntax of command in the comments
 
-diff -r 8b5e0c204825 ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 14:12:09 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 14:13:56 2010 +0100
+diff -r 6d652e23a2fb ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 20:14:14 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 20:14:59 2010 +0100
+@@ -71,7 +71,7 @@
+  */
+ 
+ /*
+- * Syntax: CHECK <channel|nick|server|hostmask> [-flags]
++ * Syntax: CHECK [<remote server>] <channel|nick|server|hostmask> [-flags]
+  * 
+  * Where valid flags are:
+  * -c: Show channels when checking a hostmask.
 @@ -238,7 +238,7 @@
    char *zombie, *showlevel;
  
@@ -510,9 +520,9 @@ diff -r 8b5e0c204825 ircd/m_check.c
      send_reply(sptr, RPL_ENDOFCHECK, " ");
    }
  
-diff -r 8b5e0c204825 ircd/s_err.c
---- a/ircd/s_err.c	Tue Mar 23 14:12:09 2010 +0100
-+++ b/ircd/s_err.c	Tue Mar 23 14:13:56 2010 +0100
+diff -r 6d652e23a2fb ircd/s_err.c
+--- a/ircd/s_err.c	Tue Mar 23 20:14:14 2010 +0100
++++ b/ircd/s_err.c	Tue Mar 23 20:14:59 2010 +0100
 @@ -612,7 +612,7 @@
  /* 289 */
    { 0 },
