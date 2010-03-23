@@ -8,6 +8,7 @@ ischannelservice.patch
 invalidatebanssethost.patch
 localoperkill.patch
 freetargetcheckaftermodechecks.patch
+checkoutput.patch
 commonchansumode.patch
 who-accountid.patch
 centralizemodecccheck.patch
