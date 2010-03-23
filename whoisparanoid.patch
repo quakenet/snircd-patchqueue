@@ -1,0 +1,14 @@
+whoisparanoid.patch
+
+diff -r 180017284849 ircd/m_whois.c
+--- a/ircd/m_whois.c	Tue Mar 23 22:01:56 2010 +0100
++++ b/ircd/m_whois.c	Tue Mar 23 22:05:41 2010 +0100
+@@ -218,7 +218,7 @@
+       send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
+                  user->realhost, ircd_ntoa(&cli_ip(acptr)));
+ 
+-    if (!IsAnOper(sptr) && IsParanoid(acptr) && IsAnOper(acptr))
++    if (!IsAnOper(sptr) && IsParanoid(acptr) && (sptr != acptr))
+       sendcmdto_one(&me, CMD_NOTICE, acptr, "%C :whois: %s performed a /WHOIS on you.", acptr, cli_name(sptr));
+     
+     /* Hint: if your looking to add more flags to a user, eg +h, here's
