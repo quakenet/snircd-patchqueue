@@ -3,10 +3,11 @@ few minor other changes:
 changed hidden to delayedjoin,
 changed no modes <none> to just + same as /MODE shows
 added zombie and delayedjoin prefix to header for check channel
+changed all (timestamp) output to [timestamp] seems more consistent with other places (e.g. snomask HACK MODEs)
 
-diff -r 6242a5095d6d ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 12:55:51 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 13:15:51 2010 +0100
+diff -r 8b5e0c204825 ircd/m_check.c
+--- a/ircd/m_check.c	Tue Mar 23 14:12:09 2010 +0100
++++ b/ircd/m_check.c	Tue Mar 23 14:13:56 2010 +0100
 @@ -238,7 +238,7 @@
    char *zombie, *showlevel;
  
@@ -55,7 +56,7 @@ diff -r 6242a5095d6d ircd/m_check.c
      for (ban = chptr->banlist; ban; ban = ban->next) {
 -      ircd_snprintf(0, outbuf, sizeof(outbuf),  "[%d] - %s - Set by %s, on %s (%Tu)",
 +      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR,
-+        ":[%d] - %s - Set by %s, on %s (%Tu)",
++        ":[%d] - %s - Set by %s, on %s [%Tu]",
          ++bans, ban->banstr, ban->who, myctime(ban->when), ban->when);
 -      send_reply(sptr, RPL_DATASTR, outbuf);
      }
@@ -83,7 +84,7 @@ diff -r 6242a5095d6d ircd/m_check.c
    /* Creation Time */
 -  ircd_snprintf(sptr, outbuf, sizeof(outbuf), "  Creation time:: %s (%Tu)", myctime(chptr->creationtime), chptr->creationtime);
 -  send_reply(sptr, RPL_DATASTR, outbuf);
-+  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":  Creation time:: %s (%Tu)",
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":  Creation time:: %s [%Tu]",
 +    myctime(chptr->creationtime), chptr->creationtime);
  
    /* Topic */
@@ -102,7 +103,7 @@ diff -r 6242a5095d6d ircd/m_check.c
  
 -    ircd_snprintf(sptr, outbuf, sizeof(outbuf), "         Set at:: %s (%Tu)", myctime(chptr->topic_time), chptr->topic_time);
 -    send_reply(sptr, RPL_DATASTR, outbuf); 
-+    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":         Set at:: %s (%Tu)", myctime(chptr->topic_time), chptr->topic_time); 
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":         Set at:: %s [%Tu]", myctime(chptr->topic_time), chptr->topic_time); 
    }
  
    /* Channel Modes */
@@ -159,11 +160,11 @@ diff -r 6242a5095d6d ircd/m_check.c
 -    send_reply(sptr, RPL_DATASTR, outbuf);
 -  }
 +  if (MyUser(acptr))  
-+    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":      Signed on:: %s (%Tu)", myctime(acptr->cli_firsttime), acptr->cli_firsttime);
++    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":      Signed on:: %s [%Tu]", myctime(acptr->cli_firsttime), acptr->cli_firsttime);
  
 -  ircd_snprintf(0, outbuf, sizeof(outbuf), "      Timestamp:: %s (%d)", myctime(acptr->cli_lastnick), acptr->cli_lastnick);
 -  send_reply(sptr, RPL_DATASTR, outbuf);
-+  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":      Timestamp:: %s (%d)", myctime(acptr->cli_lastnick), acptr->cli_lastnick);
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":      Timestamp:: %s [%d]", myctime(acptr->cli_lastnick), acptr->cli_lastnick);
  
 -  ircd_snprintf(0, outbuf, sizeof(outbuf), "  User/Hostmask:: %s@%s [%s] (Clients: %hu)", cli_user(acptr)->username, cli_user(acptr)->host,
 -  ircd_ntoa(&(cli_ip(acptr))), IPcheck_nr(acptr));
@@ -322,7 +323,7 @@ diff -r 6242a5095d6d ircd/m_check.c
  
 -  ircd_snprintf(0, outbuf, sizeof(outbuf), "   Connected at:: %s (%Tu)", myctime(acptr->cli_serv->timestamp), acptr->cli_serv->timestamp);
 -  send_reply(sptr, RPL_DATASTR, outbuf);
-+  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":   Connected at:: %s (%Tu)",
++  send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":   Connected at:: %s [%Tu]",
 +    myctime(acptr->cli_serv->timestamp), acptr->cli_serv->timestamp);
  
 -  ircd_snprintf(0, outbuf, sizeof(outbuf), "    Server name:: %s", acptr->cli_name);
@@ -509,9 +510,9 @@ diff -r 6242a5095d6d ircd/m_check.c
      send_reply(sptr, RPL_ENDOFCHECK, " ");
    }
  
-diff -r 6242a5095d6d ircd/s_err.c
---- a/ircd/s_err.c	Tue Mar 23 12:55:51 2010 +0100
-+++ b/ircd/s_err.c	Tue Mar 23 13:15:51 2010 +0100
+diff -r 8b5e0c204825 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Mar 23 14:12:09 2010 +0100
++++ b/ircd/s_err.c	Tue Mar 23 14:13:56 2010 +0100
 @@ -612,7 +612,7 @@
  /* 289 */
    { 0 },
