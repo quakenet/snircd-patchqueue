@@ -15,6 +15,7 @@ checkendof.patch
 checkmscheck.patch
 commonchansumode.patch
 freetargetandsilencecheckafterumodechecks.patch
+umoderqerrorreplynickatserver.patch
 who-accountid.patch
 centralizemodecccheck.patch
 hiskgline.patch
