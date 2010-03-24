@@ -1,0 +1,55 @@
+check usermode +R first, then +q, and then free target limits and last silence list
+
+dont use a free target when the message is going to be stopped by +R or +q
+dont check target limits and silence list until the end,
+which are probably more costly than +R/+q checks
+
+diff -r a6514af6df3d ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Wed Mar 24 12:31:16 2010 +0100
++++ b/ircd/ircd_relay.c	Wed Mar 24 12:59:31 2010 +0100
+@@ -393,10 +393,6 @@
+     send_reply(sptr, ERR_NOSUCHNICK, name);
+     return;
+   }
+-  if ((!IsRealChannelService(acptr) &&
+-       check_target_limit(sptr, acptr, cli_name(acptr), 0)) ||
+-      is_silenced(sptr, acptr))
+-    return;
+ 
+   /* ASUKA -- slug
+    * +R check, if target is +R and we're not +r (or opered) then
+@@ -413,6 +409,11 @@
+     return;
+   }
+ 
++  if ((!IsRealChannelService(acptr) &&
++       check_target_limit(sptr, acptr, cli_name(acptr), 0)) ||
++      is_silenced(sptr, acptr))
++    return;
++
+   /*
+    * send away message if user away
+    */
+@@ -444,10 +445,6 @@
+ 
+   if (0 == (acptr = FindUser(name)))
+     return;
+-  if ((!IsRealChannelService(acptr) && 
+-       check_target_limit(sptr, acptr, cli_name(acptr), 0)) ||
+-      is_silenced(sptr, acptr))
+-    return;
+ 
+   /* ASUKA -- slug
+    * +R check, if target is +R and we're not +r (or opered) then
+@@ -460,6 +457,11 @@
+   if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
+     return;
+ 
++  if ((!IsRealChannelService(acptr) && 
++       check_target_limit(sptr, acptr, cli_name(acptr), 0)) ||
++      is_silenced(sptr, acptr))
++    return;
++
+   /*
+    * deliver the message
+    */
