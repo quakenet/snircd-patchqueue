@@ -1,8 +1,22 @@
 invalidate bans when the user sets +h or -h so they are checked again
 
-diff -r 4dafbe6a4b4e ircd/s_user.c
---- a/ircd/s_user.c	Tue Mar 23 22:17:47 2010 +0100
-+++ b/ircd/s_user.c	Tue Mar 23 22:21:27 2010 +0100
+diff -r 9d816a3c603b ircd/m_sethost.c
+--- a/ircd/m_sethost.c	Thu Mar 25 12:27:05 2010 +0100
++++ b/ircd/m_sethost.c	Thu Mar 25 12:34:09 2010 +0100
+@@ -229,6 +229,10 @@
+    * and set the modes, if any
+    */
+   for (chan = cli_user(target)->channel; chan; chan = chan->next_channel) {
++
++    /* Invalidate bans against the user so we check them again */
++    ClearBanValid(chan);
++
+     if (IsZombie(chan))
+       continue;
+     /* If this channel has delayed joins and the user has no modes, just set
+diff -r 9d816a3c603b ircd/s_user.c
+--- a/ircd/s_user.c	Thu Mar 25 12:27:05 2010 +0100
++++ b/ircd/s_user.c	Thu Mar 25 12:34:09 2010 +0100
 @@ -1152,6 +1152,10 @@
     * and set the modes, if any
     */
