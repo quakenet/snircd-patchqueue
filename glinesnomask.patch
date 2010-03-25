@@ -1,0 +1,68 @@
+use snomask SNO_GLINE when oper is the source of the GLINE message, else use SNO_AUTO
+
+diff -r 5302f8ba2ea2 ircd/gline.c
+--- a/ircd/gline.c	Thu Mar 25 11:41:07 2010 +0100
++++ b/ircd/gline.c	Thu Mar 25 11:53:55 2010 +0100
+@@ -231,7 +231,7 @@
+         continue;
+ 
+       /* let the ops know about it */
+-      sendto_opmask_butone(0, SNO_GLINE, "BADCHAN active for %H", chptr);
++      sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO, "BADCHAN active for %H", chptr);
+ 
+       for (member=chptr->members;member;member=nmember) {
+         nmember=member->next_member;
+@@ -286,7 +286,7 @@
+         	   gline->gl_reason);
+ 
+         /* let the ops know about it */
+-        sendto_opmask_butone(0, SNO_GLINE, "G-line active for %s",
++        sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO, "G-line active for %s",
+                              get_client_name(acptr, SHOW_IP));
+ 
+         /* and get rid of him */
+@@ -567,7 +567,7 @@
+   /* lifetime is already an absolute timestamp */
+ 
+   /* Inform ops... */
+-  sendto_opmask_butone(0, ircd_strncmp(reason, "AUTO", 4) ? SNO_GLINE :
++  sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE :
+                        SNO_AUTO, "%s adding %s%s %s for %s%s%s%s%s, expiring at "
+                        "%Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+@@ -643,7 +643,7 @@
+     return 0; /* was active to begin with */
+ 
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s activating global %s for %s%s%s%s%s, "
++  sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO, "%s activating global %s for %s%s%s%s%s, "
+                        "expiring at %Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          get_client_name_and_opername(sptr) :
+@@ -716,7 +716,7 @@
+   }
+ 
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s %s %s for %s%s%s%s%s, expiring at %Tu: "
++  sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO, "%s %s %s for %s%s%s%s%s, expiring at %Tu: "
+ 		       "%s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          get_client_name_and_opername(sptr) :
+@@ -921,7 +921,7 @@
+   }
+ 
+   /* All right, inform ops... */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s modifying global %s for %s%s%s%s%s:%s",
++  sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO, "%s modifying global %s for %s%s%s%s%s:%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+ 		       get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
+@@ -968,7 +968,7 @@
+   assert(GlineIsLocal(gline));
+ 
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s removing local %s for %s%s%s%s%s",
++  sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO, "%s removing local %s for %s%s%s%s%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+ 		       get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",

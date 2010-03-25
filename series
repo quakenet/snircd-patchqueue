@@ -29,6 +29,7 @@ whousermodes.patch
 badchanactivefor.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ulined.patch
+glinesnomask.patch
 remoteglinejupe.patch
 whotopic.patch
 whoban.patch
