@@ -1,4 +1,4 @@
-whoisparanoid.patch
+correct whois paranoid logic
 
 diff -r 180017284849 ircd/m_whois.c
 --- a/ircd/m_whois.c	Tue Mar 23 22:01:56 2010 +0100
