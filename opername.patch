@@ -1,4 +1,4 @@
-Add opername to snomask and remote connect wallops
+Add opername to snomask, remote connect wallops, and as prefix to server jupes
 
 in form of nick(opername)
 new function get_client_name_and_opername() add in s_misc.c
