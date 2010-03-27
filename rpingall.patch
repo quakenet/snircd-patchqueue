@@ -1,0 +1,45 @@
+RPING with target * travels to all servers, allowing an oper to easily get ping replies from all linked servers.
+
+diff -r 58882b64802f ircd/m_rping.c
+--- a/ircd/m_rping.c	Sat Mar 27 15:09:21 2010 +0100
++++ b/ircd/m_rping.c	Sat Mar 27 16:21:11 2010 +0100
+@@ -152,6 +152,13 @@
+ 	sendcmdto_one(sptr, CMD_RPING, destination, "%C %s %s %s :%s",
+ 		      destination, parv[2], parv[3], parv[4], parv[5]);
+     }
++    /* target is *, send RPONG back and pass on to other servers */
++    else if (parv[1][0] == '*' && parv[1][1] == '\0') {
++      sendcmdto_one(&me, CMD_RPONG, sptr, "%s %s %s %s :%s", cli_name(sptr),
++        parv[2], parv[3], parv[4], parv[5]);
++      sendcmdto_serv_butone(sptr, CMD_RPING, cptr, "%s %s %s %s :%s",
++        parv[1], parv[2], parv[3], parv[4], parv[5]);
++    }
+   }
+   else {
+     if (parc < 3) {
+@@ -167,7 +174,11 @@
+     /*
+      * otherwise ping the destination from here
+      */
+-    if ((destination = find_match_server(parv[1]))) {
++    /* target is *, send to all servers */
++    if (parv[1][0] == '*' && parv[1][1] == '\0')
++      sendcmdto_serv_butone(&me, CMD_RPING, &me, "%s %C %s :%s", parv[1],
++        sptr, militime(0, 0), parv[3]);
++    else if ((destination = find_match_server(parv[1]))) {
+       assert(IsServer(destination) || IsMe(destination));
+       sendcmdto_one(&me, CMD_RPING, destination, "%C %C %s :%s", destination,
+ 		    sptr, militime(0, 0), parv[3]);
+@@ -228,7 +239,11 @@
+       start_time = parv[2];
+   }
+ 
+-  if ((acptr = find_match_server(parv[1]))) {
++  /* target is *, send to all servers */
++  if (parv[1][0] == '*' && parv[1][1] == '\0')
++    sendcmdto_serv_butone(&me, CMD_RPING, cptr, "%s %C %s :%s", parv[1], sptr,
++      militime(0, 0), start_time);
++  else if ((acptr = find_match_server(parv[1]))) {
+     assert(IsServer(acptr) || IsMe(acptr));
+     sendcmdto_one(&me, CMD_RPING, acptr, "%C %C %s :%s", acptr, sptr,
+ 		  militime(0, 0), start_time);

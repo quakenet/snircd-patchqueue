@@ -17,6 +17,7 @@ commonchansumode.patch
 freetargetandsilencecheckafterumodechecks.patch
 umoderqerrorreplynickatserver.patch
 who-accountid.patch
+rpingall.patch
 centralizemodecccheck.patch
 hiskgline.patch
 opername.patch
