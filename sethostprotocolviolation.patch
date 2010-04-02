@@ -1,0 +1,14 @@
+protocol violation for a bad user@host in remote sethost is not cptr's fault, but sptr, as it is only checked at the target's server
+
+diff -r 11557b3c0a69 ircd/m_sethost.c
+--- a/ircd/m_sethost.c
++++ b/ircd/m_sethost.c
+@@ -213,7 +213,7 @@
+ 
+   ircd_snprintf(0, hostmask, USERLEN + HOSTLEN + 2, "%s@%s", parv[2], parv[3]);
+   if (!is_hostmask(hostmask))
+-    return protocol_violation(cptr, "Bad Host mask %s for user %s", hostmask, cli_name(target));
++    return protocol_violation(sptr, "Bad Host mask %s for user %s", hostmask, cli_name(target));
+ 
+   sendcmdto_common_channels_butone(target, CMD_QUIT, target, ":Host change");
+ 
