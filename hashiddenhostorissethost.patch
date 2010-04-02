@@ -1,0 +1,165 @@
+add HasHiddenHostOrIsSetHost() macro instead of having to test HasHiddenHost() and IsSetHost() in many places
+
+diff -r 2dbf2e34034c include/client.h
+--- a/include/client.h
++++ b/include/client.h
+@@ -634,6 +634,8 @@
+ #define HasHiddenHost(x)        (IsHiddenHost(x) && IsAccount(x))
+ /** Return non-zero if the client is using a spoofhost */
+ #define IsSetHost(x)            HasFlag(x, FLAG_SETHOST)
++/** Return non-zero if the client's host is hidden or is using a spoofhost */
++#define HasHiddenHostOrIsSetHost(x) (HasHiddenHost(x) || IsSetHost(x))
+ 
+ /** Mark a client as having an in-progress net.burst. */
+ #define SetBurst(x)             SetFlag(x, FLAG_BURST)
+diff -r 2dbf2e34034c ircd/m_check.c
+--- a/ircd/m_check.c
++++ b/ircd/m_check.c
+@@ -489,7 +489,7 @@
+   send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":  User/Hostmask:: %s@%s [%s] (Clients: %hu)",
+     cli_user(acptr)->username, cli_user(acptr)->host, ircd_ntoa(&(cli_ip(acptr))), IPcheck_nr(acptr));
+ 
+-  if (IsSetHost(acptr) || HasHiddenHost(acptr))
++  if (HasHiddenHostOrIsSetHost(acptr))
+     send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ": Real User/Host:: %s@%s", cli_user(acptr)->realusername, cli_user(acptr)->realhost);
+ 
+   /* COLOR_OFF ? */
+diff -r 2dbf2e34034c ircd/m_sethost.c
+--- a/ircd/m_sethost.c
++++ b/ircd/m_sethost.c
+@@ -136,7 +136,7 @@
+ 	send_reply(sptr, ERR_BADHOSTMASK, hostmask);
+ 	return 0;
+       }
+-      if (IsSetHost(sptr) || HasHiddenHost(sptr)) {
++      if (HasHiddenHostOrIsSetHost(sptr)) {
+         ircd_snprintf(0, curhostmask, USERLEN + HOSTLEN + 2, "%s@%s", sptr->cli_user->username, sptr->cli_user->host);
+         if (0 == strcmp(hostmask, curhostmask)) {
+           send_reply(sptr, RPL_HOSTHIDDEN, curhostmask);
+@@ -150,7 +150,7 @@
+ 	send_reply(sptr, ERR_BADHOSTMASK, parv[1]);
+ 	return 0;
+       }
+-      if (IsSetHost(sptr) || HasHiddenHost(sptr)) {
++      if (HasHiddenHostOrIsSetHost(sptr)) {
+         if (0 == strcmp(parv[1], sptr->cli_user->host)) {
+           send_reply(sptr, RPL_HOSTHIDDEN, parv[1]);
+           return 0;
+@@ -206,7 +206,7 @@
+   setflags = cli_flags(target);
+   FlagClr(&setflags, FLAG_SETHOST);
+ 
+-  if (IsSetHost(target) || HasHiddenHost(target)) { 
++  if (HasHiddenHostOrIsSetHost(target)) { 
+     if ((0 == strcmp(parv[2], target->cli_user->username)) && (0 == strcmp(parv[3], target->cli_user->host))) 
+       return 0;
+   }
+diff -r 2dbf2e34034c ircd/m_userhost.c
+--- a/ircd/m_userhost.c
++++ b/ircd/m_userhost.c
+@@ -104,7 +104,7 @@
+ 	       * of +x.  If an oper wants the real host, he should go to
+ 	       * /whois to get it.
+ 	       */
+-	      (HasHiddenHost(cptr) || IsSetHost(cptr)) && (sptr != cptr) ?
++	      HasHiddenHostOrIsSetHost(cptr) && (sptr != cptr) ?
+ 	      cli_user(cptr)->host : cli_user(cptr)->realhost);
+ }
+ 
+diff -r 2dbf2e34034c ircd/m_userip.c
+--- a/ircd/m_userip.c
++++ b/ircd/m_userip.c
+@@ -106,7 +106,7 @@
+ 	       * of +x.  If an oper wants the real IP, he should go to
+ 	       * /whois to get it.
+ 	       */
+-	      ((HasHiddenHost(cptr) || IsSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && (sptr != cptr)) ?
++	      ((HasHiddenHostOrIsSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && (sptr != cptr)) ?
+ 	      feature_str(FEAT_HIDDEN_IP) :
+ 	      ircd_ntoa(&cli_ip(cptr)));
+ }
+diff -r 2dbf2e34034c ircd/m_who.c
+--- a/ircd/m_who.c
++++ b/ircd/m_who.c
+@@ -398,14 +398,13 @@
+               && ((!(matchsel & WHO_FIELD_HOS))
+               || matchexec(cli_user(acptr)->host, mymask, minlen))
+               && ((!(matchsel & WHO_FIELD_HOS))
+-              || !IsSetHost(acptr)
+-	      || !HasHiddenHost(acptr)
++	      || !HasHiddenHostOrIsSetHost(acptr)
+ 	      || !IsAnOper(sptr)
+               || matchexec(cli_user(acptr)->realhost, mymask, minlen))
+               && ((!(matchsel & WHO_FIELD_REN))
+               || matchexec(cli_info(acptr), mymask, minlen))
+               && ((!(matchsel & WHO_FIELD_NIP))
+-              || ((HasHiddenHost(acptr) || IsSetHost(acptr)) && !IsAnOper(sptr))
++              || (HasHiddenHostOrIsSetHost(acptr) && !IsAnOper(sptr))
+               || !ipmask_check(&cli_ip(acptr), &imask, ibits))
+               && ((!(matchsel & WHO_FIELD_ACC))
+               || matchexec(cli_user(acptr)->account, mymask, minlen)))
+@@ -437,14 +436,13 @@
+             && ((!(matchsel & WHO_FIELD_HOS))
+             || matchexec(cli_user(acptr)->host, mymask, minlen))
+             && ((!(matchsel & WHO_FIELD_HOS))
+-            || !IsSetHost(acptr)
+-	    || !HasHiddenHost(acptr)
++	    || !HasHiddenHostOrIsSetHost(acptr)
+ 	    || !IsAnOper(sptr)
+             || matchexec(cli_user(acptr)->realhost, mymask, minlen))
+             && ((!(matchsel & WHO_FIELD_REN))
+             || matchexec(cli_info(acptr), mymask, minlen))
+             && ((!(matchsel & WHO_FIELD_NIP))
+-            || ((HasHiddenHost(acptr) || IsSetHost(acptr)) && !IsAnOper(sptr))
++            || (HasHiddenHostOrIsSetHost(acptr) && !IsAnOper(sptr))
+             || !ipmask_check(&cli_ip(acptr), &imask, ibits))
+             && ((!(matchsel & WHO_FIELD_ACC))
+             || matchexec(cli_user(acptr)->account, mymask, minlen)))
+diff -r 2dbf2e34034c ircd/m_whois.c
+--- a/ircd/m_whois.c
++++ b/ircd/m_whois.c
+@@ -214,7 +214,7 @@
+     if (IsAccount(acptr))
+       send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
+ 
+-    if ((HasHiddenHost(acptr) || IsSetHost(acptr)) && ((IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) || acptr == sptr))
++    if (HasHiddenHostOrIsSetHost(acptr) && ((IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) || acptr == sptr))
+       send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
+                  user->realhost, ircd_ntoa(&cli_ip(acptr)));
+ 
+diff -r 2dbf2e34034c ircd/send.c
+--- a/ircd/send.c
++++ b/ircd/send.c
+@@ -281,7 +281,7 @@
+   {
+     case MATCH_HOST:
+       return (match(mask, cli_user(one)->host) == 0 ||
+-        ((HasHiddenHost(one) || IsSetHost(one)) && match(mask, cli_user(one)->realhost) == 0));
++        (HasHiddenHostOrIsSetHost(one) && match(mask, cli_user(one)->realhost) == 0));
+     case MATCH_SERVER:
+     default:
+       return (match(mask, cli_name(cli_user(one)->server)) == 0);
+diff -r 2dbf2e34034c ircd/whocmds.c
+--- a/ircd/whocmds.c
++++ b/ircd/whocmds.c
+@@ -134,7 +134,7 @@
+ 
+   if (fields & WHO_FIELD_NIP)
+   {
+-    const char* p2 = (HasHiddenHost(acptr) || IsSetHost(acptr) || feature_bool(FEAT_HIS_USERIP)) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_USER_PRIVACY))) ?
++    const char* p2 = (HasHiddenHostOrIsSetHost(acptr) || feature_bool(FEAT_HIS_USERIP)) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_USER_PRIVACY))) ?
+       feature_str(FEAT_HIDDEN_IP) :
+       ircd_ntoa(&cli_ip(acptr));
+     *(p1++) = ' ';
+diff -r 2dbf2e34034c ircd/whowas.c
+--- a/ircd/whowas.c
++++ b/ircd/whowas.c
+@@ -272,7 +272,7 @@
+   DupString(ww->name, cli_name(cptr));
+   DupString(ww->username, cli_user(cptr)->username);
+   DupString(ww->hostname, cli_user(cptr)->host);
+-  if (HasHiddenHost(cptr))
++  if (HasHiddenHostOrIsSetHost(cptr))
+     DupString(ww->realhost, cli_user(cptr)->realhost);
+   DupString(ww->servername, cli_name(cli_user(cptr)->server));
+   DupString(ww->realname, cli_info(cptr));

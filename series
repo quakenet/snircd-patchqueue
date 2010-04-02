@@ -25,6 +25,7 @@ hiskgline.patch
 opername.patch
 noticepluschan.patch
 autosethost.patch
+hashiddenhostorissethost.patch
 netriderkickoutsideburst.patch
 killalwaysshowvictimuip.patch
 whomatch.patch
