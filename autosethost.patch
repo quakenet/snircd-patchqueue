@@ -4,9 +4,9 @@ send "Using Spoof block privilege" as NOTICE AUTH, preventing sending any other 
 send RPL_HOSTHIDDEN after all connect stuff, same place this reply is sent in case IAUTH set the user +rx
 commented out numeric reply RPL_USINGSLINE, no longer used
 
-diff -r 2c8273f25f9a include/numeric.h
---- a/include/numeric.h	Thu Mar 18 11:04:00 2010 +0100
-+++ b/include/numeric.h	Thu Mar 18 11:53:35 2010 +0100
+diff -r 350a7bb87be2 include/numeric.h
+--- a/include/numeric.h
++++ b/include/numeric.h
 @@ -314,7 +314,7 @@
  /*      RPL_NOUSERS          395        Dalnet/EFnet/IRCnet */
  #define RPL_HOSTHIDDEN       396	/* UMODE +x completed succesfuly */
@@ -16,9 +16,9 @@ diff -r 2c8273f25f9a include/numeric.h
  
  /*
   * Errors are in the range from 400-599 currently and are grouped by what
-diff -r 2c8273f25f9a ircd/s_conf.c
---- a/ircd/s_conf.c	Thu Mar 18 11:04:00 2010 +0100
-+++ b/ircd/s_conf.c	Thu Mar 18 11:53:35 2010 +0100
+diff -r 350a7bb87be2 ircd/s_conf.c
+--- a/ircd/s_conf.c
++++ b/ircd/s_conf.c
 @@ -1270,8 +1270,9 @@
          continue;
  
@@ -30,9 +30,9 @@ diff -r 2c8273f25f9a ircd/s_conf.c
        return 1;
      }
    }
-diff -r 2c8273f25f9a ircd/s_err.c
---- a/ircd/s_err.c	Thu Mar 18 11:04:00 2010 +0100
-+++ b/ircd/s_err.c	Thu Mar 18 11:53:35 2010 +0100
+diff -r 350a7bb87be2 ircd/s_err.c
+--- a/ircd/s_err.c
++++ b/ircd/s_err.c
 @@ -830,7 +830,7 @@
  /* 398 */
    { RPL_STATSSLINE, "%d %s %s %s %s", "398" },
@@ -42,9 +42,9 @@ diff -r 2c8273f25f9a ircd/s_err.c
  /* 400 */
    { 0 },
  /* 401 */
-diff -r 2c8273f25f9a ircd/s_user.c
---- a/ircd/s_user.c	Thu Mar 18 11:04:00 2010 +0100
-+++ b/ircd/s_user.c	Thu Mar 18 11:53:35 2010 +0100
+diff -r 350a7bb87be2 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
 @@ -373,12 +373,11 @@
  
      if (feature_bool(FEAT_AUTOINVISIBLE))
@@ -67,7 +67,7 @@ diff -r 2c8273f25f9a ircd/s_user.c
    if (HasHiddenHost(sptr))
      hide_hostmask(sptr, FLAG_HIDDENHOST);
 +  /* my user has sethost, inform them of their hidden host from auto applied sethost */
-+  if (HasSetHost(sptr) && MyConnect(sptr))
++  if (IsSetHost(sptr) && MyConnect(sptr))
 +    send_reply(sptr, RPL_HOSTHIDDEN, cli_user(sptr)->host);
    if (IsInvisible(sptr))
      ++UserStats.inv_clients;
