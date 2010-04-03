@@ -768,7 +768,7 @@ diff -r 211f48754a7f ircd/s_user.c
 diff -r 211f48754a7f ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,465 @@
+@@ -0,0 +1,474 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -874,6 +874,15 @@ diff -r 211f48754a7f ircd/welcome.c
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", \"%s\" \"%s\", %Tu, 0x%04x, %d)",
 +   cli_name(cptr), cli_name(sptr), name, text, who, timestamp, flags, insert));
++
++  /* name empty after taking off the prefixes? */
++  if (EmptyString(name)) {
++    if (IsUser(sptr))
++      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :WELCOME: No message number given", sptr);
++    else 
++      protocol_violation(cptr, "WELCOME: No message number given by %C", sptr);
++    return 0;
++  }
 +
 +  /* check name */
 +  if (nameint < 1 || nameint > WELCOME_MAX_ENTRIES) {
