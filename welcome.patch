@@ -753,7 +753,7 @@ diff -r 3a7d0a771452 ircd/s_user.c
 diff -r 3a7d0a771452 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,369 @@
+@@ -0,0 +1,371 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -862,7 +862,9 @@ diff -r 3a7d0a771452 ircd/welcome.c
 +    if (IsUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
 +        "%C :WELCOME: Invalid message number %s - should between 1 and %d",
-+        sptr, name, WELCOME_MAX_ENTRIES); 
++        sptr, name, WELCOME_MAX_ENTRIES);
++    else 
++      protocol_violation(cptr, "WELCOME: Invalid message number %s from %C", name, sptr);
 +    return 0;
 +  }
 +
