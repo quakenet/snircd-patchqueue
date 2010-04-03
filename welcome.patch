@@ -836,7 +836,7 @@ diff -r 211f48754a7f ircd/welcome.c
 +  assert(name >= 0 && name <= 2 * WELCOME_MAX_ENTRIES - 1);
 +
 +  /* store it */
-+  ircd_strncpy(WelcomeArray[name].text, text, TOPICLEN);
++  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
 +  ircd_strncpy(WelcomeArray[name].who, who, ACCOUNTLEN);
 +  WelcomeArray[name].timestamp = timestamp;
 +
@@ -861,7 +861,7 @@ diff -r 211f48754a7f ircd/welcome.c
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
-+  char oldtext[TOPICLEN + 1];              /* save old text when unsetting */
++  char oldtext[WELCOMELEN + 1];            /* save old text when unsetting */
 +  char msg[BUFSIZE];                       /* msg for snomask, logging, etc. */
 +  static time_t rate;                      /* rate limit snomask message */
 +
@@ -953,7 +953,7 @@ diff -r 211f48754a7f ircd/welcome.c
 +  if (EmptyString(text)) {
 +    flags &= ~WELCOME_ANNOUNCE;
 +    flags &= ~WELCOME_INSERT;
-+    ircd_strncpy(oldtext, WelcomeArray[namearray].text, TOPICLEN);
++    ircd_strncpy(oldtext, WelcomeArray[namearray].text, WELCOMELEN);
 +  }
 +
 +  /* make space if needed */
