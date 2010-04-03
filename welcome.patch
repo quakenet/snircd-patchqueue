@@ -360,7 +360,7 @@ diff -r 3a7d0a771452 ircd/ircd_parser.y
 diff -r 3a7d0a771452 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,282 @@
+@@ -0,0 +1,284 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -605,6 +605,8 @@ diff -r 3a7d0a771452 ircd/m_welcome.c
 +
 +  /* remote listing request, see if it is for me or a remote server */
 +  if (parc == 2) {
++    if (IsServer(sptr))
++      return protocol_violation(cptr, "WELCOME listing request from server %C", sptr);
 +    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C", 1, parc, parv) != HUNTED_ISME)
 +      return 0;
 +    return welcome_list(sptr, 0);
