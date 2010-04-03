@@ -172,7 +172,7 @@ diff -r 211f48754a7f include/numeric.h
 diff -r 211f48754a7f include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,62 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -208,6 +208,8 @@ diff -r 211f48754a7f include/welcome.h
 +
 +/* Maximum number of welcome entries (per type; X global, X local) */
 +#define WELCOME_MAX_ENTRIES  10
++/* Maximum length of a welcome message */
++#define WELCOMELEN TOPICLEN
 +/* Maximum timestamp drift in seconds allowed ahead of our idea of nettime
 + * before we throw a warning to ops
 + */
@@ -216,7 +218,7 @@ diff -r 211f48754a7f include/welcome.h
 +/* Describes a Welcome message entry. */
 +struct Welcome {
 +  time_t             timestamp;            /**< Timestamp of the welcome */
-+  char               text[TOPICLEN + 1];   /**< Message */
++  char               text[WELCOMELEN + 1]; /**< Message */
 +  char               who[ACCOUNTLEN + 1];  /**< Who set it */
 +};
 +
