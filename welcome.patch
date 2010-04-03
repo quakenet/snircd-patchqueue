@@ -172,7 +172,7 @@ diff -r 211f48754a7f include/numeric.h
 diff -r 211f48754a7f include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,63 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -226,9 +226,10 @@ diff -r 211f48754a7f include/welcome.h
 +#define WELCOME_LOCAL    0x01 /**< welcome is local */
 +/** Welcome action flags */
 +#define WELCOME_ANNOUNCE 0x02 /**< announce change to users */
++#define WELCOME_INSERT   0x04 /**< insert welcome message, move down all others one place */
 +
 +extern int welcome_do(struct Client *cptr, struct Client *sptr, char *name, char *text,
-+  char *who, time_t timestamp, unsigned int flags);
++  char *who, time_t timestamp, unsigned int flags, int insert);
 +extern void welcome_announce(int name);
 +extern void welcome_burst(struct Client *cptr);
 +extern int welcome_list(struct Client *sptr, int connect);
@@ -362,7 +363,7 @@ diff -r 211f48754a7f ircd/ircd_parser.y
 diff -r 211f48754a7f ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,284 @@
+@@ -0,0 +1,296 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -577,9 +578,15 @@ diff -r 211f48754a7f ircd/m_welcome.c
 +     name++;
 +     flags |= WELCOME_ANNOUNCE;
 +  }
-+  
++
++  /* check for insert prefix */
++  if (*name == '+') {
++     name++;
++     flags |= WELCOME_INSERT;
++  }
++
 +  /* and do it */
-+  return welcome_do(cptr, sptr, name, text, who, timestamp, flags);
++  return welcome_do(cptr, sptr, name, text, who, timestamp, flags, 0);
 +}
 +
 +
@@ -644,8 +651,14 @@ diff -r 211f48754a7f ircd/m_welcome.c
 +     flags |= WELCOME_ANNOUNCE;
 +  }
 +
++  /* check for insert prefix */
++  if (*name == '+') {
++     name++;
++     flags |= WELCOME_INSERT;
++  }
++
 +  /* and do it */
-+  return welcome_do(cptr, sptr, name, text, who, timestamp, flags);
++  return welcome_do(cptr, sptr, name, text, who, timestamp, flags, 0);
 +}
 diff -r 211f48754a7f ircd/parse.c
 --- a/ircd/parse.c
@@ -755,7 +768,7 @@ diff -r 211f48754a7f ircd/s_user.c
 diff -r 211f48754a7f ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,371 @@
+@@ -0,0 +1,465 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -836,18 +849,21 @@ diff -r 211f48754a7f ircd/welcome.c
 + * @param[in] sptr Originator of the welcome.
 + * @param[in] name Name of the message.
 + * @param[in] text The welcome message.
++ * @param[in] who Who set this message.
 + * @param[in] timestamp Timestamp of when the message was set.
 + * @param[in] flags Flags to set on welcome.
++ * @param[in] insert Non-zero do not propagate change (welcome_insert)
 + * @return Zero
 + */
 +int
 +welcome_do(struct Client *cptr, struct Client *sptr, char *name, char *text,
-+  char *who, time_t timestamp, unsigned int flags)
++  char *who, time_t timestamp, unsigned int flags, int insert)
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
 +  char oldtext[TOPICLEN + 1];              /* save old text when unsetting */
-+  static time_t rate;
++  char msg[BUFSIZE];                       /* msg for snomask, logging, etc. */
++  static time_t rate;                      /* rate limit snomask message */
 +
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
@@ -856,8 +872,8 @@ diff -r 211f48754a7f ircd/welcome.c
 +  assert(NULL != who);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", \"%s\" \"%s\", %Tu, 0x%04x)",
-+   cli_name(cptr), cli_name(sptr), name, text, who, timestamp, flags));
++  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", \"%s\" \"%s\", %Tu, 0x%04x, %d)",
++   cli_name(cptr), cli_name(sptr), name, text, who, timestamp, flags, insert));
 +
 +  /* check name */
 +  if (nameint < 1 || nameint > WELCOME_MAX_ENTRIES) {
@@ -933,19 +949,22 @@ diff -r 211f48754a7f ircd/welcome.c
 +        sptr, cli_user(sptr)->server, timestamp - TStime()); 
 +  }
 +
-+  /* unsetting - do not announce, save text */
++  /* unsetting - do not announce, do not insert, save text */
 +  if (EmptyString(text)) {
 +    flags &= ~WELCOME_ANNOUNCE;
++    flags &= ~WELCOME_INSERT;
 +    ircd_strncpy(oldtext, WelcomeArray[namearray].text, TOPICLEN);
 +  }
++
++  /* make space if needed */
++  if (flags & WELCOME_INSERT)
++    welcome_insert(cptr, sptr, name, nameint, namearray, who, timestamp, flags);
 +
 +  /* update */
 +  welcome_make(namearray, text, who, timestamp);
 +
-+  /* inform ops */
-+  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s%s%s WELCOME %d \"%s\" [%Tu]",
-+    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
++  /* create msg for snomask, logging, etc. */
++  ircd_snprintf(0, msg, 0, "%s%s%s WELCOME %d \"%s\" [%Tu]",
 +    EmptyString(text) ? "unsetting" : "changing",
 +    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
@@ -953,42 +972,29 @@ diff -r 211f48754a7f ircd/welcome.c
 +    EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
 +    WelcomeArray[namearray].timestamp);
 +
++  /* inform ops */
++  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
++    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
++    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
++
 +  /* log it */
-+  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s%s%s WELCOME %d \"%s\" [%Tu]",
-+    sptr, WelcomeArray[namearray].who,
-+    EmptyString(text) ? "unsetting" : "changing",
-+    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
-+    (flags & WELCOME_LOCAL) ? "local" : "global",
-+    nameint,
-+    EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
-+    WelcomeArray[namearray].timestamp);
++  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s",
++    sptr, WelcomeArray[namearray].who, msg);
 +
 +  /* welcome set by remote user, inform oper of success */
 +  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s%s local WELCOME %d \"%s\" [%Tu]",
-+      sptr, get_client_name_and_opername(sptr),
-+      EmptyString(text) ? "unsetting" : "changing",
-+      (flags & WELCOME_ANNOUNCE) ? " and announcing" : "",
-+      nameint,
-+      EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
-+      WelcomeArray[namearray].timestamp);
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s",
++      sptr, get_client_name_and_opername(sptr), msg);
 +
 +    /* TODO: wallops all local changes, by both local and remote opers? */
 +    /* tell all opers about the local message being set remotely */
-+    sendwallto_group_butone(&me, WALL_WALLOPS, 0,
-+      "%s %s%s local WELCOME %d \"%s\" [%Tu]",
-+      get_client_name_and_opername(sptr),
-+      EmptyString(text) ? "unsetting" : "changing",
-+      (flags & WELCOME_ANNOUNCE) ? " and announcing" : "",
-+      nameint,
-+      EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
-+      WelcomeArray[namearray].timestamp);
++    sendwallto_group_butone(&me, WALL_WALLOPS, 0, "%s %s", get_client_name_and_opername(sptr), msg);
 +  }
 +
 +  /* propagate it */
-+  if (!(flags & WELCOME_LOCAL))
-+    sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%d %Tu %s :%s",
-+      (flags & WELCOME_ANNOUNCE) ? "!" : "", nameint,
++  if (!(flags & WELCOME_LOCAL) && !insert)
++    sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %s :%s",
++      (flags & WELCOME_ANNOUNCE) ? "!" : "", (flags & WELCOME_INSERT) ? "+" : "", nameint,
 +      WelcomeArray[namearray].timestamp, WelcomeArray[namearray].who,
 +      WelcomeArray[namearray].text);
 +
@@ -996,6 +1002,107 @@ diff -r 211f48754a7f ircd/welcome.c
 +  if (flags & WELCOME_ANNOUNCE)
 +    welcome_announce(namearray);
 +
++  return 0;
++}
++
++
++/** Change a welcome message.
++ * @param[in] cptr Local client that sent us the welcome.
++ * @param[in] sptr Originator of the welcome.
++ * @param[in] name Name of the message.
++ * @param[in] nameint Name of the message.
++ * @param[in] namearray Array entry.
++ * @param[in] who Who set this message.
++ * @param[in] timestamp Timestamp of when the message was set.
++ * @param[in] flags Flags to set on welcome.
++ * @return Zero
++ */
++int
++welcome_insert(struct Client *cptr, struct Client *sptr, char *name, int nameint,
++  int namearray, char *who, time_t timestamp, unsigned int flags)
++{
++  char *text = "";                      /* empty text to clear to feed to welcome_do */
++  char *last = "10";                    /* last welcome message to feed to welcome_do */
++  char msg[BUFSIZE];                    /* msg for snomask, logging, etc. */
++  unsigned int newflags = flags;        /* new flags to feed back to welcome_do */
++  int i;                                /* loop variable */
++  int empty = -1;                       /* first empty spot array after arrayname */
++  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */
++
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(flags & WELCOME_INSERT);
++  assert(namearray >= 0 && namearray <= 2 * WELCOME_MAX_ENTRIES - 1);
++
++  /* debug */
++  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", \"%s\", %d, %d, \"%s\", %Tu, 0x%04x)",
++   cli_name(cptr), cli_name(sptr), name, nameint, namearray, who, timestamp, flags));
++
++  /* not set yet, do not insert */
++  if (WelcomeArray[namearray].timestamp == 0)
++    return 0;
++
++  /* last global entry */
++  if (!(flags & WELCOME_LOCAL) && (nameint == WELCOME_MAX_ENTRIES))
++    return 0;
++
++  /* last local entry */
++  if ((flags & WELCOME_LOCAL) && (nameint == 2 * WELCOME_MAX_ENTRIES)) 
++    return 0;
++
++  /* correct end for local offset */
++  if (flags & WELCOME_LOCAL)
++    end += WELCOME_MAX_ENTRIES;
++
++  /* found first empty spot */
++  for (i = namearray; i <= end; i++) {
++    if (*WelcomeArray[i].text == 0) {
++      empty = i;
++      break;
++    }
++  }
++
++  /* no empty spot, need to unset last, do not insert or announce */
++  if (empty == -1) {
++    newflags &= ~WELCOME_INSERT;
++    newflags &= ~WELCOME_ANNOUNCE;
++    welcome_do(cptr, sptr, last, text, who, timestamp, newflags, 1);
++    empty = end;
++  }
++
++  /* move entries down */
++  for (i = empty; i > namearray; i--)
++    welcome_make(i, WelcomeArray[i-1].text, WelcomeArray[i-1].who, WelcomeArray[i-1].timestamp);
++
++  /* correct empty for local offset */
++  if (flags & WELCOME_LOCAL)
++    empty -= WELCOME_MAX_ENTRIES;
++
++  /* create msg for snomask, logging, etc. */
++  if (nameint == empty)
++    ircd_snprintf(0, msg, 0, "moving %s WELCOME message %d one place down",
++      (flags & WELCOME_LOCAL) ? "local" : "global", nameint);  
++  else 
++    ircd_snprintf(0, msg, 0, "moving %s WELCOME message %d %s %d one place down",
++      (flags & WELCOME_LOCAL) ? "local" : "global", nameint, (empty - nameint > 1) ? "to" : "and" , empty);
++
++  /* inform ops */
++  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
++    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
++    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
++
++  /* log it */
++  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s", sptr, who, msg);
++
++  /* welcome set by remote user, inform oper */
++  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s",
++      sptr, get_client_name_and_opername(sptr), msg);
++
++    /* TODO: wallops all local changes, by both local and remote opers? */
++    /* tell all opers about the local message being set remotely */
++    sendwallto_group_butone(&me, WALL_WALLOPS, 0, "%s %s", get_client_name_and_opername(sptr), msg);
++  }
 +  return 0;
 +}
 +
