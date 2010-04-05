@@ -768,7 +768,7 @@ diff -r 4676d2565f9b ircd/s_user.c
 diff -r 4676d2565f9b ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,570 @@
+@@ -0,0 +1,584 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -967,7 +967,10 @@ diff -r 4676d2565f9b ircd/welcome.c
 +  int namearray, time_t timestamp, char *who, unsigned int flags)
 +{
 +  char msg[BUFSIZE];                    /* msg for snomask, logging, etc. */
-+  char text[WELCOMELEN + 1];         /* save old text */ 
++  char text[WELCOMELEN + 1];            /* save old text */
++  int i;                                /* loop variable */
++  int empty = namearray;                /* first empty spot in array after arrayname */
++  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */ 
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", 0x%04x)",
@@ -989,6 +992,17 @@ diff -r 4676d2565f9b ircd/welcome.c
 +  /* propagate it, but not when inserting */
 +  if (!(flags & (WELCOME_LOCAL|WELCOME_INSERT)))
 +    welcome_propagate(cptr, sptr, nameint, timestamp, who, "", flags);
++
++  /* correct end for local offset */
++  if (flags & WELCOME_LOCAL)
++    end += WELCOME_MAX_ENTRIES;
++
++  /* found first empty spot */
++  for (i = namearray; i < end; i++)
++    welcome_make(i, WelcomeArray[i+1].text, WelcomeArray[i+1].who, timestamp);
++
++  /* clear last entry */
++  welcome_make(end, "", who, timestamp);
 +
 +  return 0;
 +}
