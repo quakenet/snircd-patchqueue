@@ -1087,7 +1087,7 @@ diff -r 4676d2565f9b ircd/welcome.c
 +
 +  /* move entries down */
 +  for (i = empty; i > namearray; i--)
-+    welcome_make(i, WelcomeArray[i-1].text, WelcomeArray[i-1].who, WelcomeArray[i-1].timestamp);
++    welcome_make(i, WelcomeArray[i-1].text, WelcomeArray[i-1].who, timestamp);
 +
 +  /* correct empty for local offset */
 +  if (flags & WELCOME_LOCAL)
