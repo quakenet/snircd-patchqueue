@@ -1033,18 +1033,6 @@ diff -r 4676d2565f9b ircd/welcome.c
 +  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\", 0x%04x)",
 +   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags));
 +
-+  /* not set yet, do not insert */
-+  if (WelcomeArray[namearray].timestamp == 0)
-+    return 0;
-+
-+  /* last global entry */
-+  if (!(flags & WELCOME_LOCAL) && (nameint == WELCOME_MAX_ENTRIES))
-+    return 0;
-+
-+  /* last local entry */
-+  if ((flags & WELCOME_LOCAL) && (nameint == 2 * WELCOME_MAX_ENTRIES)) 
-+    return 0;
-+
 +  /* correct end for local offset */
 +  if (flags & WELCOME_LOCAL)
 +    end += WELCOME_MAX_ENTRIES;
@@ -1197,6 +1185,14 @@ diff -r 4676d2565f9b ircd/welcome.c
 +    }
 +  }
 +
++  /* do not insert for last global/local entry and when not set yet */
++  if (flags & WELCOME_INSERT) {
++    if ((WelcomeArray[namearray].timestamp == 0) ||
++         (!(flags & WELCOME_LOCAL) && nameint == WELCOME_MAX_ENTRIES) ||
++         ((flags & WELCOME_LOCAL) && nameint == 2 * WELCOME_MAX_ENTRIES))
++      flags &= ~WELCOME_INSERT;
++  } 
++
 +  /* TODO: rate limited for what? max 10 welcome messages..? */
 +  /* possible timestamp drift - warn ops */
 +  if (timestamp - TStime() > WELCOME_MAX_DRIFT) {
@@ -1213,6 +1209,10 @@ diff -r 4676d2565f9b ircd/welcome.c
 +
 +  /* unset */
 +  if (EmptyString(text)) {
++    /* clear insert flag,
++     * when this flag is set, welcome_set() assumes it is being called from welcome_insert()
++     * and wont propagate the change
++     */
 +    flags &= ~WELCOME_INSERT;
 +    return welcome_unset(cptr, sptr, nameint, namearray, timestamp, who, flags);
 +  }
