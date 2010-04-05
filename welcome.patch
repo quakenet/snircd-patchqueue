@@ -768,7 +768,7 @@ diff -r 4676d2565f9b ircd/s_user.c
 diff -r 4676d2565f9b ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,484 @@
+@@ -0,0 +1,480 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -987,9 +987,7 @@ diff -r 4676d2565f9b ircd/welcome.c
 +    EmptyString(text) ? "unsetting" : "changing",
 +    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
-+    nameint,
-+    EmptyString(text) ? oldtext : WelcomeArray[namearray].text,
-+    WelcomeArray[namearray].timestamp);
++    nameint, EmptyString(text) ? oldtext : text, timestamp);
 +
 +  /* inform ops */
 +  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
@@ -997,8 +995,7 @@ diff -r 4676d2565f9b ircd/welcome.c
 +    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
 +
 +  /* log it */
-+  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s",
-+    sptr, WelcomeArray[namearray].who, msg);
++  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s", sptr, who, msg);
 +
 +  /* welcome set by remote user, inform oper of success */
 +  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
@@ -1013,9 +1010,8 @@ diff -r 4676d2565f9b ircd/welcome.c
 +  /* propagate it */
 +  if (!(flags & WELCOME_LOCAL) && !insert)
 +    sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %s :%s",
-+      (flags & WELCOME_ANNOUNCE) ? "!" : "", (flags & WELCOME_INSERT) ? "+" : "", nameint,
-+      WelcomeArray[namearray].timestamp, WelcomeArray[namearray].who,
-+      WelcomeArray[namearray].text);
++      (flags & WELCOME_ANNOUNCE) ? "!" : "", (flags & WELCOME_INSERT) ? "+" : "",
++      nameint, timestamp, who, text);
 +
 +  /* announce it */
 +  if (flags & WELCOME_ANNOUNCE)
