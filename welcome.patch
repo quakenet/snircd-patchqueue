@@ -768,7 +768,7 @@ diff -r 4676d2565f9b ircd/s_user.c
 diff -r 4676d2565f9b ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,582 @@
+@@ -0,0 +1,570 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -868,6 +868,39 @@ diff -r 4676d2565f9b ircd/welcome.c
 +}
 +
 +
++/** Log a welcome message.
++ * @param[in] sptr Originator of the welcome.
++ * @param[in] msg The message to show.
++ * @param[in] who Who set this message.
++ * @param[in] flags Flags to set on welcome.
++ * @return Zero
++ */
++int
++welcome_log(struct Client *sptr, char *msg, char *who, unsigned int flags)
++{
++
++  /* inform ops */
++  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
++    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
++    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
++
++  /* log it */
++  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s", sptr, who, msg);
++
++  /* welcome by remote user, inform oper of success */
++  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
++    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s",
++      sptr, get_client_name_and_opername(sptr), msg);
++
++    /* TODO: wallops all local changes, by both local and remote opers? */
++    /* tell all opers about the local message being set remotely */
++    sendwallto_group_butone(&me, WALL_WALLOPS, 0, "%s %s", get_client_name_and_opername(sptr), msg);
++  }
++
++  return 0;
++}
++
++
 +/** Set a welcome message.
 + * @param[in] cptr Local client that sent us the welcome.
 + * @param[in] sptr Originator of the welcome.
@@ -904,23 +937,8 @@ diff -r 4676d2565f9b ircd/welcome.c
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
 +    nameint, text, timestamp);
 +
-+  /* inform ops */
-+  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
-+    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
-+
 +  /* log it */
-+  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s", sptr, who, msg);
-+
-+  /* welcome set by remote user, inform oper of success */
-+  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s",
-+      sptr, get_client_name_and_opername(sptr), msg);
-+
-+    /* TODO: wallops all local changes, by both local and remote opers? */
-+    /* tell all opers about the local message being set remotely */
-+    sendwallto_group_butone(&me, WALL_WALLOPS, 0, "%s %s", get_client_name_and_opername(sptr), msg);
-+  }
++  welcome_log(sptr, msg, who, flags);
 +
 +  /* propagate it */
 +  if (!(flags & WELCOME_LOCAL))
@@ -965,23 +983,8 @@ diff -r 4676d2565f9b ircd/welcome.c
 +  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" [%Tu]",
 +    (flags & WELCOME_LOCAL) ? "local" : "global", nameint, text, timestamp);
 +
-+  /* inform ops */
-+  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
-+    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
-+
 +  /* log it */
-+  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s", sptr, who, msg);
-+
-+  /* welcome set by remote user, inform oper of success */
-+  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s",
-+      sptr, get_client_name_and_opername(sptr), msg);
-+
-+    /* TODO: wallops all local changes, by both local and remote opers? */
-+    /* tell all opers about the local message being set remotely */
-+    sendwallto_group_butone(&me, WALL_WALLOPS, 0, "%s %s", get_client_name_and_opername(sptr), msg);
-+  }
++  welcome_log(sptr, msg, who, flags);
 +
 +  /* propagate it, but not when inserting */
 +  if (!(flags & (WELCOME_LOCAL|WELCOME_INSERT)))
@@ -1062,23 +1065,8 @@ diff -r 4676d2565f9b ircd/welcome.c
 +    ircd_snprintf(0, msg, 0, "moving %s WELCOME message %d %s %d one place down",
 +      (flags & WELCOME_LOCAL) ? "local" : "global", nameint, (empty - nameint > 1) ? "to" : "and" , empty);
 +
-+  /* inform ops */
-+  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
-+    (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-+    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
-+
 +  /* log it */
-+  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s", sptr, who, msg);
-+
-+  /* welcome set by remote user, inform oper */
-+  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
-+    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s",
-+      sptr, get_client_name_and_opername(sptr), msg);
-+
-+    /* TODO: wallops all local changes, by both local and remote opers? */
-+    /* tell all opers about the local message being set remotely */
-+    sendwallto_group_butone(&me, WALL_WALLOPS, 0, "%s %s", get_client_name_and_opername(sptr), msg);
-+  }
++  welcome_log(sptr, msg, who, flags);
 +
 +  /* set it */
 +  welcome_set(cptr, sptr, nameint, namearray, timestamp, who, text, flags);
