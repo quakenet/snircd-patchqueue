@@ -771,7 +771,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,582 @@
+@@ -0,0 +1,581 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -875,12 +875,11 @@ diff -r a9b437e961ec ircd/welcome.c
 +/** Log a welcome message.
 + * @param[in] sptr Originator of the welcome.
 + * @param[in] msg The message to show.
-+ * @param[in] who Who set this message.
 + * @param[in] flags Flags to set on welcome.
 + * @return Zero
 + */
 +int
-+welcome_log(struct Client *sptr, char *msg, char *who, unsigned int flags)
++welcome_log(struct Client *sptr, char *msg, unsigned int flags)
 +{
 +
 +  /* inform ops */
@@ -889,7 +888,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +    get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server), msg);
 +
 +  /* log it */
-+  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%#C (%s) %s", sptr, who, msg);
++  log_write(LS_NETWORK, L_INFO, LOG_NOSNOTICE, "%s %s", get_client_name_and_opername(sptr), msg);
 +
 +  /* welcome by remote user, inform oper of success */
 +  if ((flags & WELCOME_LOCAL) && IsUser(sptr) && !MyUser(sptr)) {
@@ -935,14 +934,14 @@ diff -r a9b437e961ec ircd/welcome.c
 +  welcome_make(namearray, text, who, timestamp);
 +
 +  /* create msg for log */
-+  ircd_snprintf(0, msg, 0, "%s%s%s WELCOME %d \"%s\" [%Tu]",
++  ircd_snprintf(0, msg, 0, "%s%s%s WELCOME %d \"%s\" %s [%Tu]",
 +    new ? "setting" : "changing",
 +    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
-+    nameint, text, timestamp);
++    nameint, text, who, timestamp);
 +
 +  /* log it */
-+  welcome_log(sptr, msg, who, flags);
++  welcome_log(sptr, msg, flags);
 +
 +  /* propagate it */
 +  if (!(flags & WELCOME_LOCAL))
@@ -987,11 +986,11 @@ diff -r a9b437e961ec ircd/welcome.c
 +  welcome_make(namearray, "", who, timestamp);
 +
 +  /* create msg for log */
-+  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" [%Tu]",
-+    (flags & WELCOME_LOCAL) ? "local" : "global", nameint, text, timestamp);
++  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" %s [%Tu]",
++    (flags & WELCOME_LOCAL) ? "local" : "global", nameint, text, who, timestamp);
 +
 +  /* log it */
-+  welcome_log(sptr, msg, who, flags);
++  welcome_log(sptr, msg, flags);
 +
 +  /* propagate it, but not when inserting */
 +  if (!(flags & (WELCOME_LOCAL|WELCOME_INSERT)))
@@ -1072,7 +1071,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +      (flags & WELCOME_LOCAL) ? "local" : "global", nameint, (empty - nameint > 1) ? "to" : "and" , empty);
 +
 +  /* log it */
-+  welcome_log(sptr, msg, who, flags);
++  welcome_log(sptr, msg, flags);
 +
 +  /* set it */
 +  welcome_set(cptr, sptr, nameint, namearray, timestamp, who, text, flags);
