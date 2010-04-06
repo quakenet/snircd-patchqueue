@@ -771,7 +771,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,585 @@
+@@ -0,0 +1,582 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1097,6 +1097,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
++  int max = WELCOME_MAX_ENTRIES;           /* max number of entries */
 +  static time_t rate;                      /* rate limit snomask message */
 +
 +  assert(NULL != cptr);
@@ -1119,19 +1120,19 @@ diff -r a9b437e961ec ircd/welcome.c
 +  }
 +
 +  /* check name */
-+  if (nameint < 1 || nameint > WELCOME_MAX_ENTRIES) {
++  if (!WelcomeIsValid(namearray)) {
 +    if (IsUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
 +        "%C :WELCOME: Invalid message number %s - should between 1 and %d",
-+        sptr, name, WELCOME_MAX_ENTRIES);
++        sptr, name, max);
 +    else {
 +      protocol_violation(cptr, "WELCOME: Invalid message number %s from %C - should be between 1 and %d",
-+        name, sptr, WELCOME_MAX_ENTRIES);
-+      /* nameint greater than MAX, perhaps we are upgrading, but used extra slots too soon?
++        name, sptr, max);
++      /* nameint greater than max, perhaps we are upgrading, but used extra slots too soon?
 +       *   propagate it manually
 +       * TODO: cant do announce here?
 +       */
-+      if (nameint > WELCOME_MAX_ENTRIES && !(flags & WELCOME_LOCAL))
++      if (nameint > max && !(flags & WELCOME_LOCAL))
 +        welcome_propagate(cptr, sptr, nameint, timestamp, who, text, flags);
 +    }
 +    return 0;
@@ -1190,12 +1191,8 @@ diff -r a9b437e961ec ircd/welcome.c
 +  }
 +
 +  /* do not insert for last global/local entry and when not set yet */
-+  if (flags & WELCOME_INSERT) {
-+    if ((WelcomeArray[namearray].timestamp == 0) ||
-+         (!(flags & WELCOME_LOCAL) && nameint == WELCOME_MAX_ENTRIES) ||
-+         ((flags & WELCOME_LOCAL) && nameint == 2 * WELCOME_MAX_ENTRIES))
-+      flags &= ~WELCOME_INSERT;
-+  } 
++  if ((flags & WELCOME_INSERT) && ((WelcomeArray[namearray].timestamp == 0) || (nameint == max)))
++    flags &= ~WELCOME_INSERT;
 +
 +  /* TODO: rate limited for what? max 10 welcome messages..? */
 +  /* possible timestamp drift - warn ops */
