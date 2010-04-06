@@ -177,18 +177,7 @@ diff -r 4c7b03099b6f ircd/s_user.c
    /*
     * find flags already set for user
     * why not just copy them?
-@@ -1517,8 +1521,9 @@
-   if (do_set_host) {
-     /* We clear the flag in the old mask, so that the +h will be sent */
-     /* Only do this if we're SETTING +h and it succeeded */
--    if (set_hostmask(sptr, hostmask, password) && hostmask)
-+    if (set_hostmask(sptr, hostmask, password) && hostmask) {
-       FlagClr(&setflags, FLAG_SETHOST);
-+    }
-   }
- 
-   if (IsRegistered(sptr)) {
-@@ -1569,7 +1574,7 @@
+@@ -1569,7 +1573,7 @@
      }
      assert(UserStats.opers <= UserStats.clients + UserStats.unknowns);
      assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
@@ -197,7 +186,7 @@ diff -r 4c7b03099b6f ircd/s_user.c
    }
  
    return 0;
-@@ -1644,9 +1649,11 @@
+@@ -1644,9 +1648,11 @@
   * @param[in] old Pre-change set of modes for \a sptr.
   * @param[in] sendset One of ALL_UMODES, SEND_UMODES_BUT_OPER,
   * SEND_UMODES, to select which changed user modes to send.
@@ -210,7 +199,7 @@ diff -r 4c7b03099b6f ircd/s_user.c
  {
    int i;
    int flag;
-@@ -1689,12 +1696,15 @@
+@@ -1689,12 +1695,15 @@
      }
      /* Special case for SETHOST.. */
      if (flag == FLAG_SETHOST) {
