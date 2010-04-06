@@ -172,7 +172,7 @@ diff -r a9b437e961ec include/numeric.h
 diff -r a9b437e961ec include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,66 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -214,6 +214,9 @@ diff -r a9b437e961ec include/welcome.h
 + * before we throw a warning to ops
 + */
 +#define WELCOME_MAX_DRIFT   600
++
++/* test if a welcome entry is in a valid range */
++#define WelcomeIsValid(x) ((x) >= 0 && (x) <= 2 * WELCOME_MAX_ENTRIES - 1)
 +
 +/* Describes a Welcome message entry. */
 +struct Welcome {
@@ -832,8 +835,8 @@ diff -r a9b437e961ec ircd/welcome.c
 +static int 
 +welcome_make(int name, char *text, char *who, time_t timestamp)
 +{
-+  /* range 0 to 2 * max - 1 */
-+  assert(name >= 0 && name <= 2 * WELCOME_MAX_ENTRIES - 1);
++  /* valid range */
++  assert(WelcomeIsValid(name));
 +
 +  /* store it */
 +  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
@@ -1139,7 +1142,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +    namearray += WELCOME_MAX_ENTRIES;
 +
 +  /* must be true by now */
-+  assert(namearray >= 0 && namearray <= 2 * WELCOME_MAX_ENTRIES - 1);
++  assert(WelcomeIsValid(namearray));
 +
 +  /* cannot unset welcome that is not set */
 +  if (WelcomeArray[namearray].timestamp == 0 && EmptyString(text)) {
@@ -1237,8 +1240,8 @@ diff -r a9b437e961ec ircd/welcome.c
 +  struct MsgBuf *msgbuf;
 +  int i;
 +
-+  /* range 0 to 2 * max - 1 */
-+  assert(name >= 0 && name <= 2 * WELCOME_MAX_ENTRIES - 1); 
++  /* valid range */
++  assert(WelcomeIsValid(name)); 
 +
 +  /* TODO: target is $* as if it were a global broadcast
 +   * could make it $servername for local message announcement
