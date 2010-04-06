@@ -780,7 +780,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,609 @@
+@@ -0,0 +1,611 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -913,6 +913,8 @@ diff -r a9b437e961ec ircd/welcome.c
 +int
 +welcome_log(struct Client *sptr, char *msg, unsigned int flags)
 +{
++  assert(NULL != sptr);
++  assert(NULL != msg);
 +
 +  /* inform ops */
 +  sendto_opmask_butone(0, SNO_OLDSNO, "%s %s",
