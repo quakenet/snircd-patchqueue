@@ -1,0 +1,44 @@
+show usermode +h to clients (/mode +h spoof .. and /mode -h is allowed by clients)
+
+diff -r b99b280644c5 include/client.h
+--- a/include/client.h
++++ b/include/client.h
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioOswkgxRXInPq"
++#define infousermodes "dioOswkghxRXInPq"
+ 
+ /** Character to indicate no oper name available */
+ #define NOOPERNAMECHARACTER '-'
+diff -r b99b280644c5 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -1226,8 +1226,7 @@
+     for (i = 0; i < USERMODELIST_SIZE; i++)
+     {
+       if (HasFlag(sptr, userModeList[i].flag) &&
+-          ((userModeList[i].flag != FLAG_ACCOUNT) &&
+-          (userModeList[i].flag != FLAG_SETHOST)))
++          userModeList[i].flag != FLAG_ACCOUNT)
+         *m++ = userModeList[i].c;
+     }
+     *m = '\0';
+@@ -1689,12 +1688,10 @@
+     }
+     /* Special case for SETHOST.. */
+     if (flag == FLAG_SETHOST) {
+-      /* Don't send to users */
+-      if (cptr && MyUser(cptr))
+-      	continue;
+-      
+-      /* If we're setting +h, add the parameter later */
+-      if (!FlagHas(old, flag))	
++      /* If we're setting +h, add the parameter later,
++       * but not when showing to the user
++       */
++      if (!FlagHas(old, flag) && (!cptr || !MyUser(cptr)))	
+       	needhost++;    
+     }
+     if (FlagHas(old, flag))

@@ -34,6 +34,7 @@ whousermodes.patch
 badchanactivefor.patch
 chanopaccountabilityforkickdelayedjoin.patch
 ulined.patch
+showumodehtoclients.patch
 glinesnomask.patch
 remoteglinejupe.patch
 whotopic.patch
