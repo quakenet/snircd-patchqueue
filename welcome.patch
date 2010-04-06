@@ -771,7 +771,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,581 @@
+@@ -0,0 +1,592 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1134,6 +1134,17 @@ diff -r a9b437e961ec ircd/welcome.c
 +      if (nameint > max && !(flags & WELCOME_LOCAL))
 +        welcome_propagate(cptr, sptr, nameint, timestamp, who, text, flags);
 +    }
++    return 0;
++  }
++
++  /* source is user, and is myuser or welcome is local, check length of the message */
++  if ((IsUser(sptr)) && ((MyUser(sptr)) || (flags & WELCOME_LOCAL)) && (strlen(text) > WELCOMELEN)) {
++    sendcmdto_one(&me, CMD_NOTICE, sptr,
++      "%C :WELCOME: The message is too long with %d chars - max is %d chars",
++      sptr, strlen(text), WELCOMELEN);
++    ircd_strncpy(text, text, WELCOMELEN);
++    sendcmdto_one(&me, CMD_NOTICE, sptr,
++      "%C :WELCOME: Change or trunacte the message to: \"%s\"", sptr, text);
 +    return 0;
 +  }
 +
