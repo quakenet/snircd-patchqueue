@@ -1144,7 +1144,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +      sptr, strlen(text), WELCOMELEN);
 +    ircd_strncpy(text, text, WELCOMELEN);
 +    sendcmdto_one(&me, CMD_NOTICE, sptr,
-+      "%C :WELCOME: Change or trunacte the message to: \"%s\"", sptr, text);
++      "%C :WELCOME: Change or truncate the message to: \"%s\"", sptr, text);
 +    return 0;
 +  }
 +
