@@ -172,7 +172,7 @@ diff -r a9b437e961ec include/numeric.h
 diff -r a9b437e961ec include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,75 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -210,10 +210,7 @@ diff -r a9b437e961ec include/welcome.h
 +#define WELCOME_MAX_ENTRIES  10
 +/* Maximum length of a welcome message */
 +#define WELCOMELEN TOPICLEN
-+/* Maximum timestamp drift in seconds allowed ahead of our idea of nettime
-+ * before we throw a warning to ops
-+ */
-+#define WELCOME_MAX_DRIFT   600
++
 +
 +/* Test if a welcome entry is in a valid range */
 +#define WelcomeIsValid(x)     ((x) >= 0 && (x) <= 2 * WELCOME_MAX_ENTRIES - 1)
@@ -783,7 +780,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,591 @@
+@@ -0,0 +1,609 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -875,10 +872,33 @@ diff -r a9b437e961ec ircd/welcome.c
 +{
 +  /* must be global */
 +  assert(!(flags & WELCOME_LOCAL));
++  assert(NULL != sptr);
++  assert(NULL != cptr);
 +
 +  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %s :%s",
 +    (flags & WELCOME_ANNOUNCE) ? "!" : "", (flags & WELCOME_INSERT) ? "+" : "",
 +    nameint, timestamp, who, text);
++
++  return 0;
++}
++
++
++/** Resend a welcome message.
++ * @param[in] cptr Local client that sent us the welcome.
++ * @param[in] nameint Name of the message.
++ * @param[in] namearray Name of the array item.
++ * @return Zero
++ */
++int
++welcome_resend(struct Client *cptr, int nameint, int namearray)
++{
++  /* must be valid */
++  assert(WelcomeIsValid(namearray));
++  assert(NULL != cptr);
++  assert(IsServer(cptr));
++
++  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
++    nameint, WelcomeTS(namearray), WelcomeWho(namearray), WelcomeText(namearray));
 +
 +  return 0;
 +}
@@ -1106,7 +1126,6 @@ diff -r a9b437e961ec ircd/welcome.c
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
 +  int max = WELCOME_MAX_ENTRIES;           /* max number of entries */
-+  static time_t rate;                      /* rate limit snomask message */
 +
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
@@ -1137,16 +1156,10 @@ diff -r a9b437e961ec ircd/welcome.c
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
 +        "%C :WELCOME: Invalid message number %s - should between 1 and %d",
 +        sptr, name, max);
-+    else {
-+      protocol_violation(cptr, "WELCOME: Invalid message number %s from %C - should be between 1 and %d",
++    else
++      protocol_violation(cptr,
++        "WELCOME: Invalid message number %s from %C - should be between 1 and %d",
 +        name, sptr, max);
-+      /* nameint greater than max, perhaps we are upgrading, but used extra slots too soon?
-+       *   propagate it manually
-+       * TODO: cant do announce here?
-+       */
-+      if (nameint > max && !(flags & WELCOME_LOCAL))
-+        welcome_propagate(cptr, sptr, nameint, timestamp, who, text, flags);
-+    }
 +    return 0;
 +  }
 +
@@ -1189,47 +1202,49 @@ diff -r a9b437e961ec ircd/welcome.c
 +    /* global */
 +    if (!(flags & WELCOME_LOCAL)) {
 +
-+      /* netburst and we got the same or a newer one
-+       *
-+       *   we only use the timestamp for resolving conflicts in net burst
-+       *   outside of netburst, we simply parse whatever we get
-+       *   this way we will not get stuck with a welcome message set by a server
-+       *   running ahead with the time
++      /* myuser changes it,
++       *   welcomeTS greater than or equal to timestamp, take welcomeTS+1 as timestamp
++       *   else the change is not accepted upstream because of the older TS
 +       */
-+      if (IsBurstOrBurstAck(cptr) && timestamp <= WelcomeTS(namearray))
-+        return 0;
++      if (MyUser(sptr) && WelcomeTS(namearray) >= timestamp)
++        timestamp = WelcomeTS(namearray) +1;
++
++      /* compare timestamps, ignore welcome when:
++       *  we got a newer one
++       *  or when timestamps are the same
++       *  our text is shorter or our text is 'smaller'
++       */
++      if ((timestamp < WelcomeTS(namearray)) ||                 /* we got a newer one */
++           ((timestamp == WelcomeTS(namearray)) &&              /* same timestamp */
++           ((strlen(WelcomeText(namearray)) < strlen(text)) ||  /* our text is shorter */
++           (ircd_strcmp(WelcomeText(namearray), text) < 0)))) { /* our text is 'smaller' */
++        /* burst or burst ack, cptr gets our version from the burst */
++        if (IsBurstOrBurstAck(cptr))
++          return 0;
++        /* sync server */
++        return welcome_resend(cptr, nameint, namearray);
++      }
 +
 +    /* local welcome - we use our idea of the time */
 +    } else
 +      timestamp = TStime();
 +
-+    /* compare new message with old message */
-+    if (ircd_strcmp(text, WelcomeText(namearray)) == 0) {
-+      if (IsUser(sptr))
++    /* new global welcome from my user or local welcome
++     *   compare new message with old message
++     */
++    if (IsUser(sptr) && (MyUser(sptr) || (flags & WELCOME_LOCAL))) {
++      if (ircd_strcmp(text, WelcomeText(namearray)) == 0) {
 +        sendcmdto_one(&me, CMD_NOTICE, sptr,
-+          "%C :WELCOME: Cannot change %s message for %s - nothing to change.",
++          "%C :WELCOME: Cannot change %s message for %s - nothing to change",
 +          sptr, (flags & WELCOME_LOCAL) ? "local" : "global", name); 
-+      return 0;
++        return 0;
++      }
 +    }
 +  }
 +
 +  /* do not insert for last global/local entry and when not set yet */
 +  if ((flags & WELCOME_INSERT) && ((!WelcomeIsSet(namearray)) || (nameint == max)))
 +    flags &= ~WELCOME_INSERT;
-+
-+  /* TODO: rate limited for what? max 10 welcome messages..? */
-+  /* possible timestamp drift - warn ops */
-+  if (timestamp - TStime() > WELCOME_MAX_DRIFT) {
-+    sendto_opmask_butone_ratelimited(0, SNO_NETWORK, &rate,
-+      "Possible timestamp drift from %C; timestamp in WELCOME message is %is ahead of time",
-+      IsServer(sptr) ? sptr : cli_user(sptr)->server, timestamp - TStime());
-+
-+    /* warn remote oper too */
-+    if (IsUser(sptr))
-+      sendcmdto_one(&me, CMD_NOTICE, sptr,
-+        "%C :Possible timestamp drift from %C; timestamp in WELCOME message is %is ahead of time",
-+        sptr, cli_user(sptr)->server, timestamp - TStime()); 
-+  }
 +
 +  /* unset */
 +  if (EmptyString(text)) {
