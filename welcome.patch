@@ -783,7 +783,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,595 @@
+@@ -0,0 +1,594 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1263,8 +1263,10 @@ diff -r a9b437e961ec ircd/welcome.c
 +  struct MsgBuf *msgbuf;
 +  int i;
 +
-+  /* valid range */
-+  assert(WelcomeIsValid(name)); 
++  /* valid range, set and not empty */
++  assert(WelcomeIsValid(name));
++  assert(WelcomeIsSet(name));
++  assert(!WelcomeIsEmpty(name));
 +
 +  /* TODO: target is $* as if it were a global broadcast
 +   * could make it $servername for local message announcement
@@ -1279,9 +1281,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +  /* go over local clients */
 +  for (i = HighestFd; i > 0; --i) {
 +
-+    /* skip unregistered clients - they see the message during login
-+     * skip servers
-+     */
++    /* skip unregistered clients, skip servers */
 +    if (!(acptr = LocalClientArray[i]) || !IsRegistered(acptr) || IsServer(acptr))
 +      continue;
 +
@@ -1330,7 +1330,6 @@ diff -r a9b437e961ec ircd/welcome.c
 +      local = 1;
 +
 +    /* not set or empty - skip */
-+    /* TODO: EmptyString? */
 +    if (!WelcomeIsSet(name) || WelcomeIsEmpty(name))
 +      continue;
 +
