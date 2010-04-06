@@ -783,7 +783,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,594 @@
+@@ -0,0 +1,591 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -950,7 +950,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +    new ? "setting" : "changing",
 +    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
-+    nameint, text, who, timestamp);
++    nameint, WelcomeText(namearray), WelcomeWho(namearray), timestamp);
 +
 +  /* log it */
 +  welcome_log(sptr, msg, flags);
@@ -982,7 +982,6 @@ diff -r a9b437e961ec ircd/welcome.c
 +  int namearray, time_t timestamp, char *who, unsigned int flags)
 +{
 +  char msg[BUFSIZE];                    /* msg for logging */
-+  char text[WELCOMELEN + 1];            /* save old text */
 +  int i;                                /* loop variable */
 +  int empty = namearray;                /* first empty spot in array after namearray */
 +  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */ 
@@ -991,18 +990,16 @@ diff -r a9b437e961ec ircd/welcome.c
 +  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", 0x%04x)",
 +   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, flags));
 +
-+  /* save text */
-+  ircd_strncpy(text, WelcomeText(namearray), WELCOMELEN); 
-+
-+  /* update */
-+  welcome_make(namearray, "", who, timestamp);
-+
 +  /* create msg for log */
 +  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" %s [%Tu]",
-+    (flags & WELCOME_LOCAL) ? "local" : "global", nameint, text, who, timestamp);
++    (flags & WELCOME_LOCAL) ? "local" : "global",
++    nameint, WelcomeText(namearray), WelcomeWho(namearray), timestamp);
 +
 +  /* log it */
 +  welcome_log(sptr, msg, flags);
++
++  /* update */
++  welcome_make(namearray, "", who, timestamp);
 +
 +  /* propagate it, but not when inserting */
 +  if (!(flags & (WELCOME_LOCAL|WELCOME_INSERT)))
