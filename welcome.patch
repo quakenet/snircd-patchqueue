@@ -172,7 +172,7 @@ diff -r a9b437e961ec include/numeric.h
 diff -r a9b437e961ec include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,70 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -216,7 +216,11 @@ diff -r a9b437e961ec include/welcome.h
 +#define WELCOME_MAX_DRIFT   600
 +
 +/* test if a welcome entry is in a valid range */
-+#define WelcomeIsValid(x) ((x) >= 0 && (x) <= 2 * WELCOME_MAX_ENTRIES - 1)
++#define WelcomeIsValid(x)     ((x) >= 0 && (x) <= 2 * WELCOME_MAX_ENTRIES - 1)
++/* test if a welcome entry is set */
++#define WelcomeIsSet(x)       (WelcomeArray[(x)].timestamp > 0)
++/* test if a welcome entry is empty */
++#define WelcomeIsEmpty(x)     (*WelcomeArray[(x)].text == 0)
 +
 +/* Describes a Welcome message entry. */
 +struct Welcome {
@@ -927,7 +931,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags));
 +
 +  /* not set */
-+  if (*WelcomeArray[namearray].text == 0)
++  if (WelcomeIsEmpty(namearray))
 +    new = 1;
 +
 +  /* update */
@@ -972,7 +976,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +  char msg[BUFSIZE];                    /* msg for logging */
 +  char text[WELCOMELEN + 1];            /* save old text */
 +  int i;                                /* loop variable */
-+  int empty = namearray;                /* first empty spot in array after arrayname */
++  int empty = namearray;                /* first empty spot in array after namearray */
 +  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */ 
 +
 +  /* debug */
@@ -1028,7 +1032,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +{
 +  char msg[BUFSIZE];                    /* msg for logging */
 +  int i;                                /* loop variable */
-+  int empty = -1;                       /* first empty spot in array after arrayname */
++  int empty = -1;                       /* first empty spot in array after namearray */
 +  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */
 +  int last = end;                       /* last welcome message to feed to welcome_unset */
 +
@@ -1042,7 +1046,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +
 +  /* find first empty spot */
 +  for (i = namearray; i <= end; i++) {
-+    if (*WelcomeArray[i].text == 0) {
++    if (WelcomeIsEmpty(i)) {
 +      empty = i;
 +      break;
 +    }
@@ -1160,7 +1164,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +  assert(WelcomeIsValid(namearray));
 +
 +  /* cannot unset welcome that is not set */
-+  if (WelcomeArray[namearray].timestamp == 0 && EmptyString(text)) {
++  if (!WelcomeIsSet(namearray) && EmptyString(text)) {
 +
 +    /* from user, throw error */
 +    if (IsUser(sptr))
@@ -1175,7 +1179,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +
 +  /* check if there is something to change */
 +  /* we got a record for it */
-+  if (WelcomeArray[namearray].timestamp != 0) {
++  if (WelcomeIsSet(namearray)) {
 +
 +    /* global */
 +    if (!(flags & WELCOME_LOCAL)) {
@@ -1205,7 +1209,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +  }
 +
 +  /* do not insert for last global/local entry and when not set yet */
-+  if ((flags & WELCOME_INSERT) && ((WelcomeArray[namearray].timestamp == 0) || (nameint == max)))
++  if ((flags & WELCOME_INSERT) && ((!WelcomeIsSet(namearray)) || (nameint == max)))
 +    flags &= ~WELCOME_INSERT;
 +
 +  /* TODO: rate limited for what? max 10 welcome messages..? */
@@ -1291,7 +1295,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +
 +  /* loop over global entries - 0 to max - 1*/
 +  for (name = 0; name <= WELCOME_MAX_ENTRIES - 1; name++) {
-+    if (WelcomeArray[name].timestamp != 0)
++    if (WelcomeIsSet(name))
 +      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
 +        name + 1, WelcomeArray[name].timestamp, WelcomeArray[name].who,
 +        WelcomeArray[name].text);
@@ -1320,7 +1324,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +
 +    /* not set or empty - skip */
 +    /* TODO: EmptyString? */
-+    if (WelcomeArray[name].timestamp == 0 || *WelcomeArray[name].text == 0)
++    if (!WelcomeIsSet(name) || WelcomeIsEmpty(name))
 +      continue;
 +
 +    /* got one */
@@ -1357,7 +1361,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +      local = 1;
 +
 +    /* not set */
-+    if (WelcomeArray[name].timestamp == 0)
++    if (!WelcomeIsSet(name))
 +      continue;
 +
 +    /* send it */
@@ -1365,6 +1369,6 @@ diff -r a9b437e961ec ircd/welcome.c
 +      local ? name + 1 - WELCOME_MAX_ENTRIES : name + 1,
 +      local ? cli_name(&me) : "*",
 +      WelcomeArray[name].who, WelcomeArray[name].timestamp,
-+      EmptyString(WelcomeArray[name].text)  ? "<Empty>" : WelcomeArray[name].text);
++      WelcomeIsEmpty(name) ? "<Empty>" : WelcomeArray[name].text);
 +  }
 +}
