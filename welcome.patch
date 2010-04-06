@@ -1221,7 +1221,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +  /* unset */
 +  if (EmptyString(text)) {
 +    /* clear insert flag,
-+     * when this flag is set, welcome_set() assumes it is being called from welcome_insert()
++     * when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
 +     * and wont propagate the change
 +     */
 +    flags &= ~WELCOME_INSERT;
