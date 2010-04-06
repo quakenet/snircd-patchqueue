@@ -172,7 +172,7 @@ diff -r a9b437e961ec include/numeric.h
 diff -r a9b437e961ec include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,70 @@
+@@ -0,0 +1,78 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -215,12 +215,20 @@ diff -r a9b437e961ec include/welcome.h
 + */
 +#define WELCOME_MAX_DRIFT   600
 +
-+/* test if a welcome entry is in a valid range */
++/* Test if a welcome entry is in a valid range */
 +#define WelcomeIsValid(x)     ((x) >= 0 && (x) <= 2 * WELCOME_MAX_ENTRIES - 1)
-+/* test if a welcome entry is set */
++/* Test if a welcome entry is set */
 +#define WelcomeIsSet(x)       (WelcomeArray[(x)].timestamp > 0)
-+/* test if a welcome entry is empty */
++/* Test if a welcome entry is empty */
 +#define WelcomeIsEmpty(x)     (*WelcomeArray[(x)].text == 0)
++
++/* Get welcome timestamp */
++#define WelcomeTS(x)          (WelcomeArray[(x)].timestamp)
++/* Get welcome text */
++#define WelcomeText(x)        (WelcomeArray[(x)].text)
++/* Get welcome who info */
++#define WelcomeWho(x)         (WelcomeArray[(x)].who)
++
 +
 +/* Describes a Welcome message entry. */
 +struct Welcome {
@@ -775,7 +783,7 @@ diff -r a9b437e961ec ircd/s_user.c
 diff -r a9b437e961ec ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,596 @@
+@@ -0,0 +1,595 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -984,7 +992,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, flags));
 +
 +  /* save text */
-+  ircd_strncpy(text, WelcomeArray[namearray].text, WELCOMELEN); 
++  ircd_strncpy(text, WelcomeText(namearray), WELCOMELEN); 
 +
 +  /* update */
 +  welcome_make(namearray, "", who, timestamp);
@@ -1006,7 +1014,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +
 +  /* move entries up, update timestamp */
 +  for (i = namearray; i < end; i++)
-+    welcome_make(i, WelcomeArray[i+1].text, WelcomeArray[i+1].who, timestamp);
++    welcome_make(i, WelcomeText(i+1), WelcomeWho(i+1), timestamp);
 +
 +  /* clear last entry, update timestamp */
 +  welcome_make(end, "", who, timestamp);
@@ -1060,7 +1068,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +
 +  /* move entries down, update timestamp */
 +  for (i = empty; i > namearray; i--)
-+    welcome_make(i, WelcomeArray[i-1].text, WelcomeArray[i-1].who, timestamp);
++    welcome_make(i, WelcomeText(i-1), WelcomeWho(i-1), timestamp);
 +
 +  /* correct empty for local offset */
 +  if (flags & WELCOME_LOCAL)
@@ -1191,7 +1199,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +       *   this way we will not get stuck with a welcome message set by a server
 +       *   running ahead with the time
 +       */
-+      if (IsBurstOrBurstAck(cptr) && timestamp <= WelcomeArray[namearray].timestamp)
++      if (IsBurstOrBurstAck(cptr) && timestamp <= WelcomeTS(namearray))
 +        return 0;
 +
 +    /* local welcome - we use our idea of the time */
@@ -1199,7 +1207,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +      timestamp = TStime();
 +
 +    /* compare new message with old message */
-+    if (ircd_strcmp(text, WelcomeArray[namearray].text) == 0) {
++    if (ircd_strcmp(text, WelcomeText(namearray)) == 0) {
 +      if (IsUser(sptr))
 +        sendcmdto_one(&me, CMD_NOTICE, sptr,
 +          "%C :WELCOME: Cannot change %s message for %s - nothing to change.",
@@ -1266,7 +1274,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +  /* build msgbuf */
 +  msgbuf = msgq_make(0, ":%C %s $* :[%s] %s", &me, MSG_NOTICE,
 +    name >= WELCOME_MAX_ENTRIES ? cli_name(&me) : feature_str(FEAT_NETWORK),
-+    WelcomeArray[name].text);
++    WelcomeText(name));
 +
 +  /* go over local clients */
 +  for (i = HighestFd; i > 0; --i) {
@@ -1297,8 +1305,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +  for (name = 0; name <= WELCOME_MAX_ENTRIES - 1; name++) {
 +    if (WelcomeIsSet(name))
 +      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
-+        name + 1, WelcomeArray[name].timestamp, WelcomeArray[name].who,
-+        WelcomeArray[name].text);
++        name + 1, WelcomeTS(name), WelcomeWho(name), WelcomeText(name));
 +  }
 +}
 +
@@ -1330,7 +1337,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +    /* got one */
 +    found++;
 +    sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :[%s] %s",
-+      sptr, local ? cli_name(&me) : feature_str(FEAT_NETWORK), WelcomeArray[name].text);
++      sptr, local ? cli_name(&me) : feature_str(FEAT_NETWORK), WelcomeText(name));
 +  }
 +
 +  /* nothing set */
@@ -1368,7 +1375,7 @@ diff -r a9b437e961ec ircd/welcome.c
 +    send_reply(sptr, RPL_STATSWELCOME,
 +      local ? name + 1 - WELCOME_MAX_ENTRIES : name + 1,
 +      local ? cli_name(&me) : "*",
-+      WelcomeArray[name].who, WelcomeArray[name].timestamp,
-+      WelcomeIsEmpty(name) ? "<Empty>" : WelcomeArray[name].text);
++      WelcomeWho(name), WelcomeTS(name),
++      WelcomeIsEmpty(name) ? "<Empty>" : WelcomeText(name));
 +  }
 +}
