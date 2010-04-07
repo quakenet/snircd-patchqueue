@@ -77,7 +77,7 @@ ircd/ircd_lexer.l
 ircd/ircd_parser.y
 add PRIV_LOCAL_WELCOME PRIV_WELCOME
 
-diff -r a9b437e961ec include/client.h
+diff -r 8c7c9ff0f0ca include/client.h
 --- a/include/client.h
 +++ b/include/client.h
 @@ -142,6 +142,8 @@
@@ -89,7 +89,7 @@ diff -r a9b437e961ec include/client.h
      PRIV_LAST_PRIV /**< number of privileges */
    };
  
-diff -r a9b437e961ec include/handlers.h
+diff -r 8c7c9ff0f0ca include/handlers.h
 --- a/include/handlers.h
 +++ b/include/handlers.h
 @@ -138,6 +138,7 @@
@@ -116,7 +116,7 @@ diff -r a9b437e961ec include/handlers.h
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
  extern int ms_xquery(struct Client*, struct Client*, int, char*[]);
  extern int ms_xreply(struct Client*, struct Client*, int, char*[]);
-diff -r a9b437e961ec include/ircd_features.h
+diff -r 8c7c9ff0f0ca include/ircd_features.h
 --- a/include/ircd_features.h
 +++ b/include/ircd_features.h
 @@ -101,6 +101,7 @@
@@ -135,7 +135,7 @@ diff -r a9b437e961ec include/ircd_features.h
    FEAT_HIS_STATS_w,
    FEAT_HIS_STATS_x,
    FEAT_HIS_STATS_y,
-diff -r a9b437e961ec include/msg.h
+diff -r 8c7c9ff0f0ca include/msg.h
 --- a/include/msg.h
 +++ b/include/msg.h
 @@ -196,6 +196,10 @@
@@ -149,7 +149,7 @@ diff -r a9b437e961ec include/msg.h
  #define MSG_WALLCHOPS           "WALLCHOPS"     /* WC */
  #define TOK_WALLCHOPS           "WC"
  #define CMD_WALLCHOPS		MSG_WALLCHOPS, TOK_WALLCHOPS
-diff -r a9b437e961ec include/numeric.h
+diff -r 8c7c9ff0f0ca include/numeric.h
 --- a/include/numeric.h
 +++ b/include/numeric.h
 @@ -116,6 +116,7 @@
@@ -169,7 +169,7 @@ diff -r a9b437e961ec include/numeric.h
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r a9b437e961ec include/welcome.h
+diff -r 8c7c9ff0f0ca include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
 @@ -0,0 +1,75 @@
@@ -213,7 +213,7 @@ diff -r a9b437e961ec include/welcome.h
 +
 +
 +/* Test if a welcome entry is in a valid range */
-+#define WelcomeIsValid(x)     ((x) >= 0 && (x) <= 2 * WELCOME_MAX_ENTRIES - 1)
++#define WelcomeIsValid(x)     ((unsigned) (x) <= 2 * WELCOME_MAX_ENTRIES -1)
 +/* Test if a welcome entry is set */
 +#define WelcomeIsSet(x)       (WelcomeArray[(x)].timestamp > 0)
 +/* Test if a welcome entry is empty */
@@ -248,7 +248,7 @@ diff -r a9b437e961ec include/welcome.h
 +extern void welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param);
 +
 +#endif /* INCLUDED_welcome_h */
-diff -r a9b437e961ec ircd/Makefile.in
+diff -r 8c7c9ff0f0ca ircd/Makefile.in
 --- a/ircd/Makefile.in
 +++ b/ircd/Makefile.in
 @@ -186,6 +186,7 @@
@@ -293,7 +293,7 @@ diff -r a9b437e961ec ircd/Makefile.in
  whocmds.o: whocmds.c ../config.h ../include/whocmds.h \
    ../include/channel.h ../include/ircd_defs.h ../include/res.h \
    ../config.h ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r a9b437e961ec ircd/client.c
+diff -r 8c7c9ff0f0ca ircd/client.c
 --- a/ircd/client.c
 +++ b/ircd/client.c
 @@ -177,6 +177,7 @@
@@ -321,7 +321,7 @@ diff -r a9b437e961ec ircd/client.c
  #undef P
    { 0, 0 }
  };
-diff -r a9b437e961ec ircd/ircd_features.c
+diff -r 8c7c9ff0f0ca ircd/ircd_features.c
 --- a/ircd/ircd_features.c
 +++ b/ircd/ircd_features.c
 @@ -366,6 +366,7 @@
@@ -340,7 +340,7 @@ diff -r a9b437e961ec ircd/ircd_features.c
    F_B(HIS_STATS_w, 0, 1, 0),
    F_B(HIS_STATS_x, 0, 1, 0),
    F_B(HIS_STATS_y, 0, 1, 0),
-diff -r a9b437e961ec ircd/ircd_lexer.l
+diff -r 8c7c9ff0f0ca ircd/ircd_lexer.l
 --- a/ircd/ircd_lexer.l
 +++ b/ircd/ircd_lexer.l
 @@ -166,6 +166,8 @@
@@ -352,7 +352,7 @@ diff -r a9b437e961ec ircd/ircd_lexer.l
    { NULL, 0 }
  };
  static int ntokens;
-diff -r a9b437e961ec ircd/ircd_parser.y
+diff -r 8c7c9ff0f0ca ircd/ircd_parser.y
 --- a/ircd/ircd_parser.y
 +++ b/ircd/ircd_parser.y
 @@ -189,6 +189,7 @@
@@ -372,7 +372,7 @@ diff -r a9b437e961ec ircd/ircd_parser.y
            TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
  yesorno: YES { $$ = 1; } | NO { $$ = 0; };
  
-diff -r a9b437e961ec ircd/m_welcome.c
+diff -r 8c7c9ff0f0ca ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
 @@ -0,0 +1,296 @@
@@ -672,7 +672,7 @@ diff -r a9b437e961ec ircd/m_welcome.c
 +  /* and do it */
 +  return welcome_do(cptr, sptr, name, timestamp, who, text, flags);
 +}
-diff -r a9b437e961ec ircd/parse.c
+diff -r 8c7c9ff0f0ca ircd/parse.c
 --- a/ircd/parse.c
 +++ b/ircd/parse.c
 @@ -661,6 +661,15 @@
@@ -691,7 +691,7 @@ diff -r a9b437e961ec ircd/parse.c
  
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
-diff -r a9b437e961ec ircd/s_err.c
+diff -r 8c7c9ff0f0ca ircd/s_err.c
 --- a/ircd/s_err.c
 +++ b/ircd/s_err.c
 @@ -486,7 +486,7 @@
@@ -712,7 +712,7 @@ diff -r a9b437e961ec ircd/s_err.c
  /* 510 */
    { 0 },
  /* 511 */
-diff -r a9b437e961ec ircd/s_serv.c
+diff -r 8c7c9ff0f0ca ircd/s_serv.c
 --- a/ircd/s_serv.c
 +++ b/ircd/s_serv.c
 @@ -57,6 +57,7 @@
@@ -731,7 +731,7 @@ diff -r a9b437e961ec ircd/s_serv.c
  
    /*
     * Pass on my client information to the new server
-diff -r a9b437e961ec ircd/s_stats.c
+diff -r 8c7c9ff0f0ca ircd/s_stats.c
 --- a/ircd/s_stats.c
 +++ b/ircd/s_stats.c
 @@ -54,6 +54,7 @@
@@ -756,7 +756,7 @@ diff -r a9b437e961ec ircd/s_stats.c
    { 'x', "memusage", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_x,
      stats_meminfo, 0,
      "List usage information." },
-diff -r a9b437e961ec ircd/s_user.c
+diff -r 8c7c9ff0f0ca ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
 @@ -63,6 +63,7 @@
@@ -777,7 +777,7 @@ diff -r a9b437e961ec ircd/s_user.c
    }
    else {
      struct Client *acptr = user->server;
-diff -r a9b437e961ec ircd/welcome.c
+diff -r 8c7c9ff0f0ca ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
 @@ -0,0 +1,611 @@
