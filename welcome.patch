@@ -375,7 +375,7 @@ diff -r 8c7c9ff0f0ca ircd/ircd_parser.y
 diff -r 8c7c9ff0f0ca ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,294 @@
+@@ -0,0 +1,292 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -579,14 +579,12 @@ diff -r 8c7c9ff0f0ca ircd/m_welcome.c
 +    flags |= WELCOME_LOCAL; 
 +  }
 +
-+  /* TODO: disallow global announcement from oper?
-+   * as PRIVMSG/NOTICE to $* is not allowed either by the ircd
-+   * when PRIV for that is added, use that here? PRIV_BROADCAST or something
-+   */
 +  /* check for anounce prefix */
 +  if (*name == '$') {
 +     name++;
-+     flags |= WELCOME_ANNOUNCE;
++     /* only allow announce by oper for local welcome */
++     if (flags & WELCOME_LOCAL)
++       flags |= WELCOME_ANNOUNCE;
 +  }
 +
 +  /* check for insert prefix */
