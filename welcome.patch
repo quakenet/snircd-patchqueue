@@ -780,7 +780,7 @@ diff -r 8c7c9ff0f0ca ircd/s_user.c
 diff -r 8c7c9ff0f0ca ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,611 @@
+@@ -0,0 +1,609 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1213,13 +1213,11 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +
 +      /* compare timestamps, ignore welcome when:
 +       *  we got a newer one
-+       *  or when timestamps are the same
-+       *  our text is shorter or our text is 'smaller'
++       *  or when timestamps are the same and our text is 'smaller'
 +       */
-+      if ((timestamp < WelcomeTS(namearray)) ||                 /* we got a newer one */
-+           ((timestamp == WelcomeTS(namearray)) &&              /* same timestamp */
-+           ((strlen(WelcomeText(namearray)) < strlen(text)) ||  /* our text is shorter */
-+           (ircd_strcmp(WelcomeText(namearray), text) < 0)))) { /* our text is 'smaller' */
++      if ((timestamp < WelcomeTS(namearray)) ||                /* we got a newer one */
++         ((timestamp == WelcomeTS(namearray)) &&               /* same timestamp */
++          (ircd_strcmp(WelcomeText(namearray), text) < 0))) {  /* our text is 'smaller' */
 +        /* burst or burst ack, cptr gets our version from the burst */
 +        if (IsBurstOrBurstAck(cptr))
 +          return 0;
