@@ -776,7 +776,7 @@ diff -r 8c7c9ff0f0ca ircd/s_user.c
 diff -r 8c7c9ff0f0ca ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,611 @@
+@@ -0,0 +1,628 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -840,8 +840,9 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +static int 
 +welcome_make(int name, char *text, char *who, time_t timestamp)
 +{
-+  /* valid range */
 +  assert(WelcomeIsValid(name));
++  assert(NULL != text);
++  assert(NULL != who);
 +
 +  /* store it */
 +  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
@@ -866,10 +867,10 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +welcome_propagate(struct Client *cptr, struct Client *sptr, int nameint,
 +  time_t timestamp, char *who, char *text, unsigned int flags)
 +{
-+  /* must be global */
-+  assert(!(flags & WELCOME_LOCAL));
 +  assert(NULL != sptr);
 +  assert(NULL != cptr);
++  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
++  assert(!(flags & WELCOME_LOCAL));
 +
 +  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %s :%s",
 +    (flags & WELCOME_ANNOUNCE) ? "$" : "", (flags & WELCOME_INSERT) ? "+" : "",
@@ -888,10 +889,10 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +int
 +welcome_resend(struct Client *cptr, int nameint, int namearray)
 +{
-+  /* must be valid */
-+  assert(WelcomeIsValid(namearray));
 +  assert(NULL != cptr);
 +  assert(IsServer(cptr));
++  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
++  assert(WelcomeIsValid(namearray));
 +
 +  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
 +    nameint, WelcomeTS(namearray), WelcomeWho(namearray), WelcomeText(namearray));
@@ -952,6 +953,11 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +  char msg[BUFSIZE];                    /* msg for logging */
 +  int new = 0;
 +
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
++  assert(WelcomeIsValid(namearray));
++
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\", 0x%04x)",
 +   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags));
@@ -1003,6 +1009,11 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +  int i;                                /* loop variable */
 +  int empty = namearray;                /* first empty spot in array after namearray */
 +  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */ 
++
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
++  assert(WelcomeIsValid(namearray));
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", 0x%04x)",
@@ -1058,6 +1069,11 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +  int empty = -1;                       /* first empty spot in array after namearray */
 +  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */
 +  int last = end;                       /* last welcome message to feed to welcome_unset */
++
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
++  assert(WelcomeIsValid(namearray));
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\", 0x%04x)",
@@ -1123,7 +1139,6 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
-+  int max = WELCOME_MAX_ENTRIES;           /* max number of entries */
 +
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
@@ -1153,11 +1168,11 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +    if (IsUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
 +        "%C :WELCOME: Invalid message number %s - should between 1 and %d",
-+        sptr, name, max);
++        sptr, name, WELCOME_MAX_ENTRIES);
 +    else
 +      protocol_violation(cptr,
 +        "WELCOME: Invalid message number %s from %C - should be between 1 and %d",
-+        name, sptr, max);
++        name, sptr, WELCOME_MAX_ENTRIES);
 +    return 0;
 +  }
 +
@@ -1178,6 +1193,7 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +
 +  /* must be true by now */
 +  assert(WelcomeIsValid(namearray));
++  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
 +
 +  /* cannot unset welcome that is not set */
 +  if (!WelcomeIsSet(namearray) && EmptyString(text)) {
@@ -1241,7 +1257,8 @@ diff -r 8c7c9ff0f0ca ircd/welcome.c
 +  }
 +
 +  /* do not insert for last global/local entry and when not set yet */
-+  if ((flags & WELCOME_INSERT) && ((!WelcomeIsSet(namearray)) || (nameint == max)))
++  if ((flags & WELCOME_INSERT) &&
++      ((!WelcomeIsSet(namearray)) || (nameint == WELCOME_MAX_ENTRIES)))
 +    flags &= ~WELCOME_INSERT;
 +
 +  /* unset */
