@@ -24,6 +24,7 @@ rpingall.patch
 centralizemodecccheck.patch
 hiskgline.patch
 opername.patch
+operautomodes.patch
 noticepluschan.patch
 autosethost.patch
 hashiddenhostorissethost.patch

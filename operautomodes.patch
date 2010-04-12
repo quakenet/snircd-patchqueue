@@ -1,0 +1,14 @@
+auto set usermodes +n and +I when opering
+
+diff -r 46f97f5713b0 ircd/m_oper.c
+--- a/ircd/m_oper.c
++++ b/ircd/m_oper.c
+@@ -186,6 +186,8 @@
+     SetFlag(sptr, FLAG_WALLOP);
+     SetFlag(sptr, FLAG_SERVNOTICE);
+     SetFlag(sptr, FLAG_DEBUG);
++    SetFlag(sptr, FLAG_NOCHAN);
++    SetFlag(sptr, FLAG_NOIDLE);
+     
+     set_snomask(sptr, SNO_OPERDEFAULT, SNO_ADD);
+     cli_max_sendq(sptr) = 0; /* Get the sendq from the oper's class */
