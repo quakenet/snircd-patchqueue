@@ -8,6 +8,7 @@ badchanzombie.patch
 badchanlocalkick.patch
 nserverflag.patch
 enforceinvisible.patch
+snircdumodescheckisanoper.patch
 minoplevel.patch
 ischannelservice.patch
 invalidatebanssethost.patch
