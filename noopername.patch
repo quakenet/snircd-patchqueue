@@ -1,0 +1,15 @@
+add protocol violation when we should have gotten an opername, but did not
+
+diff -r 495100bee360 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -1293,6 +1293,9 @@
+                 }
+               }
+             }
++            /* no opername? */
++            else
++              protocol_violation(cptr, "Received mode +o for user %s without opername", cli_name(sptr));
+           }
+         } else {
+           ClrFlag(sptr, FLAG_OPER);
