@@ -1,0 +1,66 @@
+do check user was indeed a local oper when -o or -O is set
+if it is my user, use cli_sockhost() instead of cli_user()->realhost
+
+diff -r 14467ecfea35 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -1317,13 +1317,7 @@
+           if (MyConnect(sptr))
+           {
+             tmpmask = cli_snomask(sptr) & ~SNO_OPER;
+-            cli_handler(sptr) = CLIENT_HANDLER;
+-            
+-            /* notify my operators a local operator has deOPERed - wiebe */
+-            sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (o) as %s",
+-            cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
+-            cli_user(sptr)->opername);
+-            
++            cli_handler(sptr) = CLIENT_HANDLER;            
+           }
+         }
+         break;
+@@ -1521,7 +1515,7 @@
+       ++UserStats.opers;
+       client_set_privs(sptr, NULL); /* may set propagate privilege */
+ 
+-      /* notify my operators a user has OPERed on a remote server - wiebe */
++      /* notify my operators a user has OPERed on a remote server */
+       if (!MyConnect(sptr)) {
+          sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now operator (O) as %s on %s",
+          cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
+@@ -1533,20 +1527,30 @@
+     if (HasPriv(sptr, PRIV_PROPAGATE)) {
+       prop = 1;
+     }
++
++    /* user was a local operator */
++    if (FlagHas(&setflags, FLAG_LOCOP) && !IsLocOp(sptr)) {
++
++      /* notify my operators a local operator has deOPERed */
++      sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (o) as %s",
++        cli_name(sptr), cli_user(sptr)->realusername, cli_sockhost(sptr),
++        cli_user(sptr)->opername);
++    }
++
+     if (FlagHas(&setflags, FLAG_OPER) && !IsOper(sptr)) {
+       /* user no longer oper */
+       assert(UserStats.opers > 0);
+       --UserStats.opers;
+       
+-      /* notify my operators an operator has deOPERed on the network - wiebe */
++      /* notify my operators an operator has deOPERed on the network */
+       if (MyConnect(sptr)) {
+         sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s",
+-        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
+-        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>");
++          cli_name(sptr), cli_user(sptr)->realusername, cli_sockhost(sptr),
++          cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>");
+       } else {
+         sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s on %s",
+-        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
+-        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>", cli_name(cli_user(sptr)->server));
++          cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++          cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>", cli_name(cli_user(sptr)->server));
+       }
+       
+       client_set_privs(sptr, NULL); /* will clear propagate privilege */
