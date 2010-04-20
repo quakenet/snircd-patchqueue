@@ -7,6 +7,7 @@ cprivmsgerracconly.patch
 badchanzombie.patch
 badchanlocalkick.patch
 nserverflag.patch
+enforceinvisible.patch
 minoplevel.patch
 ischannelservice.patch
 invalidatebanssethost.patch

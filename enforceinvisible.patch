@@ -1,0 +1,29 @@
+only disallow _local_ users setting usermode -i when feature AUTOINVISIBLE is turned on
+and do not enforce this setting on remote users, leads to desynch
+
+diff -r 8bf7e9b238c1 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -1328,8 +1328,7 @@
+         if (what == MODE_ADD)
+           SetInvisible(sptr);
+         else
+-          if (!feature_bool(FEAT_AUTOINVISIBLE) || IsOper(sptr)) /* Don't allow non-opers to -i if FEAT_AUTOINVISIBLE is set */
+-            ClearInvisible(sptr);
++          ClearInvisible(sptr);
+         break;
+       case 'd':
+         if (what == MODE_ADD)
+@@ -1447,6 +1446,12 @@
+     if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
+       ClearParanoid(sptr);
+ 
++    /* disallow ordinary users to do MODE -i when feature AUTOINVISIBLE is enabled */
++    if (FlagHas(&setflags, FLAG_INVISIBLE) && !IsInvisible(sptr) &&          /* MODE -i */
++        feature_bool(FEAT_AUTOINVISIBLE) &&                                  /* AUTOINVISIBLE is enabled */
++        !FlagHas(&setflags, FLAG_OPER) && !FlagHas(&setflags, FLAG_LOCOP))   /* (was) not opered */
++       SetInvisible(sptr);
++
+     /*
+      * only send wallops to opers
+      */
