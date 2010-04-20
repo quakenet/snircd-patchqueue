@@ -6,9 +6,9 @@ added zombie and delayedjoin prefix to header for check channel
 changed all (timestamp) output to [timestamp] seems more consistent with other places (e.g. snomask HACK MODEs)
 added [<remote server>] param to syntax of command in the comments
 
-diff -r 7eae4cf8f270 ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 21:53:21 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 21:56:26 2010 +0100
+diff -r a698927b198f ircd/m_check.c
+--- a/ircd/m_check.c
++++ b/ircd/m_check.c
 @@ -71,7 +71,7 @@
   */
  
@@ -85,10 +85,9 @@ diff -r 7eae4cf8f270 ircd/m_check.c
  
    /* Header */
 -  send_reply(sptr, RPL_DATASTR, " ");
--  send_reply(sptr, RPL_CHKHEAD, "channel", chptr->chname);
--  send_reply(sptr, RPL_DATASTR, " ");
 +  send_reply(sptr, RPL_DATASTR, ": ");
-+  send_reply(sptr, RPL_CHKHEAD, ":channel", chptr->chname);
+   send_reply(sptr, RPL_CHKHEAD, "channel", chptr->chname);
+-  send_reply(sptr, RPL_DATASTR, " ");
 +  send_reply(sptr, RPL_DATASTR, ": ");
  
    /* Creation Time */
@@ -155,10 +154,9 @@ diff -r 7eae4cf8f270 ircd/m_check.c
  
    /* Header */
 -  send_reply(sptr, RPL_DATASTR, " ");
--  send_reply(sptr, RPL_CHKHEAD, "user", cli_name(acptr));
--  send_reply(sptr, RPL_DATASTR, " ");
 +  send_reply(sptr, RPL_DATASTR, ": ");
-+  send_reply(sptr, RPL_CHKHEAD, ":user", cli_name(acptr));
+   send_reply(sptr, RPL_CHKHEAD, "user", cli_name(acptr));
+-  send_reply(sptr, RPL_DATASTR, " ");
 +  send_reply(sptr, RPL_DATASTR, ": ");
  
 -  ircd_snprintf(0, outbuf, sizeof(outbuf), "           Nick:: %s (%s%s)", cli_name(acptr), NumNick(acptr));
@@ -326,10 +324,9 @@ diff -r 7eae4cf8f270 ircd/m_check.c
  
    /* Header */
 -  send_reply(sptr, RPL_DATASTR, " ");
--  send_reply(sptr, RPL_CHKHEAD, "server", acptr->cli_name);
--  send_reply(sptr, RPL_DATASTR, " ");
 +  send_reply(sptr, RPL_DATASTR, ": ");
-+  send_reply(sptr, RPL_CHKHEAD, ":server", acptr->cli_name);
+   send_reply(sptr, RPL_CHKHEAD, "server", acptr->cli_name);
+-  send_reply(sptr, RPL_DATASTR, " ");
 +  send_reply(sptr, RPL_DATASTR, ": ");
  
 -  ircd_snprintf(0, outbuf, sizeof(outbuf), "   Connected at:: %s (%Tu)", myctime(acptr->cli_serv->timestamp), acptr->cli_serv->timestamp);
@@ -417,9 +414,8 @@ diff -r 7eae4cf8f270 ircd/m_check.c
        if (count == 0) {
          /* Output header */ 
 -        send_reply(sptr, RPL_DATASTR, " ");
--        send_reply(sptr, RPL_CHKHEAD, "host", targhost);
 +        send_reply(sptr, RPL_DATASTR, ": ");
-+        send_reply(sptr, RPL_CHKHEAD, ":host", targhost);
+         send_reply(sptr, RPL_CHKHEAD, "host", targhost);
  
 -        send_reply(sptr, RPL_DATASTR, " ");
 +        send_reply(sptr, RPL_DATASTR, ": ");
@@ -521,9 +517,9 @@ diff -r 7eae4cf8f270 ircd/m_check.c
      send_reply(sptr, RPL_ENDOFCHECK, " ");
    }
  
-diff -r 7eae4cf8f270 ircd/s_err.c
---- a/ircd/s_err.c	Tue Mar 23 21:53:21 2010 +0100
-+++ b/ircd/s_err.c	Tue Mar 23 21:56:26 2010 +0100
+diff -r a698927b198f ircd/s_err.c
+--- a/ircd/s_err.c
++++ b/ircd/s_err.c
 @@ -612,7 +612,7 @@
  /* 289 */
    { 0 },
