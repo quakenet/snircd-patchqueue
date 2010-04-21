@@ -77,7 +77,7 @@ ircd/ircd_lexer.l
 ircd/ircd_parser.y
 add PRIV_LOCAL_WELCOME PRIV_WELCOME
 
-diff -r 93eb31739cc6 include/client.h
+diff -r cec5aa51927e include/client.h
 --- a/include/client.h
 +++ b/include/client.h
 @@ -142,6 +142,8 @@
@@ -89,7 +89,7 @@ diff -r 93eb31739cc6 include/client.h
      PRIV_LAST_PRIV /**< number of privileges */
    };
  
-diff -r 93eb31739cc6 include/handlers.h
+diff -r cec5aa51927e include/handlers.h
 --- a/include/handlers.h
 +++ b/include/handlers.h
 @@ -138,6 +138,7 @@
@@ -116,7 +116,7 @@ diff -r 93eb31739cc6 include/handlers.h
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
  extern int ms_xquery(struct Client*, struct Client*, int, char*[]);
  extern int ms_xreply(struct Client*, struct Client*, int, char*[]);
-diff -r 93eb31739cc6 include/ircd_features.h
+diff -r cec5aa51927e include/ircd_features.h
 --- a/include/ircd_features.h
 +++ b/include/ircd_features.h
 @@ -101,6 +101,7 @@
@@ -135,7 +135,7 @@ diff -r 93eb31739cc6 include/ircd_features.h
    FEAT_HIS_STATS_w,
    FEAT_HIS_STATS_x,
    FEAT_HIS_STATS_y,
-diff -r 93eb31739cc6 include/msg.h
+diff -r cec5aa51927e include/msg.h
 --- a/include/msg.h
 +++ b/include/msg.h
 @@ -196,6 +196,10 @@
@@ -149,7 +149,7 @@ diff -r 93eb31739cc6 include/msg.h
  #define MSG_WALLCHOPS           "WALLCHOPS"     /* WC */
  #define TOK_WALLCHOPS           "WC"
  #define CMD_WALLCHOPS		MSG_WALLCHOPS, TOK_WALLCHOPS
-diff -r 93eb31739cc6 include/numeric.h
+diff -r cec5aa51927e include/numeric.h
 --- a/include/numeric.h
 +++ b/include/numeric.h
 @@ -116,6 +116,7 @@
@@ -169,10 +169,10 @@ diff -r 93eb31739cc6 include/numeric.h
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r 93eb31739cc6 include/welcome.h
+diff -r cec5aa51927e include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,76 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -246,9 +246,10 @@ diff -r 93eb31739cc6 include/welcome.h
 +extern void welcome_burst(struct Client *cptr);
 +extern int welcome_list(struct Client *sptr, int connect);
 +extern void welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param);
++extern int welcome_memory_count(size_t *we_size);
 +
 +#endif /* INCLUDED_welcome_h */
-diff -r 93eb31739cc6 ircd/Makefile.in
+diff -r cec5aa51927e ircd/Makefile.in
 --- a/ircd/Makefile.in
 +++ b/ircd/Makefile.in
 @@ -186,6 +186,7 @@
@@ -293,7 +294,7 @@ diff -r 93eb31739cc6 ircd/Makefile.in
  whocmds.o: whocmds.c ../config.h ../include/whocmds.h \
    ../include/channel.h ../include/ircd_defs.h ../include/res.h \
    ../config.h ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r 93eb31739cc6 ircd/client.c
+diff -r cec5aa51927e ircd/client.c
 --- a/ircd/client.c
 +++ b/ircd/client.c
 @@ -177,6 +177,7 @@
@@ -321,7 +322,7 @@ diff -r 93eb31739cc6 ircd/client.c
  #undef P
    { 0, 0 }
  };
-diff -r 93eb31739cc6 ircd/ircd_features.c
+diff -r cec5aa51927e ircd/ircd_features.c
 --- a/ircd/ircd_features.c
 +++ b/ircd/ircd_features.c
 @@ -366,6 +366,7 @@
@@ -340,7 +341,7 @@ diff -r 93eb31739cc6 ircd/ircd_features.c
    F_B(HIS_STATS_w, 0, 1, 0),
    F_B(HIS_STATS_x, 0, 1, 0),
    F_B(HIS_STATS_y, 0, 1, 0),
-diff -r 93eb31739cc6 ircd/ircd_lexer.l
+diff -r cec5aa51927e ircd/ircd_lexer.l
 --- a/ircd/ircd_lexer.l
 +++ b/ircd/ircd_lexer.l
 @@ -166,6 +166,8 @@
@@ -352,7 +353,7 @@ diff -r 93eb31739cc6 ircd/ircd_lexer.l
    { NULL, 0 }
  };
  static int ntokens;
-diff -r 93eb31739cc6 ircd/ircd_parser.y
+diff -r cec5aa51927e ircd/ircd_parser.y
 --- a/ircd/ircd_parser.y
 +++ b/ircd/ircd_parser.y
 @@ -189,6 +189,7 @@
@@ -372,7 +373,7 @@ diff -r 93eb31739cc6 ircd/ircd_parser.y
            TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
  yesorno: YES { $$ = 1; } | NO { $$ = 0; };
  
-diff -r 93eb31739cc6 ircd/m_welcome.c
+diff -r cec5aa51927e ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
 @@ -0,0 +1,292 @@
@@ -668,7 +669,7 @@ diff -r 93eb31739cc6 ircd/m_welcome.c
 +  /* and do it */
 +  return welcome_do(cptr, sptr, name, timestamp, who, text, flags);
 +}
-diff -r 93eb31739cc6 ircd/parse.c
+diff -r cec5aa51927e ircd/parse.c
 --- a/ircd/parse.c
 +++ b/ircd/parse.c
 @@ -661,6 +661,15 @@
@@ -687,7 +688,47 @@ diff -r 93eb31739cc6 ircd/parse.c
  
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
-diff -r 93eb31739cc6 ircd/s_err.c
+diff -r cec5aa51927e ircd/s_debug.c
+--- a/ircd/s_debug.c
++++ b/ircd/s_debug.c
+@@ -50,6 +50,7 @@
+ #include "send.h"
+ #include "struct.h"
+ #include "sys.h"
++#include "welcome.h"
+ #include "whowas.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+@@ -231,7 +232,8 @@
+       aw = 0,                   /* aways set */
+       wwa = 0,                  /* whowas aways */
+       gl = 0,                   /* glines */
+-      ju = 0;                   /* jupes */
++      ju = 0,                   /* jupes */
++      we = 0;                   /* welcomes */
+ 
+   size_t chm = 0,               /* memory used by channels */
+       chbm = 0,                 /* memory used by channel bans */
+@@ -244,6 +246,7 @@
+       wwm = 0,                  /* whowas array memory used */
+       glm = 0,                  /* memory used by glines */
+       jum = 0,                  /* memory used by jupes */
++      wem = 0,                  /* memory used by welcomes */
+       com = 0,                  /* memory used by conf lines */
+       dbufs_allocated = 0,      /* memory used by dbufs */
+       dbufs_used = 0,           /* memory used by dbufs */
+@@ -351,6 +354,10 @@
+   send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
+ 	     ":Glines %d(%zu) Jupes %d(%zu)", gl, glm, ju, jum);
+ 
++  we = welcome_memory_count(&wem);
++  send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
++	     ":Welcomes %d(%zu)", we, wem);
++
+   send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
+ 	     ":Hash: client %d(%zu), chan is the same", HASHSIZE,
+ 	     sizeof(void *) * HASHSIZE);
+diff -r cec5aa51927e ircd/s_err.c
 --- a/ircd/s_err.c
 +++ b/ircd/s_err.c
 @@ -486,7 +486,7 @@
@@ -708,7 +749,7 @@ diff -r 93eb31739cc6 ircd/s_err.c
  /* 510 */
    { 0 },
  /* 511 */
-diff -r 93eb31739cc6 ircd/s_serv.c
+diff -r cec5aa51927e ircd/s_serv.c
 --- a/ircd/s_serv.c
 +++ b/ircd/s_serv.c
 @@ -57,6 +57,7 @@
@@ -727,7 +768,7 @@ diff -r 93eb31739cc6 ircd/s_serv.c
  
    /*
     * Pass on my client information to the new server
-diff -r 93eb31739cc6 ircd/s_stats.c
+diff -r cec5aa51927e ircd/s_stats.c
 --- a/ircd/s_stats.c
 +++ b/ircd/s_stats.c
 @@ -54,6 +54,7 @@
@@ -752,7 +793,7 @@ diff -r 93eb31739cc6 ircd/s_stats.c
    { 'x', "memusage", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_x,
      stats_meminfo, 0,
      "List usage information." },
-diff -r 93eb31739cc6 ircd/s_user.c
+diff -r cec5aa51927e ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
 @@ -63,6 +63,7 @@
@@ -773,10 +814,10 @@ diff -r 93eb31739cc6 ircd/s_user.c
    }
    else {
      struct Client *acptr = user->server;
-diff -r 93eb31739cc6 ircd/welcome.c
+diff -r cec5aa51927e ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,628 @@
+@@ -0,0 +1,649 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1404,4 +1445,25 @@ diff -r 93eb31739cc6 ircd/welcome.c
 +      WelcomeWho(name), WelcomeTS(name),
 +      WelcomeIsEmpty(name) ? "<Empty>" : WelcomeText(name));
 +  }
++}
++
++
++/** Count welcome messages and memory used by them.
++ * @param[out] we_size Receives total number of bytes allocated for welcomes.
++ * @return Number of welcome messages currently allocated.
++ */
++int
++welcome_memory_count(size_t *we_size)
++{
++  int name;
++  unsigned int we = 0;
++
++  for (name = 0; name <= 2 * WELCOME_MAX_ENTRIES - 1; name++) {
++    if (!WelcomeIsSet(name))
++      continue;
++    we++;
++    *we_size += WelcomeText(name) ? (strlen(WelcomeText(name)) + 1) : 0;
++    *we_size += WelcomeWho(name) ? (strlen(WelcomeWho(name)) + 1) : 0;
++  }
++  return we;
 +}
