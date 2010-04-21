@@ -1,15 +1,15 @@
 dont sent local kills by local irc operator upstream
 
-diff -r 50cf6951b339 ircd/m_kill.c
---- a/ircd/m_kill.c	Thu Mar 18 13:27:05 2010 +0100
-+++ b/ircd/m_kill.c	Thu Mar 18 13:39:16 2010 +0100
+diff -r a58c741e7e71 ircd/m_kill.c
+--- a/ircd/m_kill.c
++++ b/ircd/m_kill.c
 @@ -143,7 +143,9 @@
     *  - wiebe            
     */
     /* if (IsServer(cptr) || !MyConnect(victim)) { */
 -  sendcmdto_serv_butone(sptr, CMD_KILL, cptr, "%C :%s!%s %s", victim,
 +  /* dont sent kills by local opers upstream though */
-+  if (!MyUser(sptr) || !IsLocOp(sptr) || !MyUser(victim)) {
++  if (!(MyUser(sptr) && IsLocOp(sptr) && MyUser(victim))) {
 +     sendcmdto_serv_butone(sptr, CMD_KILL, cptr, "%C :%s!%s %s", victim,
                            inpath, path, msg);
  
