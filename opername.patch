@@ -4,7 +4,7 @@ in form of nick(opername)
 new function get_client_name_and_opername() add in s_misc.c
 mirrored after get_client_name() which can return either nick/server or nick[ident@ip]
 
-diff -r bb8b6e2e3236 include/client.h
+diff -r 4b82a90ed8b3 include/client.h
 --- a/include/client.h
 +++ b/include/client.h
 @@ -809,6 +809,7 @@
@@ -15,7 +15,7 @@ diff -r bb8b6e2e3236 include/client.h
  extern const char* client_get_default_umode(const struct Client* sptr);
  extern int client_get_ping(const struct Client* local_client);
  extern void client_drop_sendq(struct Connection* con);
-diff -r bb8b6e2e3236 ircd/channel.c
+diff -r 4b82a90ed8b3 ircd/channel.c
 --- a/ircd/channel.c
 +++ b/ircd/channel.c
 @@ -1910,8 +1910,8 @@
@@ -29,7 +29,7 @@ diff -r bb8b6e2e3236 ircd/channel.c
  			   mbuf->mb_channel->chname,
  			   rembuf_i ? "-" : "", rembuf, addbuf_i ? "+" : "",
  			   addbuf, remstr, addstr,
-diff -r bb8b6e2e3236 ircd/gline.c
+diff -r 4b82a90ed8b3 ircd/gline.c
 --- a/ircd/gline.c
 +++ b/ircd/gline.c
 @@ -567,7 +567,7 @@
@@ -77,7 +77,7 @@ diff -r bb8b6e2e3236 ircd/gline.c
  		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
                         GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
                         GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
-diff -r bb8b6e2e3236 ircd/jupe.c
+diff -r 4b82a90ed8b3 ircd/jupe.c
 --- a/ircd/jupe.c
 +++ b/ircd/jupe.c
 @@ -156,7 +156,7 @@
@@ -107,7 +107,7 @@ diff -r bb8b6e2e3236 ircd/jupe.c
                           cli_name((cli_user(sptr))->server),
  		       JupeIsLocal(jupe) ? "removing local" : "deactivating",
  		       jupe->ju_server, jupe->ju_expire + TSoffset,
-diff -r bb8b6e2e3236 ircd/m_connect.c
+diff -r 4b82a90ed8b3 ircd/m_connect.c
 --- a/ircd/m_connect.c
 +++ b/ircd/m_connect.c
 @@ -197,7 +197,7 @@
@@ -119,7 +119,7 @@ diff -r bb8b6e2e3236 ircd/m_connect.c
    log_write(LS_NETWORK, L_INFO, 0, "CONNECT From %C : %s %s", sptr, aconf->name,
  	    parv[2] ? parv[2] : "");
  
-diff -r bb8b6e2e3236 ircd/m_join.c
+diff -r 4b82a90ed8b3 ircd/m_join.c
 --- a/ircd/m_join.c
 +++ b/ircd/m_join.c
 @@ -242,8 +242,8 @@
@@ -133,7 +133,7 @@ diff -r bb8b6e2e3236 ircd/m_join.c
          err = 0;
        }
  
-diff -r bb8b6e2e3236 ircd/m_jupe.c
+diff -r 4b82a90ed8b3 ircd/m_jupe.c
 --- a/ircd/m_jupe.c
 +++ b/ircd/m_jupe.c
 @@ -193,7 +193,7 @@
@@ -160,7 +160,7 @@ diff -r bb8b6e2e3236 ircd/m_jupe.c
    } else
      return need_more_params(sptr, "JUPE");
  
-diff -r bb8b6e2e3236 ircd/m_kill.c
+diff -r 4b82a90ed8b3 ircd/m_kill.c
 --- a/ircd/m_kill.c
 +++ b/ircd/m_kill.c
 @@ -127,7 +127,7 @@
@@ -172,11 +172,11 @@ diff -r bb8b6e2e3236 ircd/m_kill.c
                         inpath, path, msg);
    log_write_kill(victim, sptr, inpath, path, msg);
  
-diff -r bb8b6e2e3236 ircd/m_oper.c
+diff -r 4b82a90ed8b3 ircd/m_oper.c
 --- a/ircd/m_oper.c
 +++ b/ircd/m_oper.c
 @@ -192,9 +192,9 @@
-     send_umode_out(cptr, sptr, &old_mode, HasPriv(sptr, PRIV_PROPAGATE));
+     send_umode_out(cptr, sptr, &old_mode, HasPriv(sptr, PRIV_PROPAGATE), 0);
      send_reply(sptr, RPL_YOUREOPER);
  
 -    sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now operator (%c) as %s",
@@ -188,7 +188,7 @@ diff -r bb8b6e2e3236 ircd/m_oper.c
  
      log_write(LS_OPER, L_INFO, 0, "OPER (%s) by (%#R)", name, sptr);
    }
-diff -r bb8b6e2e3236 ircd/m_rehash.c
+diff -r 4b82a90ed8b3 ircd/m_rehash.c
 --- a/ircd/m_rehash.c
 +++ b/ircd/m_rehash.c
 @@ -121,8 +121,8 @@
@@ -202,7 +202,7 @@ diff -r bb8b6e2e3236 ircd/m_rehash.c
  
    log_write(LS_SYSTEM, L_INFO, 0, "REHASH From %#C", sptr);
  
-diff -r bb8b6e2e3236 ircd/m_settime.c
+diff -r 4b82a90ed8b3 ircd/m_settime.c
 --- a/ircd/m_settime.c
 +++ b/ircd/m_settime.c
 @@ -177,7 +177,7 @@
@@ -223,7 +223,7 @@ diff -r bb8b6e2e3236 ircd/m_settime.c
  			 (dt < 0) ? "forwards" : "backwards");
      TSoffset -= dt; /* apply time change */
      if (IsUser(sptr)) /* let user know what we did */
-diff -r bb8b6e2e3236 ircd/s_misc.c
+diff -r 4b82a90ed8b3 ircd/s_misc.c
 --- a/ircd/s_misc.c
 +++ b/ircd/s_misc.c
 @@ -172,6 +172,20 @@
@@ -256,10 +256,10 @@ diff -r bb8b6e2e3236 ircd/s_misc.c
  			   cli_name(cli_user(killer)->server));
      else if (killer != &me && cli_serv(victim)->up != killer)
        sendto_opmask_butone(0, SNO_OLDSNO, "Received SQUIT %s from %s :",
-diff -r bb8b6e2e3236 ircd/s_user.c
+diff -r 4b82a90ed8b3 ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
-@@ -1530,9 +1530,9 @@
+@@ -1471,9 +1471,9 @@
  
        /* notify my operators a user has OPERed on a remote server */
        if (!MyConnect(sptr)) {
@@ -272,7 +272,7 @@ diff -r bb8b6e2e3236 ircd/s_user.c
        }
  			 
      }
-@@ -1545,9 +1545,8 @@
+@@ -1486,9 +1486,8 @@
      if (FlagHas(&setflags, FLAG_LOCOP) && !IsLocOp(sptr)) {
  
        /* notify my operators a local operator has deOPERed */
@@ -284,7 +284,7 @@ diff -r bb8b6e2e3236 ircd/s_user.c
      }
  
      if (FlagHas(&setflags, FLAG_OPER) && !IsOper(sptr)) {
-@@ -1557,13 +1556,12 @@
+@@ -1498,13 +1497,12 @@
        
        /* notify my operators an operator has deOPERed on the network */
        if (MyConnect(sptr)) {
