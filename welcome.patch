@@ -77,7 +77,7 @@ ircd/ircd_lexer.l
 ircd/ircd_parser.y
 add PRIV_LOCAL_WELCOME PRIV_WELCOME
 
-diff -r cec5aa51927e include/client.h
+diff -r b1cf15d038ee include/client.h
 --- a/include/client.h
 +++ b/include/client.h
 @@ -142,6 +142,8 @@
@@ -89,7 +89,7 @@ diff -r cec5aa51927e include/client.h
      PRIV_LAST_PRIV /**< number of privileges */
    };
  
-diff -r cec5aa51927e include/handlers.h
+diff -r b1cf15d038ee include/handlers.h
 --- a/include/handlers.h
 +++ b/include/handlers.h
 @@ -138,6 +138,7 @@
@@ -116,7 +116,7 @@ diff -r cec5aa51927e include/handlers.h
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
  extern int ms_xquery(struct Client*, struct Client*, int, char*[]);
  extern int ms_xreply(struct Client*, struct Client*, int, char*[]);
-diff -r cec5aa51927e include/ircd_features.h
+diff -r b1cf15d038ee include/ircd_features.h
 --- a/include/ircd_features.h
 +++ b/include/ircd_features.h
 @@ -101,6 +101,7 @@
@@ -135,7 +135,7 @@ diff -r cec5aa51927e include/ircd_features.h
    FEAT_HIS_STATS_w,
    FEAT_HIS_STATS_x,
    FEAT_HIS_STATS_y,
-diff -r cec5aa51927e include/msg.h
+diff -r b1cf15d038ee include/msg.h
 --- a/include/msg.h
 +++ b/include/msg.h
 @@ -196,6 +196,10 @@
@@ -149,7 +149,7 @@ diff -r cec5aa51927e include/msg.h
  #define MSG_WALLCHOPS           "WALLCHOPS"     /* WC */
  #define TOK_WALLCHOPS           "WC"
  #define CMD_WALLCHOPS		MSG_WALLCHOPS, TOK_WALLCHOPS
-diff -r cec5aa51927e include/numeric.h
+diff -r b1cf15d038ee include/numeric.h
 --- a/include/numeric.h
 +++ b/include/numeric.h
 @@ -116,6 +116,7 @@
@@ -169,7 +169,7 @@ diff -r cec5aa51927e include/numeric.h
  #define ERR_SILELISTFULL     511        /* Undernet extension */
  /*      ERR_NOTIFYFULL       512           aircd */
  /*	ERR_TOOMANYWATCH     512           Numeric List: Dalnet */
-diff -r cec5aa51927e include/welcome.h
+diff -r b1cf15d038ee include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
 @@ -0,0 +1,76 @@
@@ -249,7 +249,7 @@ diff -r cec5aa51927e include/welcome.h
 +extern int welcome_memory_count(size_t *we_size);
 +
 +#endif /* INCLUDED_welcome_h */
-diff -r cec5aa51927e ircd/Makefile.in
+diff -r b1cf15d038ee ircd/Makefile.in
 --- a/ircd/Makefile.in
 +++ b/ircd/Makefile.in
 @@ -186,6 +186,7 @@
@@ -294,7 +294,7 @@ diff -r cec5aa51927e ircd/Makefile.in
  whocmds.o: whocmds.c ../config.h ../include/whocmds.h \
    ../include/channel.h ../include/ircd_defs.h ../include/res.h \
    ../config.h ../include/client.h ../include/dbuf.h ../include/msgq.h \
-diff -r cec5aa51927e ircd/client.c
+diff -r b1cf15d038ee ircd/client.c
 --- a/ircd/client.c
 +++ b/ircd/client.c
 @@ -177,6 +177,7 @@
@@ -322,7 +322,7 @@ diff -r cec5aa51927e ircd/client.c
  #undef P
    { 0, 0 }
  };
-diff -r cec5aa51927e ircd/ircd_features.c
+diff -r b1cf15d038ee ircd/ircd_features.c
 --- a/ircd/ircd_features.c
 +++ b/ircd/ircd_features.c
 @@ -366,6 +366,7 @@
@@ -341,7 +341,7 @@ diff -r cec5aa51927e ircd/ircd_features.c
    F_B(HIS_STATS_w, 0, 1, 0),
    F_B(HIS_STATS_x, 0, 1, 0),
    F_B(HIS_STATS_y, 0, 1, 0),
-diff -r cec5aa51927e ircd/ircd_lexer.l
+diff -r b1cf15d038ee ircd/ircd_lexer.l
 --- a/ircd/ircd_lexer.l
 +++ b/ircd/ircd_lexer.l
 @@ -166,6 +166,8 @@
@@ -353,7 +353,7 @@ diff -r cec5aa51927e ircd/ircd_lexer.l
    { NULL, 0 }
  };
  static int ntokens;
-diff -r cec5aa51927e ircd/ircd_parser.y
+diff -r b1cf15d038ee ircd/ircd_parser.y
 --- a/ircd/ircd_parser.y
 +++ b/ircd/ircd_parser.y
 @@ -189,6 +189,7 @@
@@ -373,7 +373,7 @@ diff -r cec5aa51927e ircd/ircd_parser.y
            TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
  yesorno: YES { $$ = 1; } | NO { $$ = 0; };
  
-diff -r cec5aa51927e ircd/m_welcome.c
+diff -r b1cf15d038ee ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
 @@ -0,0 +1,292 @@
@@ -669,7 +669,7 @@ diff -r cec5aa51927e ircd/m_welcome.c
 +  /* and do it */
 +  return welcome_do(cptr, sptr, name, timestamp, who, text, flags);
 +}
-diff -r cec5aa51927e ircd/parse.c
+diff -r b1cf15d038ee ircd/parse.c
 --- a/ircd/parse.c
 +++ b/ircd/parse.c
 @@ -661,6 +661,15 @@
@@ -688,7 +688,7 @@ diff -r cec5aa51927e ircd/parse.c
  
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
-diff -r cec5aa51927e ircd/s_debug.c
+diff -r b1cf15d038ee ircd/s_debug.c
 --- a/ircd/s_debug.c
 +++ b/ircd/s_debug.c
 @@ -50,6 +50,7 @@
@@ -728,7 +728,7 @@ diff -r cec5aa51927e ircd/s_debug.c
    send_reply(cptr, SND_EXPLICIT | RPL_STATSDEBUG,
  	     ":Hash: client %d(%zu), chan is the same", HASHSIZE,
  	     sizeof(void *) * HASHSIZE);
-diff -r cec5aa51927e ircd/s_err.c
+diff -r b1cf15d038ee ircd/s_err.c
 --- a/ircd/s_err.c
 +++ b/ircd/s_err.c
 @@ -486,7 +486,7 @@
@@ -749,7 +749,7 @@ diff -r cec5aa51927e ircd/s_err.c
  /* 510 */
    { 0 },
  /* 511 */
-diff -r cec5aa51927e ircd/s_serv.c
+diff -r b1cf15d038ee ircd/s_serv.c
 --- a/ircd/s_serv.c
 +++ b/ircd/s_serv.c
 @@ -57,6 +57,7 @@
@@ -768,7 +768,7 @@ diff -r cec5aa51927e ircd/s_serv.c
  
    /*
     * Pass on my client information to the new server
-diff -r cec5aa51927e ircd/s_stats.c
+diff -r b1cf15d038ee ircd/s_stats.c
 --- a/ircd/s_stats.c
 +++ b/ircd/s_stats.c
 @@ -54,6 +54,7 @@
@@ -779,7 +779,7 @@ diff -r cec5aa51927e ircd/s_stats.c
  
  #include <stdio.h>
  #include <stdlib.h>
-@@ -654,9 +655,12 @@
+@@ -650,9 +651,12 @@
    { 'V', "vserversmach", (STAT_FLAG_OPERFEAT | STAT_FLAG_VARPARAM | STAT_FLAG_CASESENS), FEAT_HIS_STATS_v,
      stats_servers_verbose, 0,
      "Verbose server information." },
@@ -793,7 +793,7 @@ diff -r cec5aa51927e ircd/s_stats.c
    { 'x', "memusage", STAT_FLAG_OPERFEAT, FEAT_HIS_STATS_x,
      stats_meminfo, 0,
      "List usage information." },
-diff -r cec5aa51927e ircd/s_user.c
+diff -r b1cf15d038ee ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
 @@ -63,6 +63,7 @@
@@ -804,17 +804,18 @@ diff -r cec5aa51927e ircd/s_user.c
  
  #include "handlers.h" /* m_motd and m_lusers */
  
-@@ -410,6 +411,9 @@
-                            cli_info(sptr), NumNick(cptr) /* two %s's */);
+@@ -402,6 +403,10 @@
  
      IPcheck_connect_succeeded(sptr);
-+
+ 
++    /* send welcome */
 +    if (feature_bool(FEAT_WELCOME))
 +      welcome_list(sptr, 1);
-   }
-   else {
-     struct Client *acptr = user->server;
-diff -r cec5aa51927e ircd/welcome.c
++
+     /* TODO: */
+     /* apply auto sethost if needed */
+     apply_spoofblock(sptr);
+diff -r b1cf15d038ee ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
 @@ -0,0 +1,649 @@
