@@ -1,9 +1,9 @@
 check IsAnOper() (local or global) instead of IsOper() (global)
 
-diff -r bcdbf3b717a7 ircd/s_user.c
+diff -r 4ef83f0e2e71 ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
-@@ -1435,15 +1435,15 @@
+@@ -1351,15 +1351,15 @@
       * new umode; servers can set it, local users cannot;
       * prevents users from /kick'ing or /mode -o'ing
       */
@@ -23,4 +23,4 @@ diff -r bcdbf3b717a7 ircd/s_user.c
 +    if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsAnOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
        ClearParanoid(sptr);
  
-     /* disallow ordinary users to do MODE -i when feature AUTOINVISIBLE is enabled */
+     /* TODO: */
