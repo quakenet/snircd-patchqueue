@@ -31,7 +31,6 @@ hiskgline.patch
 opername.patch
 operautomodes.patch
 noticepluschan.patch
-autosethost.patch
 hashiddenhostorissethost.patch
 netriderkickoutsideburst.patch
 killalwaysshowvictimuip.patch
