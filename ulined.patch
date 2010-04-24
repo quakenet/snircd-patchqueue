@@ -16,9 +16,9 @@ are also marked as U:lined.
 
 No other differences found for U:lined vs. non-U:lined servers.
 
-diff -r f1b5d42273f5 ircd/m_mode.c
---- a/ircd/m_mode.c	Tue Jan 20 16:58:13 2009 +0100
-+++ b/ircd/m_mode.c	Tue Jan 20 17:20:10 2009 +0100
+diff -r 7550bca292f5 ircd/m_mode.c
+--- a/ircd/m_mode.c
++++ b/ircd/m_mode.c
 @@ -212,7 +212,7 @@
    ClrFlag(sptr, FLAG_TS8);
  
@@ -28,19 +28,3 @@ diff -r f1b5d42273f5 ircd/m_mode.c
        modebuf_init(&mbuf, sptr, cptr, chptr,
  		   (MODEBUF_DEST_CHANNEL | /* Send mode to clients */
  		    MODEBUF_DEST_SERVER  | /* Send mode to servers */
-diff -r f1b5d42273f5 ircd/m_sethost.c
---- a/ircd/m_sethost.c	Tue Jan 20 16:58:13 2009 +0100
-+++ b/ircd/m_sethost.c	Tue Jan 20 17:20:10 2009 +0100
-@@ -193,8 +193,10 @@
-     return 0;
- 
-   /* Fake host assignments must be from services */
--  if (!find_conf_byhost(cli_confs(sptr), cli_name(sptr), CONF_UWORLD))
--    return protocol_violation(cptr, "Non-U:lined server %s set fake host on user %s", cli_name(sptr), cli_name(target));
-+  if (!IsService(sptr))
-+    return protocol_violation(cptr,
-+      "Non-service server %C tried to set fake host on user %C (%s@%s)",
-+      sptr, target, parv[2], parv[3]);
- 
-   if (!MyConnect(target)) {
-     sendcmdto_one(sptr, CMD_SETHOST, cli_user(target)->server, "%C %s %s", target,
