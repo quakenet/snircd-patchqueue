@@ -10,6 +10,7 @@ noopername.patch
 opernotify.patch
 minoplevel.patch
 ischannelservice.patch
+hackdeop.patch
 localoperkill.patch
 whoisparanoid.patch
 freetargetcheckaftermodechecks.patch

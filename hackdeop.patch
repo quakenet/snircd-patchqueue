@@ -1,0 +1,23 @@
+do not send HACK deop notice for +k operator deopping himself (using /MODE or /OPMODE)
+
+diff -r 98e1865ae6f0 ircd/channel.c
+--- a/ircd/channel.c
++++ b/ircd/channel.c
+@@ -3176,14 +3176,15 @@
+        * Allow +X'ed users to mess with +k'ed.
+        * --Bigfoot
+        */
+-      if ((IsRealChannelService(state->cli_change[i].client)) || (IsChannelService(state->cli_change[i].client) && !IsXtraOp(state->sptr))) {
++      if ((IsRealChannelService(state->cli_change[i].client)) ||
++          (IsChannelService(state->cli_change[i].client) && !IsXtraOp(state->sptr) && state->sptr != state->cli_change[i].client)) {
+ 	if (state->flags & MODE_PARSE_FORCE) /* it was forced */
+ 	  sendto_opmask_butone(0, SNO_HACK4, "Deop of +k user on %H by %s",
+ 			       state->chptr,
+ 			       (IsServer(state->sptr) ? cli_name(state->sptr) :
+ 				cli_name((cli_user(state->sptr))->server)));
+ 
+-        else if (MyUser(state->sptr) && state->flags & MODE_PARSE_SET && (state->sptr != state->cli_change[i].client)) {
++        else if (MyUser(state->sptr) && state->flags & MODE_PARSE_SET) {
+           if(IsRealChannelService(state->cli_change[i].client)){
+             send_reply(state->sptr, ERR_ISREALSERVICE,
+                      cli_name(state->cli_change[i].client),
