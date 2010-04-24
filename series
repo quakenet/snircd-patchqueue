@@ -14,7 +14,6 @@ noopername.patch
 opernotify.patch
 minoplevel.patch
 ischannelservice.patch
-invalidatebanssethost.patch
 localoperkill.patch
 whoisparanoid.patch
 freetargetcheckaftermodechecks.patch
