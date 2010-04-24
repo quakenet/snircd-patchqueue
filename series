@@ -1,6 +1,5 @@
 sethost.patch
 realusernamesethost.patch
-sethostoldcode.patch
 sethostprotocolviolation.patch
 cprivmsgerracconly.patch
 badchanzombie.patch
