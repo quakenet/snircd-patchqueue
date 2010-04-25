@@ -6,6 +6,7 @@ badchanlocalkick.patch
 nserverflag.patch
 enforceinvisible.patch
 snircdumodescheckisanoper.patch
+automodeni.patch
 noopername.patch
 opernotify.patch
 minoplevel.patch

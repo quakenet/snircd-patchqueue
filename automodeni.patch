@@ -1,0 +1,39 @@
+allow usermodes +n and usermode +I to be auto set from the class block
+
+diff -r 64e4811dd29a include/s_user.h
+--- a/include/s_user.h
++++ b/include/s_user.h
+@@ -53,6 +53,7 @@
+ /* used for parsing user modes */
+ #define ALLOWMODES_ANY	0 /**< Allow any user mode */
+ #define ALLOWMODES_DEFAULT  1 /**< Only allow the subset of modes that are legit defaults */
++#define ALLOWMODES_AUTO     2 /**< Only allow auto modes */
+ 
+ /* return sets for umode_str() */
+ #define UMODE_ALL_PARAMS            0 /**< return the user modes and all parameters */
+diff -r 64e4811dd29a ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -365,7 +365,7 @@
+     if (tmpstr) {
+       char *umodev[] = { NULL, NULL, NULL, NULL };
+       umodev[2] = tmpstr;
+-      set_user_mode(cptr, sptr, 3, umodev, ALLOWMODES_ANY);
++      set_user_mode(cptr, sptr, 3, umodev, ALLOWMODES_AUTO);
+     }
+ 
+     if (feature_bool(FEAT_AUTOINVISIBLE))
+@@ -1355,9 +1355,11 @@
+       ClearChannelService(sptr);
+     if (!FlagHas(&setflags, FLAG_XTRAOP) && !(IsAnOper(sptr) && HasPriv(sptr, PRIV_XTRA_OPER)))
+       ClearXtraOp(sptr);
+-    if (!FlagHas(&setflags, FLAG_NOCHAN) && !(IsAnOper(sptr) || feature_bool(FEAT_USER_HIDECHANS)))
++    /* user is an oper, or feature USER_HIDECHANS is TRUE, or the mode is auto set from the class block, else clear mode +n */
++    if (!FlagHas(&setflags, FLAG_NOCHAN) && !(IsAnOper(sptr) || feature_bool(FEAT_USER_HIDECHANS) || allow_modes == ALLOWMODES_AUTO))
+       ClearNoChan(sptr);
+-    if (!FlagHas(&setflags, FLAG_NOIDLE) && !((IsAnOper(sptr) && HasPriv(sptr, PRIV_NOIDLE)) || feature_bool(FEAT_USER_HIDEIDLETIME)))
++    /* user is an oper with priv NOIDLE, or feature USER_HIDEIDLETIME is TRUE, or the mode is auto set from the class block, else clear mode +I */
++    if (!FlagHas(&setflags, FLAG_NOIDLE) && !((IsAnOper(sptr) && HasPriv(sptr, PRIV_NOIDLE)) || feature_bool(FEAT_USER_HIDEIDLETIME) || allow_modes == ALLOWMODES_AUTO))
+       ClearNoIdle(sptr);
+     if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsAnOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
+       ClearParanoid(sptr);
