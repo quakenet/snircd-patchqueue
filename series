@@ -11,6 +11,7 @@ opernotify.patch
 minoplevel.patch
 ischannelservice.patch
 hackdeop.patch
+whonoidle.patch
 localoperkill.patch
 whoisparanoid.patch
 freetargetcheckaftermodechecks.patch

@@ -1,0 +1,14 @@
+hide idle time of users with mode +I in non-HIS setup in WHO
+
+diff -r 3932ddb66141 ircd/whocmds.c
+--- a/ircd/whocmds.c
++++ b/ircd/whocmds.c
+@@ -233,7 +233,7 @@
+   {
+     *p1++ = ' ';
+     if (MyUser(acptr) &&
+-	((IsAnOper(sptr) && HasPriv(sptr, PRIV_ROUTEINFO)) || !feature_bool(FEAT_HIS_WHO_SERVERNAME) ||
++	((IsAnOper(sptr) && HasPriv(sptr, PRIV_ROUTEINFO)) || (!feature_bool(FEAT_HIS_WHO_SERVERNAME) && !IsNoIdle(acptr)) ||
+ 	 acptr == sptr))
+       p1 += ircd_snprintf(0, p1, 11, "%d",
+                           CurrentTime - cli_user(acptr)->last);
