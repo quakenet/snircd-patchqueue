@@ -1,0 +1,18 @@
+user with mode +I  WHOIS'ing himself can see his own idle time
+
+diff -r b8c9dc4c4bfd ircd/m_whois.c
+--- a/ircd/m_whois.c
++++ b/ircd/m_whois.c
+@@ -226,9 +226,9 @@
+      */
+ 
+     if (MyConnect(acptr) &&
+-        ((IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) ||
+-         (!IsNoIdle(acptr) && (!feature_bool(FEAT_HIS_WHOIS_IDLETIME) ||
+-                              sptr == acptr || parc >= 3))))
++        (sptr == acptr ||   /* user WHOIS'ing himself */
++        (IsNoIdle(acptr) && IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) ||   /* opers can see through +I */
++        (!IsNoIdle(acptr) && (IsAnOper(sptr) || !feature_bool(FEAT_HIS_WHOIS_IDLETIME) || parc >= 3))))  /* not +I, from an oper or not HIS or remote */
+        send_reply(sptr, RPL_WHOISIDLE, name, CurrentTime - user->last,
+                   cli_firsttime(acptr));
+   }
