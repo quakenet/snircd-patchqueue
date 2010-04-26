@@ -1391,6 +1391,15 @@ diff -r c6f3803ee169 ircd/s_user.c
        	needhost++;    
      }
      if (FlagHas(old, flag))
+@@ -1741,7 +1669,7 @@
+   }
+   if (needhost) {
+     *m++ = ' ';
+-    ircd_snprintf(0, m, USERLEN + HOSTLEN + 1, "%s@%s", cli_user(sptr)->username,
++    ircd_snprintf(0, m, USERLEN + HOSTLEN + 2, "%s@%s", cli_user(sptr)->username,
+          cli_user(sptr)->host);
+   } else
+     *m = '\0';
 @@ -1769,108 +1697,30 @@
    return 0;
  }
