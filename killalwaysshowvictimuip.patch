@@ -1,14 +1,14 @@
 show nick[user@host] in kills for remote users (user part is not shown in case the user did not have an ident reply)
 
-diff -r 2139c147d1ab ircd/m_kill.c
---- a/ircd/m_kill.c	Tue Mar 23 23:04:59 2010 +0100
-+++ b/ircd/m_kill.c	Tue Mar 23 23:15:21 2010 +0100
+diff -r 43c64cf43c35 ircd/m_kill.c
+--- a/ircd/m_kill.c
++++ b/ircd/m_kill.c
 @@ -125,10 +125,17 @@
     * Note: "victim->name" is used instead of "user" because we may
     *       have changed the target because of the nickname change.
     */
 -  sendto_opmask_butone(0, snomask,
-+  if (MyUser(victim))
++  if (MyConnect(victim))
 +    sendto_opmask_butone(0, snomask,
                         "Received KILL message for %s from %s Path: %s!%s %s",
                         get_client_name(victim, SHOW_IP), get_client_name_and_opername(sptr),
