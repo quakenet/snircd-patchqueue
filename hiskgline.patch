@@ -3,9 +3,9 @@ tidy up HIS G-line/K-line reasons, instead of examing the quit reason, set a fla
 make clean etc. otherwise you may find that this patch breaks remote sethosts and possibly other things
 but it is fine - just make sure all is compiled again
 
-diff -r b737284f4c26 include/client.h
---- a/include/client.h	Sun Jan 11 22:38:41 2009 +0000
-+++ b/include/client.h	Sun Jan 11 22:38:41 2009 +0000
+diff -r 9d6b26c74f5f include/client.h
+--- a/include/client.h
++++ b/include/client.h
 @@ -156,6 +156,8 @@
      FLAG_PINGSENT,                  /**< Unreplied ping sent */
      FLAG_DEADSOCKET,                /**< Local socket is dead--Exiting soon */
@@ -15,10 +15,10 @@ diff -r b737284f4c26 include/client.h
      FLAG_BLOCKED,                   /**< socket is in a blocked condition */
      FLAG_CLOSING,                   /**< set when closing to suppress errors */
      FLAG_UPING,                     /**< has active UDP ping request */
-diff -r b737284f4c26 ircd/gline.c
---- a/ircd/gline.c	Sun Jan 11 22:38:41 2009 +0000
-+++ b/ircd/gline.c	Sun Jan 11 22:38:41 2009 +0000
-@@ -282,9 +282,10 @@
+diff -r 9d6b26c74f5f ircd/gline.c
+--- a/ircd/gline.c
++++ b/ircd/gline.c
+@@ -286,9 +286,10 @@
                               get_client_name(acptr, SHOW_IP));
  
          /* and get rid of him */
@@ -31,10 +31,10 @@ diff -r b737284f4c26 ircd/gline.c
          if ((tval = exit_client_msg(cptr, acptr, &me, "G-lined (%s)", gline->gl_reason))) 
          retval = tval; /* retain killed status */
        }
-diff -r b737284f4c26 ircd/s_auth.c
---- a/ircd/s_auth.c	Sun Jan 11 22:38:41 2009 +0000
-+++ b/ircd/s_auth.c	Sun Jan 11 22:38:41 2009 +0000
-@@ -270,9 +270,10 @@
+diff -r 9d6b26c74f5f ircd/s_auth.c
+--- a/ircd/s_auth.c
++++ b/ircd/s_auth.c
+@@ -273,9 +273,10 @@
    killreason = find_kill(sptr, 1, &reason);
    if (killreason) {
      ServerStats->is_ref++;
@@ -48,10 +48,10 @@ diff -r b737284f4c26 ircd/s_auth.c
      return exit_client_msg(sptr, sptr, &me, "%s (%s)",
                         (killreason == -1 ? "K-lined" : "G-lined"), reason);
    }
-diff -r b737284f4c26 ircd/s_conf.c
---- a/ircd/s_conf.c	Sun Jan 11 22:38:41 2009 +0000
-+++ b/ircd/s_conf.c	Sun Jan 11 22:38:41 2009 +0000
-@@ -993,9 +993,10 @@
+diff -r 9d6b26c74f5f ircd/s_conf.c
+--- a/ircd/s_conf.c
++++ b/ircd/s_conf.c
+@@ -994,9 +994,10 @@
                               "K-line active for %s%s",
                               IsUnknown(acptr) ? "Unregistered Client ":"",
                               get_client_name(acptr, SHOW_IP));
@@ -65,9 +65,9 @@ diff -r b737284f4c26 ircd/s_conf.c
          if (exit_client_msg(cptr, acptr, &me, "%s (%s)", found_g == -2 ? "G-lined" :
              "K-lined", reason) == CPTR_KILLED)
            ret = CPTR_KILLED;
-diff -r b737284f4c26 ircd/s_misc.c
---- a/ircd/s_misc.c	Sun Jan 11 22:38:41 2009 +0000
-+++ b/ircd/s_misc.c	Sun Jan 11 22:38:41 2009 +0000
+diff -r 9d6b26c74f5f ircd/s_misc.c
+--- a/ircd/s_misc.c
++++ b/ircd/s_misc.c
 @@ -496,11 +496,24 @@
  	sendcmdto_one(killer, CMD_SQUIT, dlp->value.cptr, "%s %Tu :%s",
  		      cli_name(victim), cli_serv(victim)->timestamp, comment);
@@ -78,7 +78,7 @@ diff -r b737284f4c26 ircd/s_misc.c
 -        else if (!strncmp(comment, "K-lined", 7))
 -          comment = "K-lined";
 +        /* my user is hit by K-line or G-line, hide the reason */
-+        if (MyUser(victim)) {
++        if (MyConnect(victim)) {
 +          if (HasFlag(victim, FLAG_KLINED))
 +            comment = "K-lined";
 +          else if (HasFlag(victim, FLAG_GLINED))
