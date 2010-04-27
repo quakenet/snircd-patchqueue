@@ -6,9 +6,9 @@ function uses a table to check for control codes, which is faster than what was 
 also corrects that an error is returned in WALLVOICES and WALLCHOPS in case +c or +C blocks the message, which is also done for other modes there
 also corrects that CTCP ACTION is only allowed for PRIVMSG, and not for NOTICE WALLCHOPS and WALLVOICES
 
-diff -r 8567e020893c include/channel.h
---- a/include/channel.h	Thu Mar 25 13:10:37 2010 +0100
-+++ b/include/channel.h	Thu Mar 25 13:25:55 2010 +0100
+diff -r 748d1ac19fa9 include/channel.h
+--- a/include/channel.h
++++ b/include/channel.h
 @@ -398,6 +398,7 @@
  extern struct Membership* find_channel_member(struct Client* cptr, struct Channel* chptr);
  extern int member_can_send_to_channel(struct Membership* member, int reveal);
@@ -17,9 +17,9 @@ diff -r 8567e020893c include/channel.h
  
  extern void remove_user_from_channel(struct Client *sptr, struct Channel *chptr);
  extern void remove_user_from_all_channels(struct Client* cptr);
-diff -r 8567e020893c ircd/channel.c
---- a/ircd/channel.c	Thu Mar 25 13:10:37 2010 +0100
-+++ b/ircd/channel.c	Thu Mar 25 13:25:55 2010 +0100
+diff -r 748d1ac19fa9 ircd/channel.c
+--- a/ircd/channel.c
++++ b/ircd/channel.c
 @@ -778,6 +778,68 @@
    return member_can_send_to_channel(member, reveal);
  }
@@ -57,7 +57,7 @@ diff -r 8567e020893c ircd/channel.c
 +  assert(0 != chptr);  
 +
 +  /* dont check this for remote users or servers - fail safe */
-+  if (!MyUser(cptr) || IsServer(cptr))
++  if (!MyConnect(cptr) || IsServer(cptr))
 +    return 1;
 +  
 +  /* mode +c set */
@@ -89,9 +89,9 @@ diff -r 8567e020893c ircd/channel.c
  /** Returns the name of a channel that prevents the user from changing nick.
   * if a member and not (opped or voiced) and (banned or moderated), return
   * the name of the first channel banned on.
-diff -r 8567e020893c ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Thu Mar 25 13:10:37 2010 +0100
-+++ b/ircd/ircd_relay.c	Thu Mar 25 13:25:55 2010 +0100
+diff -r 748d1ac19fa9 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c
++++ b/ircd/ircd_relay.c
 @@ -87,7 +87,6 @@
  void relay_channel_message(struct Client* sptr, const char* name, const char* text, const int targetc)
  {
@@ -150,9 +150,9 @@ diff -r 8567e020893c ircd/ircd_relay.c
  
    if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
        check_target_limit(sptr, chptr, chptr->chname, 0))
-diff -r 8567e020893c ircd/m_wallchops.c
---- a/ircd/m_wallchops.c	Thu Mar 25 13:10:37 2010 +0100
-+++ b/ircd/m_wallchops.c	Thu Mar 25 13:25:55 2010 +0100
+diff -r 748d1ac19fa9 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c
++++ b/ircd/m_wallchops.c
 @@ -103,7 +103,6 @@
  {
    struct Channel *chptr;
@@ -185,9 +185,9 @@ diff -r 8567e020893c ircd/m_wallchops.c
  
        if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
            check_target_limit(sptr, chptr, chptr->chname, 0))
-diff -r 8567e020893c ircd/m_wallvoices.c
---- a/ircd/m_wallvoices.c	Thu Mar 25 13:10:37 2010 +0100
-+++ b/ircd/m_wallvoices.c	Thu Mar 25 13:25:55 2010 +0100
+diff -r 748d1ac19fa9 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c
++++ b/ircd/m_wallvoices.c
 @@ -102,7 +102,6 @@
  {
    struct Channel *chptr;
