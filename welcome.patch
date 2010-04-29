@@ -180,7 +180,7 @@ diff -r 8bf1b05cdfe7 include/numeric.h
 diff -r 8bf1b05cdfe7 include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,71 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -206,10 +206,6 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +/** @file
 + * @brief  Interface and declarations for welcome message handling.
 + */
-+#ifndef INCLUDED_sys_types_h
-+#include <sys/types.h>
-+#define INCLUDED_sys_types_h
-+#endif
 +
 +struct Client;
 +struct StatDesc;
