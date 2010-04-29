@@ -1279,7 +1279,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      (flags & WELCOME_INSERT) ? "yes" : "no"));
 +
 +  /* name empty after taking off the prefixes? */
-+  if (EmptyString(name)) {
++  if (*name == 0) {
 +    if (IsUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :Welcome: No message number given", sptr);
 +    else 
@@ -1332,7 +1332,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeNameIsValid(nameint));
 +
 +  /* cannot unset welcome that is not set */
-+  if (!WelcomeIsSet(namearray) && EmptyString(text)) {
++  if (!WelcomeIsSet(namearray) && *text == 0) {
 +
 +    /* from user, throw error */
 +    if (IsUser(sptr))
@@ -1398,7 +1398,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    flags &= ~WELCOME_INSERT;
 +
 +  /* unset */
-+  if (EmptyString(text)) {
++  if (*text == 0) {
 +    /* clear insert flag,
 +     *   when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
 +     *   and wont propagate the change
