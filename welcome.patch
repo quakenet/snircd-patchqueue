@@ -379,7 +379,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,289 @@
+@@ -0,0 +1,317 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -475,8 +475,19 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +/*
 + * m_welcome - local generic message handler
 + *
-+ * parv[0] = Send prefix
-+ * parv[1] = [remote server to query]
++ *
++ * WELCOME
++ *
++ * listing:
++ *   parv[0] = Send prefix
++ *
++ *
++ * WELCOME [<server>]
++ *
++ * remote listing:
++ *   parv[0] = Send prefix
++ *   parv[1] = Target
++ *
 + */
 +int m_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
@@ -503,18 +514,28 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +/*
 + * mo_welcome - oper message handler
 + *
++ *
++ * WELCOME
++ *
 + * listing:
 + *   parv[0] = Send prefix
++ *
++ *
++ * WELCOME <server>
 + *
 + * remote listing:
 + *   parv[0] = Send prefix
 + *   parv[1] = Target
++ *
++ *
++ * WELCOME <server> <name> :<text>
 + *
 + * set global or on remote server:
 + *   parv[0] = Send prefix
 + *   parv[1] = Target: server or * for global (or left out for this server)
 + *   parv[2] = Name
 + *   parv[3] = Text
++ *
 + */
 +int mo_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
@@ -597,9 +618,15 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +/*
 + * ms_welcome - server message handler
 + *
++ *
++ * <source> WE <target>
++ *
 + * remote listing:
 + *   parv[0] = Send prefix
 + *   parv[1] = Target: server numeric or * for global
++ *
++ *
++ * <source> WE <target> <name> <timestamp> <who> :<text>
 + *
 + * set global or on remote server:
 + *   parv[0] = Send prefix
@@ -608,6 +635,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 + *   parv[3] = Timestamp
 + *   parv[4] = Who
 + *   parv[5] = Text
++ *
 + */
 +int ms_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
