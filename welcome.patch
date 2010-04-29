@@ -381,7 +381,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,315 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -470,8 +470,6 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +#include "numeric.h"
 +#include "s_user.h"
 +#include "welcome.h"
-+
-+/* #include <assert.h> -- Now using assert in ircd_log.h */
 +
 +
 +/*
@@ -848,7 +846,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,681 @@
+@@ -0,0 +1,679 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -884,8 +882,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +#include "s_debug.h"
 +#include "send.h"
 +#include "welcome.h"
-+
-+/* #include <assert.h> -- Now using assert in ircd_log.h */
 +
 +
 +/** List of welcome messages - first MAX for global, second MAX for local */
