@@ -821,7 +821,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,663 @@
+@@ -0,0 +1,671 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1247,10 +1247,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no"));
 +
-+  /* invalid timestamp */
-+  if (timestamp <= 0)
-+    return protocol_violation(cptr, "Received WELCOME with invalid timestamp %Tu from %C", timestamp, sptr);
-+
 +  /* name empty after taking off the prefixes? */
 +  if (EmptyString(name)) {
 +    if (IsUser(sptr))
@@ -1271,6 +1267,18 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +        "Received WELCOME with invalid message number %s from %C - should be between 1 and %d",
 +        name, sptr, WELCOME_MAX_ENTRIES);
 +    return 0;
++  }
++
++  /* invalid timestamp */
++  if (timestamp <= 0) {
++    /* from my user - must be a glitch,
++     *   someone set (my) network time to 0 ?
++     */
++    if (MyUser(sptr))
++      timestamp++;
++    /* else it's a protocol violation */
++    else
++      return protocol_violation(cptr, "Received WELCOME with invalid timestamp %Tu from %C", timestamp, sptr);
 +  }
 +
 +  /* source is user, and is myuser or welcome is local, check length of the message */
