@@ -180,7 +180,7 @@ diff -r 8bf1b05cdfe7 include/numeric.h
 diff -r 8bf1b05cdfe7 include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,73 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -217,18 +217,20 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +
 +
 +/* Test if a welcome entry is in a valid range */
-+#define WelcomeIsValid(x)     ((unsigned) (x) <= 2 * WELCOME_MAX_ENTRIES -1)
++#define WelcomeArrayIsValid(x)   ((unsigned) (x) <= 2 * WELCOME_MAX_ENTRIES -1)
++/* Test if a welcome name is in a valid range */
++#define WelcomeNameIsValid(x)    ((unsigned) (x) <= WELCOME_MAX_ENTRIES)
 +/* Test if a welcome entry is set */
-+#define WelcomeIsSet(x)       (WelcomeArray[(x)].timestamp > 0)
++#define WelcomeIsSet(x)          (WelcomeArray[(x)].timestamp > 0)
 +/* Test if a welcome entry is empty */
-+#define WelcomeIsEmpty(x)     (*WelcomeArray[(x)].text == 0)
++#define WelcomeIsEmpty(x)        (*WelcomeArray[(x)].text == 0)
 +
 +/* Get welcome timestamp */
-+#define WelcomeTS(x)          (WelcomeArray[(x)].timestamp)
++#define WelcomeTS(x)             (WelcomeArray[(x)].timestamp)
 +/* Get welcome text */
-+#define WelcomeText(x)        (WelcomeArray[(x)].text)
++#define WelcomeText(x)           (WelcomeArray[(x)].text)
 +/* Get welcome who info */
-+#define WelcomeWho(x)         (WelcomeArray[(x)].who)
++#define WelcomeWho(x)            (WelcomeArray[(x)].who)
 +
 +
 +/* Describes a Welcome message entry. */
@@ -846,7 +848,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,680 @@
+@@ -0,0 +1,681 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -901,7 +903,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +welcome_make(int name, char *text, char *who, time_t timestamp)
 +{
 +  /* assert */
-+  assert(WelcomeIsValid(name));
++  assert(WelcomeArrayIsValid(name));
 +  assert(NULL != text);
 +  assert(NULL != who);
 +
@@ -931,7 +933,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* assert */
 +  assert(NULL != sptr);
 +  assert(NULL != cptr);
-+  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
++  assert(WelcomeNameIsValid(nameint));
 +  assert(!(flags & WELCOME_LOCAL));
 +
 +  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %s :%s",
@@ -954,8 +956,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* assert */
 +  assert(NULL != cptr);
 +  assert(IsServer(cptr));
-+  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
-+  assert(WelcomeIsValid(namearray));
++  assert(WelcomeNameIsValid(nameint));
++  assert(WelcomeArrayIsValid(namearray));
++  assert(nameint - 1 == namearray);
 +
 +  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
 +    nameint, WelcomeTS(namearray), WelcomeWho(namearray), WelcomeText(namearray));
@@ -1012,7 +1015,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* assert */
 +  assert(flags & WELCOME_ANNOUNCE);
-+  assert(WelcomeIsValid(name));
++  assert(WelcomeArrayIsValid(name));
 +  assert(WelcomeIsSet(name));
 +  assert(!WelcomeIsEmpty(name));  
 +
@@ -1056,8 +1059,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* assert */
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
-+  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
-+  assert(WelcomeIsValid(namearray));
++  assert(WelcomeNameIsValid(nameint));
++  assert(WelcomeArrayIsValid(namearray));
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
@@ -1118,8 +1121,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* assert */
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
-+  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
-+  assert(WelcomeIsValid(namearray));
++  assert(WelcomeNameIsValid(nameint));
++  assert(WelcomeArrayIsValid(namearray));
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\","
@@ -1183,8 +1186,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* assert */
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
-+  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
-+  assert(WelcomeIsValid(namearray));
++  assert(WelcomeNameIsValid(nameint));
++  assert(WelcomeArrayIsValid(namearray));
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
@@ -1280,7 +1283,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  }
 +
 +  /* check name */
-+  if (!WelcomeIsValid(namearray)) {
++  if (!WelcomeArrayIsValid(namearray)) {
 +    if (IsUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
 +        "%C :Welcome: Invalid message number %s - should between 1 and %d",
@@ -1320,8 +1323,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    namearray += WELCOME_MAX_ENTRIES;
 +
 +  /* must be true by now */
-+  assert(WelcomeIsValid(namearray));
-+  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
++  assert(WelcomeArrayIsValid(namearray));
++  assert(WelcomeNameIsValid(nameint));
 +
 +  /* cannot unset welcome that is not set */
 +  if (!WelcomeIsSet(namearray) && EmptyString(text)) {
