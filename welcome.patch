@@ -846,7 +846,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,679 @@
+@@ -0,0 +1,688 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -902,6 +902,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeArrayIsValid(name));
 +  assert(NULL != text);
 +  assert(NULL != who);
++  assert(timestamp > 0);
 +
 +  /* store it */
 +  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
@@ -1057,6 +1058,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
++  assert(timestamp > 0);
++  assert(NULL != who);
++  assert(NULL != text);
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
@@ -1119,6 +1123,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
++  assert(timestamp > 0);
++  assert(NULL != who);
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\","
@@ -1184,6 +1190,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
++  assert(timestamp > 0);
++  assert(NULL != who);
++  assert(NULL != text);
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
