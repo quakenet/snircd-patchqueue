@@ -620,14 +620,14 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +  
 +  /* not enough - complain */
 +  if (parc < 2) {
-+    protocol_violation(sptr, "Too few parameters for WELCOME (got %d - need 2)", parc);
++    protocol_violation(cptr, "Received too few parameters for WELCOME from %C (got %d - need 2)", sptr, parc);
 +    return need_more_params(sptr, "WELCOME");
 +  }
 +
 +  /* remote listing request, see if it is for me or a remote server */
 +  if (parc == 2) {
 +    if (IsServer(sptr))
-+      return protocol_violation(cptr, "WELCOME listing request from server %C", sptr);
++      return protocol_violation(cptr, "Received WELCOME listing request from server %C", sptr);
 +    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C", 1, parc, parv) != HUNTED_ISME)
 +      return 0;
 +    return welcome_list(sptr, 0);
@@ -635,7 +635,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +
 +  /* we need at least 6 parameters to continue - complain */  
 +  if (parc < 6) {
-+    protocol_violation(sptr, "Too few parameters for WELCOME (got %d - need 6)", parc);
++    protocol_violation(cptr, "Received too few parameters for WELCOME from %C (got %d - need 6)", sptr, parc);
 +    return need_more_params(sptr, "WELCOME");
 +  }
 +
@@ -1247,16 +1247,16 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no"));
 +
-+  /* if for some reason timestamp is 0, increase it */
-+  if (timestamp == 0)
-+    timestamp++;
++  /* invalid timestamp */
++  if (timestamp <= 0)
++    return protocol_violation(cptr, "Received WELCOME with invalid timestamp %Tu from %C", timestamp, sptr);
 +
 +  /* name empty after taking off the prefixes? */
 +  if (EmptyString(name)) {
 +    if (IsUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :Welcome: No message number given", sptr);
 +    else 
-+      protocol_violation(cptr, "WELCOME: No message number given by %C", sptr);
++      protocol_violation(cptr, "Received WELCOME with no message number from %C", sptr);
 +    return 0;
 +  }
 +
@@ -1268,7 +1268,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +        sptr, name, WELCOME_MAX_ENTRIES);
 +    else
 +      protocol_violation(cptr,
-+        "WELCOME: Invalid message number %s from %C - should be between 1 and %d",
++        "Received WELCOME with invalid message number %s from %C - should be between 1 and %d",
 +        name, sptr, WELCOME_MAX_ENTRIES);
 +    return 0;
 +  }
