@@ -821,7 +821,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,647 @@
+@@ -0,0 +1,663 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1040,8 +1040,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeIsValid(namearray));
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\", 0x%04x)",
-+   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags));
++  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++    cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags,
++      (flags & WELCOME_LOCAL) ? "yes" : "no",
++      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_INSERT) ? "yes" : "no"));
 +
 +  /* not set */
 +  if (WelcomeIsEmpty(namearray))
@@ -1097,8 +1101,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeIsValid(namearray));
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", 0x%04x)",
-+   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, flags));
++  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\","
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++    cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, flags,
++      (flags & WELCOME_LOCAL) ? "yes" : "no",
++      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_INSERT) ? "yes" : "no"));
 +
 +  /* create msg for log */
 +  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" %s [%Tu]",
@@ -1157,8 +1165,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeIsValid(namearray));
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\", 0x%04x)",
-+   cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags));
++  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++    cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags,
++      (flags & WELCOME_LOCAL) ? "yes" : "no",
++      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_INSERT) ? "yes" : "no"));
 +
 +  /* correct end for local offset */
 +  if (flags & WELCOME_LOCAL)
@@ -1228,8 +1240,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != who);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", %Tu, \"%s\", \"%s\", 0x%04x)",
-+   cli_name(cptr), cli_name(sptr), name, timestamp, who, text, flags));
++  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", %Tu, \"%s\", \"%s\","
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++    cli_name(cptr), cli_name(sptr), name, timestamp, who, text, flags,
++      (flags & WELCOME_LOCAL) ? "yes" : "no",
++      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_INSERT) ? "yes" : "no"));
 +
 +  /* if for some reason timestamp is 0, increase it */
 +  if (timestamp == 0)
