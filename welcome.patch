@@ -2,20 +2,25 @@ Add welcome message functionality.
 
 client commands:
 user:
-/WELCOME
+/WELCOME [<server>]
 shows welcome messages set, same is shown on connect
+feature HIS_REMOTE controls whether ordinary users can request a listing from a remote server
 
 oper:
-/WELCOME [<target>] [[!]<name> :<message>]
+/WELCOME [<server>] [[$][+]<N> :<message>]
 to view welcome messages from a remote server
 to set a local welcome message on this server or a remote server
-set a global welcome message (target *)
-the ! prefix makes the server annouce the welcome message to its clients when setting
+set a global welcome message (server *)
+the $ prefix makes the server annouce the welcome message to its clients when setting
+the + prefix moves message in N and all after that one spot down, and inserts the new message
+in spot N, if there is no room, the last entry is deleted
+when an entry is cleared (no text), then all entries after it are moved on place up, so all empty
+spots are at the end
 
 server:
-:<source> WE <target> [[!]<name> <timestamp> <who> :<text>]
+:<source> WE <target> [[$][+]<N> <timestamp> <who> :<text>]
 who is who set the message, the server puts in the opername when a client sets it.
-:<name> is a number 1 to WELCOME_MAX_ENTRIES - currently set at 10 (should be more than we ever need)
+:<N> is a number 1 to WELCOME_MAX_ENTRIES - currently set at 10 (should be more than we ever need)
 that means there is room for 10 local and 10 global entries
 
 STATS W/welcome (/STATS w/userload made case sensitive)
@@ -29,16 +34,16 @@ listing welcomes or on connect:
 :server NOTICE nick :[QuakeNet] Latest news: testing this welcome patch :)
 :server NOTICE nick :[server] This is a test server, expect restarts.
 
-announcement is done by a notice by the local server to $* with the same message
+announcement is done by a notice by the local server to $* ($servername for local) with the same message
 format as for listing welcome messages.
 :server NOTICE $* :[QuakeNet] Latest news: testing this welcome patch :)
-:server NOTICE $* :[server] This is a test server, expect restarts.
+:server NOTICE $server :[server] This is a test server, expect restarts.
 
 
 Files:
 
 include/handlers.h
-add m_welcome mo_welcome ms_welcome mh_welcome functions
+add m_welcome mo_welcome ms_welcome functions
 
 include/features.h
 ircd/features.c
@@ -70,6 +75,9 @@ add /STATS W/welcome
 
 ircd/s_user.c
 add showing of welcome messages on connect
+
+ircd/s_debug.c
+add count and memusage of welcome messages
 
 include/client.h
 ircd/client.c
