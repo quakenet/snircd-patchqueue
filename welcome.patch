@@ -379,7 +379,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,292 @@
+@@ -0,0 +1,284 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -460,25 +460,17 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 + *            note:   it is guaranteed that parv[0]..parv[parc-1] are all
 + *                    non-NULL pointers.
 + */
-+#include "config.h"
 +
-+#include "channel.h"
 +#include "client.h"
-+#include "hash.h"
 +#include "ircd.h"
 +#include "ircd_features.h"
-+#include "ircd_log.h"
-+#include "ircd_reply.h"
-+#include "ircd_snprintf.h"
-+#include "ircd_string.h"
 +#include "msg.h"
 +#include "numeric.h"
-+#include "numnicks.h"
 +#include "s_user.h"
-+#include "send.h"
 +#include "welcome.h"
 +
 +/* #include <assert.h> -- Now using assert in ircd_log.h */
++
 +
 +/*
 + * m_welcome - local generic message handler
@@ -821,7 +813,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,671 @@
+@@ -0,0 +1,661 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -845,30 +837,20 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +/** @file
 + * @brief Implementation of welcome message handling functions.
 + */
-+#include "config.h"
 +
 +#include "client.h"
-+#include "hash.h"
 +#include "ircd.h"
-+#include "ircd_alloc.h"
 +#include "ircd_features.h"
 +#include "ircd_log.h"
-+#include "ircd_reply.h"
 +#include "ircd_string.h"
-+#include "match.h"
 +#include "msg.h"
 +#include "numeric.h"
-+#include "numnicks.h"
 +#include "s_bsd.h"
 +#include "s_debug.h"
-+#include "s_misc.h"
 +#include "send.h"
-+#include "struct.h"
-+#include "sys.h"    /* FALSE bleah */
 +#include "welcome.h"
 +
 +/* #include <assert.h> -- Now using assert in ircd_log.h */
-+#include <string.h>
 +
 +
 +/** List of welcome messages - first MAX for global, second MAX for local */
