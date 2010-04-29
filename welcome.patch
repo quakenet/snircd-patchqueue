@@ -1242,7 +1242,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* name empty after taking off the prefixes? */
 +  if (EmptyString(name)) {
 +    if (IsUser(sptr))
-+      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :WELCOME: No message number given", sptr);
++      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :Welcome: No message number given", sptr);
 +    else 
 +      protocol_violation(cptr, "WELCOME: No message number given by %C", sptr);
 +    return 0;
@@ -1252,7 +1252,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  if (!WelcomeIsValid(namearray)) {
 +    if (IsUser(sptr))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
-+        "%C :WELCOME: Invalid message number %s - should between 1 and %d",
++        "%C :Welcome: Invalid message number %s - should between 1 and %d",
 +        sptr, name, WELCOME_MAX_ENTRIES);
 +    else
 +      protocol_violation(cptr,
@@ -1264,11 +1264,11 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* source is user, and is myuser or welcome is local, check length of the message */
 +  if (IsUser(sptr) && (MyConnect(sptr) || (flags & WELCOME_LOCAL)) && (strlen(text) > WELCOMELEN)) {
 +    sendcmdto_one(&me, CMD_NOTICE, sptr,
-+      "%C :WELCOME: The message is too long with %d chars - max is %d chars",
++      "%C :Welcome: The message is too long with %d chars - max is %d chars",
 +      sptr, strlen(text), WELCOMELEN);
 +    ircd_strncpy(text, text, WELCOMELEN);
 +    sendcmdto_one(&me, CMD_NOTICE, sptr,
-+      "%C :WELCOME: Change or truncate the message to: \"%s\"", sptr, text);
++      "%C :Welcome: Change or truncate the message to: \"%s\"", sptr, text);
 +    return 0;
 +  }
 +
@@ -1334,7 +1334,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    if (IsUser(sptr) && (MyConnect(sptr) || (flags & WELCOME_LOCAL))) {
 +      if (strcmp(text, WelcomeText(namearray)) == 0) {   /* use strcmp because the user may wish to change case */
 +        sendcmdto_one(&me, CMD_NOTICE, sptr,
-+          "%C :WELCOME: Cannot change %s message for %s - nothing to change",
++          "%C :Welcome: Cannot change %s message for %s - nothing to change",
 +          sptr, (flags & WELCOME_LOCAL) ? "local" : "global", name); 
 +        return 0;
 +      }
