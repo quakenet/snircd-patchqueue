@@ -379,7 +379,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,284 @@
+@@ -0,0 +1,289 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -504,17 +504,17 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 + * mo_welcome - oper message handler
 + *
 + * listing:
-+ * parv[0] = Send prefix
++ *   parv[0] = Send prefix
 + *
 + * remote listing:
-+ * parv[0] = Send prefix
-+ * parv[1] = Target
++ *   parv[0] = Send prefix
++ *   parv[1] = Target
 + *
 + * set global or on remote server:
-+ * parv[0] = Send prefix
-+ * parv[1] = Target: server or * for global (or left out for this server)
-+ * parv[2] = Name
-+ * parv[3] = Text
++ *   parv[0] = Send prefix
++ *   parv[1] = Target: server or * for global (or left out for this server)
++ *   parv[2] = Name
++ *   parv[3] = Text
 + */
 +int mo_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
@@ -597,12 +597,17 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +/*
 + * ms_welcome - server message handler
 + *
-+ * parv[0] = Send prefix
-+ * parv[1] = Target: server numeric or * for global
-+ * parv[2] = Name
-+ * parv[3] = Timestamp
-+ * parv[4] = Who
-+ * parv[5] = Text
++ * remote listing:
++ *   parv[0] = Send prefix
++ *   parv[1] = Target: server numeric or * for global
++ *
++ * set global or on remote server:
++ *   parv[0] = Send prefix
++ *   parv[1] = Target: server numeric or * for global
++ *   parv[2] = Name
++ *   parv[3] = Timestamp
++ *   parv[4] = Who
++ *   parv[5] = Text
 + */
 +int ms_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
@@ -813,7 +818,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,661 @@
+@@ -0,0 +1,680 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -867,6 +872,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +static int 
 +welcome_make(int name, char *text, char *who, time_t timestamp)
 +{
++  /* assert */
 +  assert(WelcomeIsValid(name));
 +  assert(NULL != text);
 +  assert(NULL != who);
@@ -894,6 +900,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +welcome_propagate(struct Client *cptr, struct Client *sptr, int nameint,
 +  time_t timestamp, char *who, char *text, unsigned int flags)
 +{
++  /* assert */
 +  assert(NULL != sptr);
 +  assert(NULL != cptr);
 +  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
@@ -916,6 +923,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +int
 +welcome_resend(struct Client *cptr, int nameint, int namearray)
 +{
++  /* assert */
 +  assert(NULL != cptr);
 +  assert(IsServer(cptr));
 +  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
@@ -937,6 +945,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +int
 +welcome_log(struct Client *sptr, char *msg, unsigned int flags)
 +{
++  /* assert */
 +  assert(NULL != sptr);
 +  assert(NULL != msg);
 +
@@ -969,11 +978,11 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +void
 +welcome_announce(int name, unsigned int flags)
 +{
-+  struct Client *acptr;
-+  struct MsgBuf *msgbuf;
-+  int i;
++  struct Client *acptr;                 /* local user */
++  struct MsgBuf *msgbuf;                /* message to send */
++  int i;                                /* loop variable */
 +
-+  /* announce, valid range, set and not empty */
++  /* assert */
 +  assert(flags & WELCOME_ANNOUNCE);
 +  assert(WelcomeIsValid(name));
 +  assert(WelcomeIsSet(name));
@@ -1014,8 +1023,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  int namearray, time_t timestamp, char *who, char *text, unsigned int flags)
 +{
 +  char msg[BUFSIZE];                    /* msg for logging */
-+  int new = 0;
++  int new = 0;                          /* welcome is new - not set yet */
 +
++  /* assert */
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
 +  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
@@ -1077,6 +1087,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  int empty = namearray;                /* first empty spot in array after namearray */
 +  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */ 
 +
++  /* assert */
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
 +  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
@@ -1141,6 +1152,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */
 +  int last = end;                       /* last welcome message to feed to welcome_unset */
 +
++  /* assert */
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
 +  assert(nameint > 0 && nameint <= WELCOME_MAX_ENTRIES);
@@ -1215,6 +1227,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
 +
++  /* assert */
 +  assert(NULL != cptr);
 +  assert(NULL != sptr);
 +  assert(NULL != name);
@@ -1313,8 +1326,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      }
 +
 +      /* compare timestamps, ignore welcome when:
-+       *  we got a newer one
-+       *  or when timestamps are the same and our text is 'smaller'
++       *   we got a newer one
++       *   or when timestamps are the same and our text is 'smaller'
 +       */
 +      else if ((timestamp < WelcomeTS(namearray)) ||            /* we got a newer one */
 +              ((timestamp == WelcomeTS(namearray)) &&           /* same timestamp */
@@ -1334,7 +1347,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +     *   compare new message with old message
 +     */
 +    if (IsUser(sptr) && (MyConnect(sptr) || (flags & WELCOME_LOCAL))) {
-+      if (strcmp(text, WelcomeText(namearray)) == 0) {   /* use strcmp because the user may wish to change case */
++      if (strcmp(text, WelcomeText(namearray)) == 0) {   /* use strcmp instead of ircd_strcmp - oper may wish to change case */
 +        sendcmdto_one(&me, CMD_NOTICE, sptr,
 +          "%C :Welcome: Cannot change %s message for %s - nothing to change",
 +          sptr, (flags & WELCOME_LOCAL) ? "local" : "global", name); 
@@ -1351,8 +1364,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* unset */
 +  if (EmptyString(text)) {
 +    /* clear insert flag,
-+     * when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
-+     * and wont propagate the change
++     *   when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
++     *   and wont propagate the change
 +     */
 +    flags &= ~WELCOME_INSERT;
 +    return welcome_unset(cptr, sptr, nameint, namearray, timestamp, who, flags);
@@ -1373,11 +1386,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +void
 +welcome_burst(struct Client *cptr)
 +{
-+  int name;
++  int name;                 /* loop variable */
 +
++  /* assert */
 +  assert(NULL != cptr);
 +
-+  /* loop over global entries - 0 to max - 1*/
++  /* loop over global entries - 0 to max - 1 */
 +  for (name = 0; name <= WELCOME_MAX_ENTRIES - 1; name++) {
 +    if (WelcomeIsSet(name))
 +      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
@@ -1394,8 +1408,11 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +int
 +welcome_list(struct Client *sptr, int connect)
 +{
-+  int found = 0, local = 0, name;
++  int name;                 /* loop variable */
++  int found = 0;            /* number of welcome messages set */
++  int local = 0;            /* welcome is local or global */
 +
++  /* assert */
 +  assert(NULL != sptr);
 +
 +  /* loop over all entries - range 0 to 2 * max - 1 */
@@ -1431,11 +1448,13 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +void
 +welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param)
 +{
-+  int name, local = 0;
++  int name;                 /* loop variable */
++  int local = 0;            /* welcome is local or global */
 +
++  /* assert */
 +  assert(NULL != sptr);
 +
-+  /* loop over all entries - range 0 to 2 * max - 1*/
++  /* loop over all entries - range 0 to 2 * max - 1 */
 +  for (name = 0; name <= 2 * WELCOME_MAX_ENTRIES - 1; name++) {
 +
 +    /* local entries now */
@@ -1463,12 +1482,17 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +int
 +welcome_memory_count(size_t *we_size)
 +{
-+  int name;
-+  unsigned int we = 0;
++  int name;                 /* loop variable */
++  unsigned int we = 0;      /* number of welcome messages set */
 +
++  /* loop over all entries - range 0 to 2 * max - 1 */
 +  for (name = 0; name <= 2 * WELCOME_MAX_ENTRIES - 1; name++) {
++
++    /* not set */
 +    if (!WelcomeIsSet(name))
 +      continue;
++
++    /* count */
 +    we++;
 +    *we_size += WelcomeText(name) ? (strlen(WelcomeText(name)) + 1) : 0;
 +    *we_size += WelcomeWho(name) ? (strlen(WelcomeWho(name)) + 1) : 0;
