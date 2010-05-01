@@ -852,7 +852,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,707 @@
+@@ -0,0 +1,712 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -881,6 +881,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +#include "ircd.h"
 +#include "ircd_features.h"
 +#include "ircd_log.h"
++#include "ircd_reply.h"
 +#include "ircd_string.h"
 +#include "msg.h"
 +#include "numeric.h"
@@ -1513,6 +1514,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* assert */
 +  assert(NULL != sptr);
++
++  /* stats header */
++  send_reply(sptr, SND_EXPLICIT | RPL_STATSWELCOME,
++    "W # Target Who Created LastMod Text");
 +
 +  /* loop over all entries - range 0 to 2 * max - 1 */
 +  for (name = 0; name <= 2 * WELCOME_MAX_ENTRIES - 1; name++) {
