@@ -180,7 +180,7 @@ diff -r 8bf1b05cdfe7 include/numeric.h
 diff -r 8bf1b05cdfe7 include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,76 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -221,21 +221,24 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +/* Test if a welcome name is in a valid range */
 +#define WelcomeNameIsValid(x)    ((unsigned) (x) <= WELCOME_MAX_ENTRIES)
 +/* Test if a welcome entry is set */
-+#define WelcomeIsSet(x)          (WelcomeArray[(x)].timestamp > 0)
++#define WelcomeIsSet(x)          (WelcomeArray[(x)].lastmod > 0)
 +/* Test if a welcome entry is empty */
 +#define WelcomeIsEmpty(x)        (*WelcomeArray[(x)].text == 0)
 +
-+/* Get welcome timestamp */
-+#define WelcomeTS(x)             (WelcomeArray[(x)].timestamp)
-+/* Get welcome text */
-+#define WelcomeText(x)           (WelcomeArray[(x)].text)
++/* Get welcome create timestamp */
++#define WelcomeCreate(x)         (WelcomeArray[(x)].create)
++/* Get welcome lastmod timestamp */
++#define WelcomeLastMod(x)        (WelcomeArray[(x)].lastmod)
 +/* Get welcome who info */
 +#define WelcomeWho(x)            (WelcomeArray[(x)].who)
++/* Get welcome text */
++#define WelcomeText(x)           (WelcomeArray[(x)].text)
 +
 +
 +/* Describes a Welcome message entry. */
 +struct Welcome {
-+  time_t             timestamp;            /**< Timestamp of the welcome */
++  time_t             create;               /**< When it was set */
++  time_t             lastmod;              /**< Last modification timestamp (used for resolving conflicts in burst) */
 +  char               text[WELCOMELEN + 1]; /**< Message */
 +  char               who[ACCOUNTLEN + 1];  /**< Who set it */
 +};
@@ -247,7 +250,7 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +#define WELCOME_INSERT   0x04 /**< insert welcome message, move down all others one place */
 +
 +extern int welcome_do(struct Client *cptr, struct Client *sptr, char *name,
-+  time_t timestamp, char *who, char *text, unsigned int flags);
++  time_t create, time_t lastmod, char *who, char *text, unsigned int flags);
 +extern void welcome_burst(struct Client *cptr);
 +extern int welcome_list(struct Client *sptr, int connect);
 +extern void welcome_stats(struct Client *sptr, const struct StatDesc *sd, char *param);
@@ -381,7 +384,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,315 @@
+@@ -0,0 +1,318 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -540,7 +543,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +int mo_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
 +  char *target, *name, *who, *text, pattern[BUFSIZE];
-+  time_t timestamp;
++  time_t create, lastmod;
 +  unsigned int flags = 0;
 +  int local = 0;
 +
@@ -580,7 +583,8 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +    target = parv[1];
 +    name = parv[2];
 +  }
-+  timestamp = TStime();
++  create = TStime();
++  lastmod = TStime();
 +  who = cli_user(sptr)->opername;
 +  text = parv[parc - 1];
 +
@@ -588,7 +592,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +  if (!(target[0] == '*' && target[1] == '\0') && !local) {
 +
 +    /* build a pattern for hunt_server_cmd since we do not have all we need in parv */
-+    ircd_snprintf(0, pattern, sizeof(pattern), "%s %s %Tu %s :%s", "%C", name, timestamp, who, text);
++    ircd_snprintf(0, pattern, sizeof(pattern), "%s %s %Tu %Tu %s :%s", "%C", name, create, lastmod, who, text);
 +    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, pattern, 1, 2, parv) != HUNTED_ISME)
 +      return 0;
 +
@@ -611,7 +615,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +  }
 +
 +  /* and do it */
-+  return welcome_do(cptr, sptr, name, timestamp, who, text, flags);
++  return welcome_do(cptr, sptr, name, create, lastmod, who, text, flags);
 +}
 +
 +
@@ -626,21 +630,22 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 + *   parv[1] = Target: server numeric or * for global
 + *
 + *
-+ * <source> WE <target> <name> <timestamp> <who> :<text>
++ * <source> WE <target> <name> <create> <lastmod> <who> :<text>
 + *
 + * set global or on remote server:
 + *   parv[0] = Send prefix
 + *   parv[1] = Target: server numeric or * for global
 + *   parv[2] = Name
-+ *   parv[3] = Timestamp
-+ *   parv[4] = Who
-+ *   parv[5] = Text
++ *   parv[3] = Create
++ *   parv[4] = LastMod
++ *   parv[5] = Who
++ *   parv[6] = Text
 + *
 + */
 +int ms_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
 +  char *target, *name, *who, *text;
-+  time_t timestamp;
++  time_t create, lastmod;
 +  unsigned int flags = 0;
 +  
 +  /* not enough - complain */
@@ -658,24 +663,25 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +    return welcome_list(sptr, 0);
 +  }
 +
-+  /* we need at least 6 parameters to continue - complain */  
-+  if (parc < 6) {
-+    protocol_violation(cptr, "Received too few parameters for WELCOME from %C (got %d - need 6)", sptr, parc);
++  /* we need at least 7 parameters to continue - complain */  
++  if (parc < 7) {
++    protocol_violation(cptr, "Received too few parameters for WELCOME from %C (got %d - need 7)", sptr, parc);
 +    return need_more_params(sptr, "WELCOME");
 +  }
 +
 +  /* set the parameters */
 +  target = parv[1];
 +  name = parv[2];
-+  timestamp = atoi(parv[3]);
-+  who = parv[4];
++  create = atoi(parv[3]);
++  lastmod = atoi(parv[4]);
++  who = parv[5];
 +  text = parv[parc - 1]; /* parse reason as last parameter */
 +
 +  /* target is not global */
 +  if (!(target[0] == '*' && target[1] == '\0')) {
 +
 +    /* not for me, and forward it */
-+    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C %s %s %s :%s", 1, parc, parv) != HUNTED_ISME)
++    if (hunt_server_cmd(sptr, CMD_WELCOME, cptr, 0, "%C %s %s %s %s :%s", 1, parc, parv) != HUNTED_ISME)
 +      return 0;
 +
 +    /* local welcome for me */
@@ -695,7 +701,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +  }
 +
 +  /* and do it */
-+  return welcome_do(cptr, sptr, name, timestamp, who, text, flags);
++  return welcome_do(cptr, sptr, name, create, lastmod, who, text, flags);
 +}
 diff -r 8bf1b05cdfe7 ircd/parse.c
 --- a/ircd/parse.c
@@ -764,7 +770,7 @@ diff -r 8bf1b05cdfe7 ircd/s_err.c
    { RPL_STATSALINE, "%s", "226" },
  /* 227 */
 -  { 0 },
-+  { RPL_STATSWELCOME, "W %d %s %s %Tu :%s", "227" },
++  { RPL_STATSWELCOME, "W %d %s %s %Tu %Tu :%s", "227" },
  /* 228 */
    { RPL_STATSQLINE, "Q %s :%s", "228" },
  /* 229 */
@@ -846,7 +852,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,688 @@
+@@ -0,0 +1,707 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -892,22 +898,25 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + * @param[in] name Name of the welcome message.
 + * @param[in] text The welcome message.
 + * @param[in] who Who set it.
-+ * @param[in] timestamp When it was set.
++ * @param[in] create When it was set.
++ * @param[in] lastmod Last modification timestamp.
 + * @return name Array number of the welcome set.
 + */
 +static int 
-+welcome_make(int name, char *text, char *who, time_t timestamp)
++welcome_make(int name, char *text, char *who, time_t create, time_t lastmod)
 +{
 +  /* assert */
 +  assert(WelcomeArrayIsValid(name));
 +  assert(NULL != text);
 +  assert(NULL != who);
-+  assert(timestamp > 0);
++  assert(lastmod > 0);
++  assert(lastmod > WelcomeLastMod(name));
 +
 +  /* store it */
 +  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
 +  ircd_strncpy(WelcomeArray[name].who, who, ACCOUNTLEN);
-+  WelcomeArray[name].timestamp = timestamp;
++  WelcomeArray[name].lastmod = lastmod;
++  WelcomeArray[name].create = create;
 +
 +  return name;
 +}
@@ -917,7 +926,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + * @param[in] cptr Local client that sent us the welcome.
 + * @param[in] sptr Originator of the welcome.
 + * @param[in] nameint Name of the message.
-+ * @param[in] timestamp Timestamp of when the message was set.
++ * @param[in] create When it was set.
++ * @param[in] lastmod Last modification timestamp.
 + * @param[in] who Who set this message.
 + * @param[in] text The welcome message.
 + * @param[in] flags Flags to set on welcome.
@@ -925,17 +935,19 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + */
 +int
 +welcome_propagate(struct Client *cptr, struct Client *sptr, int nameint,
-+  time_t timestamp, char *who, char *text, unsigned int flags)
++  time_t create, time_t lastmod, char *who, char *text, unsigned int flags)
 +{
 +  /* assert */
 +  assert(NULL != sptr);
 +  assert(NULL != cptr);
 +  assert(WelcomeNameIsValid(nameint));
++  assert(lastmod > 0);
 +  assert(!(flags & WELCOME_LOCAL));
 +
-+  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %s :%s",
-+    (flags & WELCOME_ANNOUNCE) ? "$" : "", (flags & WELCOME_INSERT) ? "+" : "",
-+    nameint, timestamp, who, text);
++  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %Tu %s :%s",
++    (flags & WELCOME_ANNOUNCE) ? "$" : "",
++    (flags & WELCOME_INSERT) ? "+" : "",
++    nameint, create, lastmod, who, text);
 +
 +  return 0;
 +}
@@ -957,8 +969,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeArrayIsValid(namearray));
 +  assert(nameint - 1 == namearray);
 +
-+  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
-+    nameint, WelcomeTS(namearray), WelcomeWho(namearray), WelcomeText(namearray));
++  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %Tu %s :%s",
++    nameint,
++    WelcomeCreate(namearray), WelcomeLastMod(namearray),
++    WelcomeWho(namearray), WelcomeText(namearray));
 +
 +  return 0;
 +}
@@ -1040,7 +1054,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + * @param[in] sptr Originator of the welcome.
 + * @param[in] nameint Name of the message.
 + * @param[in] namearray Array entry.
-+ * @param[in] timestamp Timestamp of when the message was set.
++ * @param[in] create When it was set.
++ * @param[in] lastmod Last modification timestamp.
 + * @param[in] who Who set this message.
 + * @param[in] text The message.
 + * @param[in] flags Flags to set on welcome.
@@ -1048,7 +1063,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + */
 +int
 +welcome_set(struct Client *cptr, struct Client *sptr, int nameint,
-+  int namearray, time_t timestamp, char *who, char *text, unsigned int flags)
++  int namearray, time_t create, time_t lastmod, char *who, char *text, unsigned int flags)
 +{
 +  char msg[BUFSIZE];                    /* msg for logging */
 +  int new = 0;                          /* welcome is new - not set yet */
@@ -1058,14 +1073,14 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(timestamp > 0);
++  assert(lastmod > 0);
 +  assert(NULL != who);
 +  assert(NULL != text);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
 +                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
-+    cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags,
++    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no"));
@@ -1075,21 +1090,21 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    new = 1;
 +
 +  /* update */
-+  welcome_make(namearray, text, who, timestamp);
++  welcome_make(namearray, text, who, create, lastmod);
 +
 +  /* create msg for log */
 +  ircd_snprintf(0, msg, 0, "%s%s%s WELCOME %d \"%s\" %s [%Tu]",
 +    new ? "setting" : "changing",
 +    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
-+    nameint, WelcomeText(namearray), WelcomeWho(namearray), timestamp);
++    nameint, WelcomeText(namearray), WelcomeWho(namearray), create);
 +
 +  /* log it */
 +  welcome_log(sptr, msg, flags);
 +
 +  /* propagate it */
 +  if (!(flags & WELCOME_LOCAL))
-+    welcome_propagate(cptr, sptr, nameint, timestamp, who, text, flags);
++    welcome_propagate(cptr, sptr, nameint, create, lastmod, who, text, flags);
 +
 +  /* announce it */
 +  if (flags & WELCOME_ANNOUNCE)
@@ -1104,14 +1119,15 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + * @param[in] sptr Originator of the welcome.
 + * @param[in] nameint Name of the message.
 + * @param[in] namearray Array entry.
-+ * @param[in] timestamp Timestamp of when the message was set.
++ * @param[in] create When it was set.
++ * @param[in] lastmod Last modification timestamp.
 + * @param[in] who Who set this message.
 + * @param[in] flags Flags to set on welcome.
 + * @return Zero
 + */
 +int
 +welcome_unset(struct Client *cptr, struct Client *sptr, int nameint,
-+  int namearray, time_t timestamp, char *who, unsigned int flags)
++  int namearray, time_t create, time_t lastmod, char *who, unsigned int flags)
 +{
 +  char msg[BUFSIZE];                    /* msg for logging */
 +  int i;                                /* loop variable */
@@ -1123,13 +1139,13 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(timestamp > 0);
++  assert(lastmod > 0);
 +  assert(NULL != who);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\","
 +                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
-+    cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, flags,
++    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no"));
@@ -1137,28 +1153,29 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* create msg for log */
 +  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" %s [%Tu]",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
-+    nameint, WelcomeText(namearray), WelcomeWho(namearray), timestamp);
++    nameint, WelcomeText(namearray), WelcomeWho(namearray), create);
 +
 +  /* log it */
 +  welcome_log(sptr, msg, flags);
 +
 +  /* update */
-+  welcome_make(namearray, "", who, timestamp);
++  welcome_make(namearray, "", who, create, lastmod);
 +
 +  /* propagate it, but not when inserting */
 +  if (!(flags & (WELCOME_LOCAL|WELCOME_INSERT)))
-+    welcome_propagate(cptr, sptr, nameint, timestamp, who, "", flags);
++    welcome_propagate(cptr, sptr, nameint, create, lastmod, who, "", flags);
 +
 +  /* correct end for local offset */
 +  if (flags & WELCOME_LOCAL)
 +    end += WELCOME_MAX_ENTRIES;
 +
-+  /* move entries up, update timestamp */
++  /* move entries up, update lastmod */
 +  for (i = namearray; i < end; i++)
-+    welcome_make(i, WelcomeText(i+1), WelcomeWho(i+1), timestamp);
++    welcome_make(i, WelcomeText(i+1), WelcomeWho(i+1),
++      WelcomeCreate(i+1), (WelcomeLastMod(i) >= lastmod) ? WelcomeLastMod(i) +1 : lastmod);
 +
-+  /* clear last entry, update timestamp */
-+  welcome_make(end, "", who, timestamp);
++  /* clear last entry, update lastmod */
++  welcome_make(end, "", who, create, lastmod);
 +
 +  return 0;
 +}
@@ -1169,7 +1186,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + * @param[in] sptr Originator of the welcome.
 + * @param[in] nameint Name of the message.
 + * @param[in] namearray Array entry.
-+ * @param[in] timestamp Timestamp of when the message was set.
++ * @param[in] create When it was set.
++ * @param[in] lastmod Last modification timestamp.
 + * @param[in] who Who set this message.
 + * @param[in] text The welcome message.
 + * @param[in] flags Flags to set on welcome.
@@ -1177,7 +1195,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + */
 +int
 +welcome_insert(struct Client *cptr, struct Client *sptr, int nameint,
-+  int namearray, time_t timestamp, char *who, char *text, unsigned int flags)
++  int namearray, time_t create, time_t lastmod, char *who, char *text, unsigned int flags)
 +{
 +  char msg[BUFSIZE];                    /* msg for logging */
 +  int i;                                /* loop variable */
@@ -1190,14 +1208,14 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(timestamp > 0);
++  assert(lastmod > 0);
 +  assert(NULL != who);
 +  assert(NULL != text);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, \"%s\", \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
 +                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
-+    cli_name(cptr), cli_name(sptr), nameint, namearray, timestamp, who, text, flags,
++    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no"));
@@ -1216,13 +1234,14 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* no empty spot, need to unset last */
 +  if (empty == -1) {
-+    welcome_unset(cptr, sptr, end, namearray, timestamp, who, flags);
++    welcome_unset(cptr, sptr, end, namearray, create, lastmod, who, flags);
 +    empty = end;
 +  }
 +
-+  /* move entries down, update timestamp */
++  /* move entries down, update lastmod */
 +  for (i = empty; i > namearray; i--)
-+    welcome_make(i, WelcomeText(i-1), WelcomeWho(i-1), timestamp);
++    welcome_make(i, WelcomeText(i-1), WelcomeWho(i-1),
++      WelcomeCreate(i-1), (WelcomeLastMod(i) >= lastmod) ? WelcomeLastMod(i) +1 : lastmod);
 +
 +  /* correct empty for local offset */
 +  if (flags & WELCOME_LOCAL)
@@ -1240,7 +1259,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  welcome_log(sptr, msg, flags);
 +
 +  /* set it */
-+  welcome_set(cptr, sptr, nameint, namearray, timestamp, who, text, flags);
++  welcome_set(cptr, sptr, nameint, namearray, create, lastmod, who, text, flags);
 +
 +  return 0;
 +}
@@ -1250,7 +1269,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + * @param[in] cptr Local client that sent us the welcome.
 + * @param[in] sptr Originator of the welcome.
 + * @param[in] name Name of the message.
-+ * @param[in] timestamp Timestamp of when the message was set.
++ * @param[in] create When it was set.
++ * @param[in] lastmod Last modification timestamp.
 + * @param[in] who Who set this message.
 + * @param[in] text The welcome message.
 + * @param[in] flags Flags to set on welcome.
@@ -1258,7 +1278,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + */
 +int
 +welcome_do(struct Client *cptr, struct Client *sptr, char *name,
-+  time_t timestamp, char *who, char *text, unsigned int flags)
++  time_t create, time_t lastmod, char *who, char *text, unsigned int flags)
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
@@ -1271,9 +1291,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != who);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", %Tu, \"%s\", \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", %Tu, %Tu, \"%s\", \"%s\","
 +                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
-+    cli_name(cptr), cli_name(sptr), name, timestamp, who, text, flags,
++    cli_name(cptr), cli_name(sptr), name, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no"));
@@ -1300,16 +1320,16 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    return 0;
 +  }
 +
-+  /* invalid timestamp */
-+  if (timestamp <= 0) {
++  /* invalid lastmod */
++  if (lastmod <= 0) {
 +    /* from my user - must be a glitch,
 +     *   someone set (my) network time to 0 ?
 +     */
 +    if (MyUser(sptr))
-+      timestamp++;
++      lastmod++;
 +    /* else it's a protocol violation */
 +    else
-+      return protocol_violation(cptr, "Received WELCOME with invalid timestamp %Tu from %C", timestamp, sptr);
++      return protocol_violation(cptr, "Received WELCOME with invalid lastmod timestamp %Tu from %C", lastmod, sptr);
 +  }
 +
 +  /* source is user, and is myuser or welcome is local, check length of the message */
@@ -1353,21 +1373,21 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    if (!(flags & WELCOME_LOCAL)) {
 +
 +      /* myuser changes it,
-+       *   welcomeTS greater than or equal to timestamp, take welcomeTS+1 as timestamp
++       *   WelcomeLastMod greater than or equal to lastmod, take WelcomeLastMod+1 as lastmod
 +       *   else the change is not accepted upstream because of the older TS
 +       */
 +      if (MyUser(sptr)) {
-+        if (WelcomeTS(namearray) >= timestamp)
-+          timestamp = WelcomeTS(namearray) +1;
++        if (WelcomeLastMod(namearray) >= lastmod)
++          lastmod = WelcomeLastMod(namearray) +1;
 +      }
 +
-+      /* compare timestamps, ignore welcome when:
++      /* compare lastmod, ignore welcome when:
 +       *   we got a newer one
-+       *   or when timestamps are the same and our text is 'smaller'
++       *   or when lastmod is the same and our text is 'smaller'
 +       */
-+      else if ((timestamp < WelcomeTS(namearray)) ||            /* we got a newer one */
-+              ((timestamp == WelcomeTS(namearray)) &&           /* same timestamp */
-+               (strcmp(WelcomeText(namearray), text) < 0))) {   /* our text is 'smaller' */
++      else if ((lastmod < WelcomeLastMod(namearray)) ||            /* we got a newer one */
++              ((lastmod == WelcomeLastMod(namearray)) &&           /* same lastmod */
++               (strcmp(WelcomeText(namearray), text) < 0))) {      /* our text is 'smaller' */
 +        /* burst or burst ack, cptr gets our version from the burst */
 +        if (IsBurstOrBurstAck(cptr))
 +          return 0;
@@ -1376,8 +1396,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      }
 +
 +    /* local welcome - we use our idea of the time */
-+    } else
-+      timestamp = TStime();
++    } else {
++      create = TStime();
++      lastmod = TStime();
++    }
 +
 +    /* new global welcome from my user or local welcome
 +     *   compare new message with old message
@@ -1404,15 +1426,15 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +     *   and wont propagate the change
 +     */
 +    flags &= ~WELCOME_INSERT;
-+    return welcome_unset(cptr, sptr, nameint, namearray, timestamp, who, flags);
++    return welcome_unset(cptr, sptr, nameint, namearray, create, lastmod, who, flags);
 +  }
 +
 +  /* insert */
 +  if (flags & WELCOME_INSERT)
-+    return welcome_insert(cptr, sptr, nameint, namearray, timestamp, who, text, flags);
++    return welcome_insert(cptr, sptr, nameint, namearray, create, lastmod, who, text, flags);
 +
 +  /* new or change */
-+  return welcome_set(cptr, sptr, nameint, namearray, timestamp, who, text, flags);
++  return welcome_set(cptr, sptr, nameint, namearray, create, lastmod, who, text, flags);
 +}
 +
 +
@@ -1430,8 +1452,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* loop over global entries - 0 to max - 1 */
 +  for (name = 0; name <= WELCOME_MAX_ENTRIES - 1; name++) {
 +    if (WelcomeIsSet(name))
-+      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %s :%s",
-+        name + 1, WelcomeTS(name), WelcomeWho(name), WelcomeText(name));
++      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %Tu %s :%s",
++        name + 1,
++        WelcomeCreate(name), WelcomeLastMod(name),
++        WelcomeWho(name), WelcomeText(name));
 +  }
 +}
 +
@@ -1505,7 +1529,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    send_reply(sptr, RPL_STATSWELCOME,
 +      local ? name + 1 - WELCOME_MAX_ENTRIES : name + 1,
 +      local ? cli_name(&me) : "*",
-+      WelcomeWho(name), WelcomeTS(name),
++      WelcomeWho(name),
++      WelcomeCreate(name), WelcomeLastMod(name),
 +      WelcomeIsEmpty(name) ? "<Empty>" : WelcomeText(name));
 +  }
 +}
