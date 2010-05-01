@@ -1326,7 +1326,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +     *   someone set (my) network time to 0 ?
 +     */
 +    if (MyUser(sptr))
-+      lastmod++;
++      lastmod = 1;
 +    /* else it's a protocol violation */
 +    else
 +      return protocol_violation(cptr, "Received WELCOME with invalid lastmod timestamp %Tu from %C", lastmod, sptr);
