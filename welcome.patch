@@ -852,7 +852,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,712 @@
+@@ -0,0 +1,713 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1170,10 +1170,11 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  if (flags & WELCOME_LOCAL)
 +    end += WELCOME_MAX_ENTRIES;
 +
-+  /* move entries up, update lastmod */
++  /* move entries up, update lastmod - lastmod for namearray is already updated above */
 +  for (i = namearray; i < end; i++)
-+    welcome_make(i, WelcomeText(i+1), WelcomeWho(i+1),
-+      WelcomeCreate(i+1), (WelcomeLastMod(i) >= lastmod) ? WelcomeLastMod(i) +1 : lastmod);
++    welcome_make(i, WelcomeText(i+1), WelcomeWho(i+1), WelcomeCreate(i+1),
++      (WelcomeLastMod(i) >= lastmod && i != namearray) ?
++        WelcomeLastMod(i) +1 : lastmod);
 +
 +  /* clear last entry, update lastmod */
 +  welcome_make(end, "", who, create, lastmod);
@@ -1239,10 +1240,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    empty = end;
 +  }
 +
-+  /* move entries down, update lastmod */
++  /* move entries down, update lastmod - lastmod for end is already updated above */
 +  for (i = empty; i > namearray; i--)
-+    welcome_make(i, WelcomeText(i-1), WelcomeWho(i-1),
-+      WelcomeCreate(i-1), (WelcomeLastMod(i) >= lastmod) ? WelcomeLastMod(i) +1 : lastmod);
++    welcome_make(i, WelcomeText(i-1), WelcomeWho(i-1), WelcomeCreate(i-1),
++      (WelcomeLastMod(i) >= lastmod && i != end) ? WelcomeLastMod(i) +1 : lastmod);
 +
 +  /* correct empty for local offset */
 +  if (flags & WELCOME_LOCAL)
