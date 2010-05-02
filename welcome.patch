@@ -890,7 +890,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,868 @@
+@@ -0,0 +1,882 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1461,6 +1461,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
++  int start = 0;                           /* this is the first server setting this welcome message */
 +
 +  /* assert */
 +  assert(NULL != cptr);
@@ -1481,9 +1482,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
++  /* welcome from my user, or a local welcome from a local/remote user */
++  start = (IsUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL));
++
 +  /* name empty after taking off the prefixes? */
 +  if (*name == 0) {
-+    if (MyUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL))
++    if (start)
 +      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :Welcome: No message number given", sptr);
 +    else 
 +      protocol_violation(cptr, "Received WELCOME with no message number from %C", sptr);
@@ -1492,7 +1496,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* check name */
 +  if (!WelcomeArrayIsValid(namearray)) {
-+    if (IsUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL))
++    if (start)
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
 +        "%C :Welcome: Invalid message number %s - should between 1 and %d",
 +        sptr, name, WELCOME_MAX_ENTRIES);
@@ -1516,7 +1520,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  }
 +
 +  /* source is user, and is myuser or welcome is local, check length of the message */
-+  if (IsUser(sptr) && (MyConnect(sptr) || (flags & WELCOME_LOCAL)) && (strlen(text) > WELCOMELEN)) {
++  if (start && (strlen(text) > WELCOMELEN)) {
 +    sendcmdto_one(&me, CMD_NOTICE, sptr,
 +      "%C :Welcome: The message is too long with %d chars - max is %d chars",
 +      sptr, strlen(text), WELCOMELEN);
@@ -1538,7 +1542,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  if (!WelcomeIsSet(namearray) && flags & WELCOME_UNSET) {
 +
 +    /* from user, throw error */
-+    if (IsUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL))
++    if (start)
 +      return send_reply(sptr, ERR_NOSUCHWELCOME, name);
 +
 +     /* new local welcome from server, but empty - ignore
@@ -1584,10 +1588,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      lastmod = TStime();
 +    }
 +
-+    /* new global welcome from my user or local welcome
++    /* welcome from my user or local welcome from local/remote user
 +     *   compare new message with old message
 +     */
-+    if (IsUser(sptr) && (MyConnect(sptr) || (flags & WELCOME_LOCAL))) {
++    if (start) {
 +      if (strcmp(text, WelcomeText(namearray)) == 0) {   /* use strcmp instead of ircd_strcmp - oper may wish to change case */
 +        sendcmdto_one(&me, CMD_NOTICE, sptr,
 +          "%C :Welcome: Cannot change %s message for %s - nothing to change",
@@ -1595,6 +1599,16 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +        return 0;
 +      }
 +    }
++  }
++
++  /* welcome from my user, or local welcome from local/remote user
++   *  forcing and unsetting, set create and lastmod to 0
++   *  clear delete flag
++   */
++  if (start && flags & WELCOME_FORCE && flags & WELCOME_UNSET) {
++    flags &= ~WELCOME_DELETE;
++    create = 0;
++    lastmod = 0;
 +  }
 +
 +  /* do not insert for last global/local entry and when not set yet */
