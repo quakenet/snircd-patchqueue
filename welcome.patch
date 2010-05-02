@@ -1618,8 +1618,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      ((!WelcomeIsSet(namearray)) || (nameint == WELCOME_MAX_ENTRIES)))
 +    flags &= ~WELCOME_INSERT;
 +
-+  /* clear delete flag if text is not empty */
-+  if (flags & WELCOME_DELETE && *text != 0)
++  /* clear delete flag when not unsetting */
++  if (flags & WELCOME_DELETE && !(flags & WELCOME_UNSET))
 +    flags &= ~WELCOME_DELETE;
 +
 +  /* unset */
