@@ -883,7 +883,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,848 @@
+@@ -0,0 +1,853 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1224,7 +1224,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(!WelcomeIsEmpty(namearray) || flags & WELCOME_FORCE);   /* must be set unless forced */
 +  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
@@ -1246,6 +1245,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    nameint, WelcomeText(namearray), WelcomeWho(namearray), create);
 +
 +  /* log it but only if it was set
++   *  welcome unset could have crossed with another welcome unset,
++   *    still need to update lastmod
 +   *  can be a forced unset on a welcome that is not set
 +   */
 +  if (!WelcomeIsEmpty(namearray))
@@ -1328,7 +1329,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    empty = end;
 +  }
 +
-+  /* move entries down, update lastmod - lastmod for end is already updated above */
++  /* move entries down, update lastmod */
 +  for (i = empty; i > namearray; i--)
 +    welcome_make(i, WelcomeText(i-1), WelcomeWho(i-1), WelcomeCreate(i-1),
 +      lastmod, flags | WELCOME_INCLASTMOD);
@@ -1460,7 +1461,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* name empty after taking off the prefixes? */
 +  if (*name == 0) {
-+    if (IsUser(sptr))
++    if (MyUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :Welcome: No message number given", sptr);
 +    else 
 +      protocol_violation(cptr, "Received WELCOME with no message number from %C", sptr);
@@ -1469,7 +1470,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* check name */
 +  if (!WelcomeArrayIsValid(namearray)) {
-+    if (IsUser(sptr))
++    if (IsUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL))
 +      sendcmdto_one(&me, CMD_NOTICE, sptr,
 +        "%C :Welcome: Invalid message number %s - should between 1 and %d",
 +        sptr, name, WELCOME_MAX_ENTRIES);
@@ -1515,7 +1516,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  if (!WelcomeIsSet(namearray) && *text == 0) {
 +
 +    /* from user, throw error */
-+    if (IsUser(sptr))
++    if (IsUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL))
 +      return send_reply(sptr, ERR_NOSUCHWELCOME, name);
 +
 +     /* new local welcome from server, but empty - ignore
@@ -1578,6 +1579,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  if ((flags & WELCOME_INSERT) &&
 +      ((!WelcomeIsSet(namearray)) || (nameint == WELCOME_MAX_ENTRIES)))
 +    flags &= ~WELCOME_INSERT;
++
++  /* clear delete flag if text is not empty */
++  if (flags & WELCOME_DELETE && *text != 0)
++    flags &= ~WELCOME_DELETE;
 +
 +  /* unset */
 +  if (*text == 0) {
