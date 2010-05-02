@@ -883,7 +883,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,843 @@
+@@ -0,0 +1,848 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -948,7 +948,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +             lastmod >= WelcomeLastMod(name)));   /* lastmod may not decrease for global welcome unless forced */
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_make(%d, \"%s\", \"%s\", %Tu, %Tu, "
++  Debug((DEBUG_DEBUG, "welcome_make(name=%d, text=\"%s\", who=%s, create=%Tu, lastmod=%Tu, "
 +                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s inclastmod=%s)",
 +    name, text, who, create, lastmod, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
@@ -1163,7 +1163,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != text);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_set(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
++                      "create=%Tu, lastmod=%Tu, who=%s, text=\"%s\", "
 +                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
@@ -1229,7 +1230,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != who);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_unset(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
++                      "create=%Tu, lastmod=%Tu, who=%s, "
 +                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
@@ -1298,7 +1300,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(flags & WELCOME_INSERT);   /* must be insert */
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_insert(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
++                      "create=%Tu, lastmod=%Tu, who=%s, text=\"%s\", "
 +                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
@@ -1382,7 +1385,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(flags & WELCOME_DELETE);   /* must be delete */
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_delete(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_delete(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
++                      "create=%Tu, lastmod=%Tu, who=%s, "
 +                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
@@ -1444,7 +1448,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != who);
 +
 +  /* debug */
-+  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", %Tu, %Tu, \"%s\", \"%s\","
++  Debug((DEBUG_DEBUG, "welcome_do(cptr=%s, sptr=%s, name=%s, "
++                      "create=%Tu, lastmod=%Tu, who=%s, text=\"%s\", "
 +                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), name, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
