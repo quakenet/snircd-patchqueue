@@ -180,7 +180,7 @@ diff -r 8bf1b05cdfe7 include/numeric.h
 diff -r 8bf1b05cdfe7 include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,80 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -247,10 +247,11 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +#define WELCOME_LOCAL      0x01 /**< welcome is local */
 +/** Welcome action flags */
 +#define WELCOME_ANNOUNCE   0x02 /**< announce new welcome to users */
-+#define WELCOME_INSERT     0x04 /**< insert welcome message, move down all others one place */
-+#define WELCOME_DELETE     0x08 /**< delete welcome message, move up all others one place */
-+#define WELCOME_INCLASTMOD 0x10 /**< increase lastmod if needed */
-+#define WELCOME_FORCE      0x20 /**< force change, bypass lastmod check */
++#define WELCOME_UNSET      0x04 /**< unset welcome */
++#define WELCOME_INSERT     0x08 /**< insert welcome message, move down all others one place */
++#define WELCOME_DELETE     0x10 /**< delete welcome message, move up all others one place */
++#define WELCOME_INCLASTMOD 0x20 /**< increase lastmod if needed */
++#define WELCOME_FORCE      0x40 /**< force change, bypass lastmod check */
 +
 +extern int welcome_do(struct Client *cptr, struct Client *sptr, char *name,
 +  time_t create, time_t lastmod, char *who, char *text, unsigned int flags);
@@ -387,7 +388,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,352 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -629,9 +630,11 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +     flags |= WELCOME_DELETE;
 +  }
 +
-+  /* empty text, set WELCOME_DELETE flag */
-+  if (*text == 0)
++  /* empty text, set unset and delete flag */
++  if (*text == 0) {
++    flags |= WELCOME_UNSET;
 +    flags |= WELCOME_DELETE;
++  }
 +
 +  /* and do it */
 +  return welcome_do(cptr, sptr, name, create, lastmod, who, text, flags);
@@ -730,6 +733,10 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +     name++;
 +     flags |= WELCOME_DELETE;
 +  }
++
++  /* empty text, set unset  flag */
++  if (*text == 0)
++    flags |= WELCOME_UNSET;
 +
 +  /* and do it */
 +  return welcome_do(cptr, sptr, name, create, lastmod, who, text, flags);
@@ -883,7 +890,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,853 @@
+@@ -0,0 +1,862 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -949,11 +956,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_make(name=%d, text=\"%s\", who=%s, create=%Tu, lastmod=%Tu, "
-+                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s inclastmod=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s unset=%s insert=%s delete=%s inclastmod=%s)",
 +    name, text, who, create, lastmod, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_FORCE) ? "yes" : "no",
++      (flags & WELCOME_UNSET) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no",
 +      (flags & WELCOME_INCLASTMOD) ? "yes" : "no"));
@@ -1161,15 +1169,17 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +  assert(NULL != text);
++  assert(!(flags & WELCOME_UNSET));   /* must not be unset */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_set(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
 +                      "create=%Tu, lastmod=%Tu, who=%s, text=\"%s\", "
-+                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s unset=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_FORCE) ? "yes" : "no",
++      (flags & WELCOME_UNSET) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1227,15 +1237,17 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
++  assert(flags & (WELCOME_UNSET|WELCOME_INSERT|WELCOME_DELETE));   /* must be unset, insert or delete */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_unset(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
 +                      "create=%Tu, lastmod=%Tu, who=%s, "
-+                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s unset=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_FORCE) ? "yes" : "no",
++      (flags & WELCOME_UNSET) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1303,11 +1315,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_insert(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
 +                      "create=%Tu, lastmod=%Tu, who=%s, text=\"%s\", "
-+                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s unset=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_FORCE) ? "yes" : "no",
++      (flags & WELCOME_UNSET) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1383,16 +1396,18 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
++  assert(flags & WELCOME_UNSET);    /* must be unset */
 +  assert(flags & WELCOME_DELETE);   /* must be delete */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_delete(cptr=%s, sptr=%s, nameint=%d, namearray=%d, "
 +                      "create=%Tu, lastmod=%Tu, who=%s, "
-+                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s unset=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_FORCE) ? "yes" : "no",
++      (flags & WELCOME_UNSET) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1451,11 +1466,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_do(cptr=%s, sptr=%s, name=%s, "
 +                      "create=%Tu, lastmod=%Tu, who=%s, text=\"%s\", "
-+                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s unset=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), name, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
 +      (flags & WELCOME_FORCE) ? "yes" : "no",
++      (flags & WELCOME_UNSET) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1513,7 +1529,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeNameIsValid(nameint));
 +
 +  /* cannot unset welcome that is not set */
-+  if (!WelcomeIsSet(namearray) && *text == 0) {
++  if (!WelcomeIsSet(namearray) && flags & WELCOME_UNSET) {
 +
 +    /* from user, throw error */
 +    if (IsUser(sptr) && (MyConnect(sptr) || flags & WELCOME_LOCAL))
@@ -1585,7 +1601,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    flags &= ~WELCOME_DELETE;
 +
 +  /* unset */
-+  if (*text == 0) {
++  if (flags & WELCOME_UNSET) {
 +
 +    /* clear insert flag,
 +     *   when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
