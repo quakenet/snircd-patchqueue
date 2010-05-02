@@ -950,9 +950,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != text);
 +  assert(NULL != who);
 +  assert((flags & WELCOME_FORCE) || lastmod > 0);   /* lastmod must not be 0 unless forced */
-+  assert(!(flags & WELCOME_LOCAL) &&
-+           ((flags & WELCOME_FORCE) ||
-+             lastmod >= WelcomeLastMod(name)));   /* lastmod may not decrease for global welcome unless forced */
++  assert(flags & WELCOME_LOCAL ||
++           flags & WELCOME_FORCE ||
++             lastmod >= WelcomeLastMod(name));   /* lastmod may not decrease for global welcome unless forced */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_make(name=%d, text=\"%s\", who=%s, create=%Tu, lastmod=%Tu, "
