@@ -180,7 +180,7 @@ diff -r 8bf1b05cdfe7 include/numeric.h
 diff -r 8bf1b05cdfe7 include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,79 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -250,6 +250,7 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +#define WELCOME_INSERT     0x04 /**< insert welcome message, move down all others one place */
 +#define WELCOME_DELETE     0x08 /**< delete welcome message, move up all others one place */
 +#define WELCOME_INCLASTMOD 0x10 /**< increase lastmod if needed */
++#define WELCOME_FORCE      0x20 /**< force change, bypass lastmod check */
 +
 +extern int welcome_do(struct Client *cptr, struct Client *sptr, char *name,
 +  time_t create, time_t lastmod, char *who, char *text, unsigned int flags);
@@ -386,7 +387,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,334 @@
+@@ -0,0 +1,346 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -610,6 +611,12 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +       flags |= WELCOME_ANNOUNCE;
 +  }
 +
++  /* check for force prefix */
++  if (*name == '!') {
++     name++;
++     flags |= WELCOME_FORCE;
++  }
++
 +  /* check for insert prefix */
 +  if (*name == '+') {
 +     name++;
@@ -704,6 +711,12 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +  if (*name == '$') {
 +     name++;
 +     flags |= WELCOME_ANNOUNCE;
++  }
++
++  /* check for force prefix */
++  if (*name == '!') {
++     name++;
++     flags |= WELCOME_FORCE;
 +  }
 +
 +  /* check for insert prefix */
@@ -870,7 +883,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,795 @@
+@@ -0,0 +1,843 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -929,29 +942,39 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeArrayIsValid(name));
 +  assert(NULL != text);
 +  assert(NULL != who);
-+  assert(lastmod > 0);                       /* lastmod must not be 0 */
++  assert((flags & WELCOME_FORCE) || lastmod > 0);   /* lastmod must not be 0 unless forced */
 +  assert(!(flags & WELCOME_LOCAL) &&
-+         lastmod >= WelcomeLastMod(name));   /* lastmod may not decrease */
++           ((flags & WELCOME_FORCE) ||
++             lastmod >= WelcomeLastMod(name)));   /* lastmod may not decrease for global welcome unless forced */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_make(%d, \"%s\", \"%s\", %Tu, %Tu, "
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s inclastmod=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s inclastmod=%s)",
 +    name, text, who, create, lastmod, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_FORCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no",
 +      (flags & WELCOME_INCLASTMOD) ? "yes" : "no"));
 +
++  /* forced and lastmod is zero, clear text and who */
++  if (flags & WELCOME_FORCE && lastmod == 0) {
++    text = "";
++    who = "";
++  }
++
 +  /* store it */
 +  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
 +  ircd_strncpy(WelcomeArray[name].who, who, ACCOUNTLEN);
-+  /* take current lastmod +1 */
-+  if (flags & WELCOME_INCLASTMOD && WelcomeLastMod(name) >= lastmod)
++
++  if (flags & WELCOME_INCLASTMOD &&        /* take current lastmod+1 if needed*/
++       !(flags & WELCOME_FORCE) &&         /* not forced */
++         WelcomeLastMod(name) >= lastmod)  /* current lastmod greater or equal than lastmod*/
 +    WelcomeArray[name].lastmod = WelcomeLastMod(name) +1;
-+  /* take new lastmod */
 +  else
 +    WelcomeArray[name].lastmod = lastmod;
++
 +  WelcomeArray[name].create = create;
 +
 +  return name;
@@ -977,11 +1000,13 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(NULL != cptr);
 +  assert(WelcomeNameIsValid(nameint));
-+  assert(lastmod > 0);
-+  assert(!(flags & WELCOME_LOCAL));
++  assert(lastmod >= 0);
++  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
++  assert(!(flags & WELCOME_LOCAL));  /* must not be local */
 +
-+  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%s%d %Tu %Tu %s :%s",
++  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%s%s%d %Tu %Tu %s :%s",
 +    (flags & WELCOME_ANNOUNCE) ? "$" : "",
++    (flags & WELCOME_FORCE) ? "!" : "",
 +    (flags & WELCOME_INSERT) ? "+" : "",
 +    (flags & WELCOME_DELETE) ? "-" : "",
 +    nameint, create, lastmod, who, text);
@@ -994,22 +1019,44 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 + * @param[in] cptr Local client that sent us the welcome.
 + * @param[in] nameint Name of the message.
 + * @param[in] namearray Name of the array item.
++ * @param[in] flags Flags to set on welcome.
 + * @return Zero
 + */
 +int
-+welcome_resend(struct Client *cptr, int nameint, int namearray)
++welcome_resend(struct Client *cptr, int nameint, int namearray, unsigned int flags)
 +{
++
++  int name;                 /* loop variable */
++
 +  /* assert */
 +  assert(NULL != cptr);
 +  assert(IsServer(cptr));
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
 +  assert(nameint - 1 == namearray);
++  assert(!(flags & WELCOME_LOCAL));   /* must not be local */
++  assert(!(flags & WELCOME_FORCE));   /* must not be forced */
 +
++  /* send our version */
 +  sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %Tu %s :%s",
 +    nameint,
 +    WelcomeCreate(namearray), WelcomeLastMod(namearray),
 +    WelcomeWho(namearray), WelcomeText(namearray));
++
++  /* bad welcome did not have insert or delete prefix */
++  if (!(flags & (WELCOME_INSERT|WELCOME_DELETE)))
++    return 0;
++
++  /* loop over global entries - nameint+1 to max - 1 */
++  for (name = namearray +1; name <= WELCOME_MAX_ENTRIES - 1; name++) {
++    if (!WelcomeIsSet(name))   /* not set, force */
++      sendcmdto_one(&me, CMD_WELCOME, cptr, "* !%d 0 0 0 :", name +1);
++     else   /* send our version */
++      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %Tu %s :%s",
++        name +1,
++        WelcomeCreate(name), WelcomeLastMod(name),
++        WelcomeWho(name), WelcomeText(name));
++  }
 +
 +  return 0;
 +}
@@ -1110,16 +1157,18 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod > 0);
++  assert(lastmod >= 0);
++  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +  assert(NULL != text);
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_FORCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1174,15 +1223,18 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod > 0);
++  assert(!WelcomeIsEmpty(namearray) || flags & WELCOME_FORCE);   /* must be set unless forced */
++  assert(lastmod >= 0);
++  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_FORCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1191,8 +1243,11 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
 +    nameint, WelcomeText(namearray), WelcomeWho(namearray), create);
 +
-+  /* log it */
-+  welcome_log(sptr, msg, flags);
++  /* log it but only if it was set
++   *  can be a forced unset on a welcome that is not set
++   */
++  if (!WelcomeIsEmpty(namearray))
++    welcome_log(sptr, msg, flags);
 +
 +  /* update, 
 +   *   not when inserting, welcome_insert() handles that
@@ -1236,16 +1291,19 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod > 0);
++  assert(lastmod >= 0);
++  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +  assert(NULL != text);
++  assert(flags & WELCOME_INSERT);   /* must be insert */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_FORCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1318,16 +1376,18 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod > 0);
++  assert(lastmod >= 0);
++  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
-+  assert(flags & WELCOME_DELETE);
++  assert(flags & WELCOME_DELETE);   /* must be delete */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_delete(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_FORCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1385,10 +1445,11 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", %Tu, %Tu, \"%s\", \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s force=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), name, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_FORCE) ? "yes" : "no",
 +      (flags & WELCOME_INSERT) ? "yes" : "no",
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
@@ -1421,8 +1482,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +     */
 +    if (MyUser(sptr))
 +      lastmod = 1;
-+    /* else it's a protocol violation */
-+    else
++    /* not forced or negative, it is a protocol violation */
++    else if (!(flags & WELCOME_FORCE) || lastmod < 0)
 +      return protocol_violation(cptr, "Received WELCOME with invalid lastmod timestamp %Tu from %C", lastmod, sptr);
 +  }
 +
@@ -1463,8 +1524,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* we got a record for it */
 +  if (WelcomeIsSet(namearray)) {
 +
-+    /* global */
-+    if (!(flags & WELCOME_LOCAL)) {
++    /* global and not forced */
++    if (!(flags & (WELCOME_LOCAL|WELCOME_FORCE))) {
 +
 +      /* myuser changes it,
 +       *   WelcomeLastMod greater than or equal to lastmod, take WelcomeLastMod+1 as lastmod
@@ -1486,11 +1547,11 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +        if (IsBurstOrBurstAck(cptr))
 +          return 0;
 +        /* sync server */
-+        return welcome_resend(cptr, nameint, namearray);
++        return welcome_resend(cptr, nameint, namearray, flags);
 +      }
 +
 +    /* local welcome - we use our idea of the time */
-+    } else {
++    } else if (flags & WELCOME_LOCAL) {
 +      create = TStime();
 +      lastmod = TStime();
 +    }
