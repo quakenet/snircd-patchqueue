@@ -890,7 +890,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,862 @@
+@@ -0,0 +1,868 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1057,10 +1057,16 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* loop over global entries - nameint+1 to max - 1 */
 +  for (name = namearray +1; name <= WELCOME_MAX_ENTRIES - 1; name++) {
-+    if (!WelcomeIsSet(name))   /* not set, force */
++
++    /* not set, force it to be unset on the other end */
++    if (!WelcomeIsSet(name))
 +      sendcmdto_one(&me, CMD_WELCOME, cptr, "* !%d 0 0 0 :", name +1);
-+     else   /* send our version */
-+      sendcmdto_one(&me, CMD_WELCOME, cptr, "* %d %Tu %Tu %s :%s",
++
++    /* set, force change here too
++     *  other side may have this lastmod+1, without force it would be ignored
++     */
++    else
++      sendcmdto_one(&me, CMD_WELCOME, cptr, "* !%d %Tu %Tu %s :%s",
 +        name +1,
 +        WelcomeCreate(name), WelcomeLastMod(name),
 +        WelcomeWho(name), WelcomeText(name));
