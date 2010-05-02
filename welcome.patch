@@ -890,7 +890,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,882 @@
+@@ -0,0 +1,884 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1197,7 +1197,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  welcome_make(namearray, text, who, create, lastmod, flags);
 +
 +  /* create msg for log */
-+  ircd_snprintf(0, msg, 0, "%s%s%s WELCOME %d \"%s\" %s [%Tu]",
++  ircd_snprintf(0, msg, 0, "%s%s%s%s WELCOME %d \"%s\" %s [%Tu]",
++    (flags & WELCOME_FORCE) ? "force " : "",
 +    new ? "setting" : "changing",
 +    (flags & WELCOME_ANNOUNCE) ? " and announcing " : " ",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
@@ -1258,7 +1259,8 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
 +  /* create msg for log */
-+  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" %s [%Tu]",
++  ircd_snprintf(0, msg, 0, "%sunsetting %s WELCOME %d \"%s\" %s [%Tu]",
++    (flags & WELCOME_FORCE) ? "force " : "",
 +    (flags & WELCOME_LOCAL) ? "local" : "global",
 +    nameint, WelcomeText(namearray), WelcomeWho(namearray), create);
 +
