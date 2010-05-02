@@ -180,7 +180,7 @@ diff -r 8bf1b05cdfe7 include/numeric.h
 diff -r 8bf1b05cdfe7 include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,78 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -244,10 +244,12 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +};
 +
 +/** Welcome type flags */
-+#define WELCOME_LOCAL    0x01 /**< welcome is local */
++#define WELCOME_LOCAL      0x01 /**< welcome is local */
 +/** Welcome action flags */
-+#define WELCOME_ANNOUNCE 0x02 /**< announce change to users */
-+#define WELCOME_INSERT   0x04 /**< insert welcome message, move down all others one place */
++#define WELCOME_ANNOUNCE   0x02 /**< announce new welcome to users */
++#define WELCOME_INSERT     0x04 /**< insert welcome message, move down all others one place */
++#define WELCOME_DELETE     0x08 /**< delete welcome message, move up all others one place */
++#define WELCOME_INCLASTMOD 0x10 /**< increase lastmod if needed */
 +
 +extern int welcome_do(struct Client *cptr, struct Client *sptr, char *name,
 +  time_t create, time_t lastmod, char *who, char *text, unsigned int flags);
@@ -384,7 +386,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,318 @@
+@@ -0,0 +1,334 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -614,6 +616,16 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +     flags |= WELCOME_INSERT;
 +  }
 +
++  /* check for delete prefix */
++  else if (*name == '-') {
++     name++;
++     flags |= WELCOME_DELETE;
++  }
++
++  /* empty text, set WELCOME_DELETE flag */
++  if (*text == 0)
++    flags |= WELCOME_DELETE;
++
 +  /* and do it */
 +  return welcome_do(cptr, sptr, name, create, lastmod, who, text, flags);
 +}
@@ -698,6 +710,12 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +  if (*name == '+') {
 +     name++;
 +     flags |= WELCOME_INSERT;
++  }
++
++  /* check for delete prefix */
++  else if (*name == '-') {
++     name++;
++     flags |= WELCOME_DELETE;
 +  }
 +
 +  /* and do it */
@@ -852,7 +870,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,731 @@
+@@ -0,0 +1,795 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -911,22 +929,29 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeArrayIsValid(name));
 +  assert(NULL != text);
 +  assert(NULL != who);
-+  assert(lastmod > 0);                      /* lastmod must not be 0 */
++  assert(lastmod > 0);                       /* lastmod must not be 0 */
 +  assert(!(flags & WELCOME_LOCAL) &&
-+         lastmod >= WelcomeLastMod(name));   /* lastmod must increase for global welcome */
++         lastmod >= WelcomeLastMod(name));   /* lastmod may not decrease */
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_make(%d, \"%s\", \"%s\", %Tu, %Tu, "
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s inclastmod=%s)",
 +    name, text, who, create, lastmod, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
-+      (flags & WELCOME_INSERT) ? "yes" : "no"));
++      (flags & WELCOME_INSERT) ? "yes" : "no",
++      (flags & WELCOME_DELETE) ? "yes" : "no",
++      (flags & WELCOME_INCLASTMOD) ? "yes" : "no"));
 +
 +  /* store it */
 +  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
 +  ircd_strncpy(WelcomeArray[name].who, who, ACCOUNTLEN);
-+  WelcomeArray[name].lastmod = lastmod;
++  /* take current lastmod +1 */
++  if (flags & WELCOME_INCLASTMOD && WelcomeLastMod(name) >= lastmod)
++    WelcomeArray[name].lastmod = WelcomeLastMod(name) +1;
++  /* take new lastmod */
++  else
++    WelcomeArray[name].lastmod = lastmod;
 +  WelcomeArray[name].create = create;
 +
 +  return name;
@@ -955,9 +980,10 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(lastmod > 0);
 +  assert(!(flags & WELCOME_LOCAL));
 +
-+  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%d %Tu %Tu %s :%s",
++  sendcmdto_serv_butone(sptr, CMD_WELCOME, cptr, "* %s%s%s%d %Tu %Tu %s :%s",
 +    (flags & WELCOME_ANNOUNCE) ? "$" : "",
 +    (flags & WELCOME_INSERT) ? "+" : "",
++    (flags & WELCOME_DELETE) ? "-" : "",
 +    nameint, create, lastmod, who, text);
 +
 +  return 0;
@@ -1090,11 +1116,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_set(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
-+      (flags & WELCOME_INSERT) ? "yes" : "no"));
++      (flags & WELCOME_INSERT) ? "yes" : "no",
++      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
 +  /* not set */
 +  if (WelcomeIsEmpty(namearray))
@@ -1141,9 +1168,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  int namearray, time_t create, time_t lastmod, char *who, unsigned int flags)
 +{
 +  char msg[BUFSIZE];                    /* msg for logging */
-+  int i;                                /* loop variable */
-+  int empty = namearray;                /* first empty spot in array after namearray */
-+  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */ 
 +
 +  /* assert */
 +  assert(NULL != cptr);
@@ -1155,11 +1179,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_unset(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
-+      (flags & WELCOME_INSERT) ? "yes" : "no"));
++      (flags & WELCOME_INSERT) ? "yes" : "no",
++      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
 +  /* create msg for log */
 +  ircd_snprintf(0, msg, 0, "unsetting %s WELCOME %d \"%s\" %s [%Tu]",
@@ -1169,32 +1194,16 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* log it */
 +  welcome_log(sptr, msg, flags);
 +
-+  /* update, but not when inserting welcome_insert() handles that */
-+  if (!(flags & WELCOME_INSERT))
++  /* update, 
++   *   not when inserting, welcome_insert() handles that
++   *   not when deleting, welcome_delete() handles that
++   */
++  if (!(flags & (WELCOME_INSERT|WELCOME_DELETE)))
 +    welcome_make(namearray, "", who, create, lastmod, flags);
 +
 +  /* propagate it, but not when inserting */
 +  if (!(flags & (WELCOME_LOCAL|WELCOME_INSERT)))
 +    welcome_propagate(cptr, sptr, nameint, create, lastmod, who, "", flags);
-+
-+  /* correct end for local offset */
-+  if (flags & WELCOME_LOCAL)
-+    end += WELCOME_MAX_ENTRIES;
-+
-+  /* only move entries up when not inserting */
-+  if (!(flags & WELCOME_INSERT)) {
-+
-+    /* move entries up, update lastmod - lastmod for namearray is already updated above */
-+    for (i = namearray; i < end; i++)
-+      welcome_make(i, WelcomeText(i+1), WelcomeWho(i+1), WelcomeCreate(i+1),
-+        (WelcomeLastMod(i) >= lastmod && i != namearray) ? WelcomeLastMod(i) +1 : lastmod,
-+        flags);
-+
-+    /* clear last entry, update lastmod */
-+    welcome_make(end, "", who, create,
-+      (WelcomeLastMod(i) >= lastmod) ? WelcomeLastMod(end) +1 : lastmod,
-+      flags);
-+  }
 +
 +  return 0;
 +}
@@ -1233,11 +1242,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_insert(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\", \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
-+      (flags & WELCOME_INSERT) ? "yes" : "no"));
++      (flags & WELCOME_INSERT) ? "yes" : "no",
++      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
 +  /* correct end for local offset */
 +  if (flags & WELCOME_LOCAL)
@@ -1260,8 +1270,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  /* move entries down, update lastmod - lastmod for end is already updated above */
 +  for (i = empty; i > namearray; i--)
 +    welcome_make(i, WelcomeText(i-1), WelcomeWho(i-1), WelcomeCreate(i-1),
-+      (WelcomeLastMod(i) >= lastmod && i != end) ? WelcomeLastMod(i) +1 : lastmod,
-+      flags);
++      lastmod, flags | WELCOME_INCLASTMOD);
 +
 +  /* correct empty for local offset */
 +  if (flags & WELCOME_LOCAL)
@@ -1280,6 +1289,70 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* set it */
 +  welcome_set(cptr, sptr, nameint, namearray, create, lastmod, who, text, flags);
++
++  return 0;
++}
++
++
++/** Delete a welcome message.
++ * @param[in] cptr Local client that sent us the welcome.
++ * @param[in] sptr Originator of the welcome.
++ * @param[in] nameint Name of the message.
++ * @param[in] namearray Array entry.
++ * @param[in] create When it was set.
++ * @param[in] lastmod Last modification timestamp.
++ * @param[in] who Who set this message.
++ * @param[in] flags Flags to set on welcome.
++ * @return Zero
++ */
++int
++welcome_delete(struct Client *cptr, struct Client *sptr, int nameint,
++  int namearray, time_t create, time_t lastmod, char *who, unsigned int flags)
++{
++  int i;                                /* loop variable */
++  int empty = namearray;                /* first empty spot in array after namearray */
++  int end = WELCOME_MAX_ENTRIES -1;     /* last element to check in array */ 
++
++  /* assert */
++  assert(NULL != cptr);
++  assert(NULL != sptr);
++  assert(WelcomeNameIsValid(nameint));
++  assert(WelcomeArrayIsValid(namearray));
++  assert(lastmod > 0);
++  assert(NULL != who);
++  assert(flags & WELCOME_DELETE);
++
++  /* debug */
++  Debug((DEBUG_DEBUG, "welcome_delete(\"%s\", \"%s\", %d, %d, %Tu, %Tu, \"%s\","
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
++    cli_name(cptr), cli_name(sptr), nameint, namearray, create, lastmod, who, flags,
++      (flags & WELCOME_LOCAL) ? "yes" : "no",
++      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
++      (flags & WELCOME_INSERT) ? "yes" : "no",
++      (flags & WELCOME_DELETE) ? "yes" : "no"));
++
++  /* unset it */
++  welcome_unset(cptr, sptr, nameint, namearray, create, lastmod, who, flags);
++
++  /* correct end for local offset */
++  if (flags & WELCOME_LOCAL)
++    end += WELCOME_MAX_ENTRIES;
++
++  /* move entries up, update lastmod */
++  for (i = namearray; i < end; i++) {
++    if (!WelcomeIsSet(i+1))
++      break;
++    welcome_make(i, WelcomeText(i+1), WelcomeWho(i+1), WelcomeCreate(i+1),
++      lastmod, flags | WELCOME_INCLASTMOD);
++  }
++
++  /* clear last entry */
++  if (i == end)
++    welcome_make(i, "", who, create, lastmod, flags | WELCOME_INCLASTMOD);
++
++  /* nothing was moved, clear entry */
++  if (i == namearray)
++    welcome_make(i, "", who, create, lastmod, flags);
 +
 +  return 0;
 +}
@@ -1312,11 +1385,12 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* debug */
 +  Debug((DEBUG_DEBUG, "welcome_do(\"%s\", \"%s\", \"%s\", %Tu, %Tu, \"%s\", \"%s\","
-+                      "FLAGS(0x%04x): local=%s announce=%s insert=%s)",
++                      "FLAGS(0x%04x): local=%s announce=%s insert=%s delete=%s)",
 +    cli_name(cptr), cli_name(sptr), name, create, lastmod, who, text, flags,
 +      (flags & WELCOME_LOCAL) ? "yes" : "no",
 +      (flags & WELCOME_ANNOUNCE) ? "yes" : "no",
-+      (flags & WELCOME_INSERT) ? "yes" : "no"));
++      (flags & WELCOME_INSERT) ? "yes" : "no",
++      (flags & WELCOME_DELETE) ? "yes" : "no"));
 +
 +  /* name empty after taking off the prefixes? */
 +  if (*name == 0) {
@@ -1441,11 +1515,19 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* unset */
 +  if (*text == 0) {
++
 +    /* clear insert flag,
 +     *   when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
 +     *   and wont propagate the change
++     *   welcome_delete() calls welcome_unset()
 +     */
 +    flags &= ~WELCOME_INSERT;
++
++    /* delete */
++    if (flags & WELCOME_DELETE)
++      return welcome_delete(cptr, sptr, nameint, namearray, create, lastmod, who, flags);
++
++    /* unset */
 +    return welcome_unset(cptr, sptr, nameint, namearray, create, lastmod, who, flags);
 +  }
 +
