@@ -890,7 +890,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,884 @@
+@@ -0,0 +1,882 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -949,7 +949,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(WelcomeArrayIsValid(name));
 +  assert(NULL != text);
 +  assert(NULL != who);
-+  assert((flags & WELCOME_FORCE) || lastmod > 0);   /* lastmod must not be 0 unless forced */
++  assert(flags & WELCOME_FORCE || lastmod > 0);   /* lastmod must not be 0 unless forced */
 +  assert(flags & WELCOME_LOCAL ||
 +           flags & WELCOME_FORCE ||
 +             lastmod >= WelcomeLastMod(name));   /* lastmod may not decrease for global welcome unless forced */
@@ -976,9 +976,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  ircd_strncpy(WelcomeArray[name].text, text, WELCOMELEN);
 +  ircd_strncpy(WelcomeArray[name].who, who, ACCOUNTLEN);
 +
-+  if (flags & WELCOME_INCLASTMOD &&        /* take current lastmod+1 if needed*/
++  if (flags & WELCOME_INCLASTMOD &&        /* take current lastmod+1 if needed */
 +       !(flags & WELCOME_FORCE) &&         /* not forced */
-+         WelcomeLastMod(name) >= lastmod)  /* current lastmod greater or equal than lastmod*/
++         WelcomeLastMod(name) >= lastmod)  /* current lastmod greater or equal than lastmod */
 +    WelcomeArray[name].lastmod = WelcomeLastMod(name) +1;
 +  else
 +    WelcomeArray[name].lastmod = lastmod;
@@ -1273,7 +1273,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +    welcome_log(sptr, msg, flags);
 +
 +  /* update, 
-+   *   not when inserting, welcome_insert() handles that
++   *   not when inserting, welcome_insert() handles that by calling welcome_set()
 +   *   not when deleting, welcome_delete() handles that
 +   */
 +  if (!(flags & (WELCOME_INSERT|WELCOME_DELETE)))
@@ -1463,7 +1463,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +{
 +  int nameint = atoi(name);                /* transform to int */
 +  int namearray = nameint - 1;             /* used to test the array element */
-+  int start = 0;                           /* this is the first server setting this welcome message */
++  int start = 0;                           /* this is the first server setting this welcome message from a user */
 +
 +  /* assert */
 +  assert(NULL != cptr);
@@ -1522,7 +1522,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  }
 +
 +  /* source is user, and is myuser or welcome is local, check length of the message */
-+  if (start && (strlen(text) > WELCOMELEN)) {
++  if (start && strlen(text) > WELCOMELEN) {
 +    sendcmdto_one(&me, CMD_NOTICE, sptr,
 +      "%C :Welcome: The message is too long with %d chars - max is %d chars",
 +      sptr, strlen(text), WELCOMELEN);
@@ -1574,9 +1574,9 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +       *   we got a newer one
 +       *   or when lastmod is the same and our text is 'smaller'
 +       */
-+      else if ((lastmod < WelcomeLastMod(namearray)) ||            /* we got a newer one */
-+              ((lastmod == WelcomeLastMod(namearray)) &&           /* same lastmod */
-+               (strcmp(WelcomeText(namearray), text) < 0))) {      /* our text is 'smaller' */
++      else if (lastmod < WelcomeLastMod(namearray) ||             /* we got a newer one */
++                (lastmod == WelcomeLastMod(namearray) &&          /* same lastmod */
++                   strcmp(WelcomeText(namearray), text) < 0)) {   /* our text is 'smaller' */
 +        /* burst or burst ack, cptr gets our version from the burst */
 +        if (IsBurstOrBurstAck(cptr))
 +          return 0;
@@ -1592,14 +1592,13 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +    /* welcome from my user or local welcome from local/remote user
 +     *   compare new message with old message
++     *   use strcmp instead of ircd_strcmp - oper may wish to change case
 +     */
-+    if (start) {
-+      if (strcmp(text, WelcomeText(namearray)) == 0) {   /* use strcmp instead of ircd_strcmp - oper may wish to change case */
-+        sendcmdto_one(&me, CMD_NOTICE, sptr,
-+          "%C :Welcome: Cannot change %s message for %s - nothing to change",
-+          sptr, (flags & WELCOME_LOCAL) ? "local" : "global", name); 
-+        return 0;
-+      }
++    if (start && strcmp(text, WelcomeText(namearray)) == 0) {
++      sendcmdto_one(&me, CMD_NOTICE, sptr,
++        "%C :Welcome: Cannot change %s message for %s - nothing to change",
++        sptr, (flags & WELCOME_LOCAL) ? "local" : "global", name); 
++      return 0;
 +    }
 +  }
 +
@@ -1607,30 +1606,29 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +   *  forcing and unsetting, set create and lastmod to 0
 +   *  clear delete flag
 +   */
-+  if (start && flags & WELCOME_FORCE && flags & WELCOME_UNSET) {
++  if (start && (flags & WELCOME_FORCE) && (flags & WELCOME_UNSET)) {
 +    flags &= ~WELCOME_DELETE;
 +    create = 0;
 +    lastmod = 0;
 +  }
 +
-+  /* do not insert for last global/local entry and when not set yet */
-+  if ((flags & WELCOME_INSERT) &&
-+      ((!WelcomeIsSet(namearray)) || (nameint == WELCOME_MAX_ENTRIES)))
++  /* clear insert flag 
++   *   when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
++   *     and does not propagate the change - welcome_delete() also calls welcome_unset()
++   *   do not insert last global/local welcome
++   *   do not insert when entry is not set
++   *
++   */
++  if (flags & WELCOME_INSERT &&
++       (flags & WELCOME_UNSET || !WelcomeIsSet(namearray) || nameint == WELCOME_MAX_ENTRIES))
 +    flags &= ~WELCOME_INSERT;
 +
-+  /* clear delete flag when not unsetting */
++  /* clear delete flag when not unsetting so we do not propagate the - delete prefix */
 +  if (flags & WELCOME_DELETE && !(flags & WELCOME_UNSET))
 +    flags &= ~WELCOME_DELETE;
 +
 +  /* unset */
 +  if (flags & WELCOME_UNSET) {
-+
-+    /* clear insert flag,
-+     *   when this flag is set, welcome_unset() assumes it is being called from welcome_insert()
-+     *   and wont propagate the change
-+     *   welcome_delete() calls welcome_unset()
-+     */
-+    flags &= ~WELCOME_INSERT;
 +
 +    /* delete */
 +    if (flags & WELCOME_DELETE)
