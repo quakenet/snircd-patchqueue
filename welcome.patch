@@ -394,7 +394,7 @@ diff -r 8bf1b05cdfe7 ircd/ircd_parser.y
 diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 --- /dev/null
 +++ b/ircd/m_welcome.c
-@@ -0,0 +1,352 @@
+@@ -0,0 +1,360 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -704,6 +704,14 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +  lastmod = atoi(parv[4]);
 +  who = parv[5];
 +  text = parv[parc - 1]; /* parse reason as last parameter */
++
++  /* check if create is valid - create is 0 but parv[3] is not */
++  if (create == 0 && !(parv[3][0] == '0' && parv[3][1] == '\0'))
++    return protocol_violation(cptr, "Received WELCOME with invalid create timestamp %s from %C", parv[3], sptr);
++
++  /* check if lastmod is valid - lastmod is 0 but parv[4] is not */
++  if (lastmod == 0 && !(parv[4][0] == '0' && parv[4][1] == '\0'))
++    return protocol_violation(cptr, "Received WELCOME with invalid lastmod timestamp %s from %C", parv[4], sptr);
 +
 +  /* target is not global */
 +  if (!(target[0] == '*' && target[1] == '\0')) {
