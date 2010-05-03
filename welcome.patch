@@ -547,7 +547,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 + *   parv[0] = Send prefix
 + *   parv[1] = Target: server or * for global (or left out for this server)
 + *   parv[2] = Name
-+ *   parv[3] = Text
++ *   parv[parc - 1] = Text
 + *
 + */
 +int mo_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
@@ -667,7 +667,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 + *   parv[3] = Create
 + *   parv[4] = LastMod
 + *   parv[5] = Who
-+ *   parv[6] = Text
++ *   parv[parc - 1] = Text
 + *
 + */
 +int ms_welcome(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
@@ -748,7 +748,7 @@ diff -r 8bf1b05cdfe7 ircd/m_welcome.c
 +     flags |= WELCOME_DELETE;
 +  }
 +
-+  /* empty text, set unset  flag */
++  /* empty text, set unset flag */
 +  if (*text == 0)
 +    flags |= WELCOME_UNSET;
 +
