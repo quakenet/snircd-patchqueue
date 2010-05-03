@@ -896,7 +896,7 @@ diff -r 8bf1b05cdfe7 ircd/s_user.c
 diff -r 8bf1b05cdfe7 ircd/welcome.c
 --- /dev/null
 +++ b/ircd/welcome.c
-@@ -0,0 +1,882 @@
+@@ -0,0 +1,877 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/welcome.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -1014,7 +1014,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(NULL != cptr);
 +  assert(WelcomeNameIsValid(nameint));
-+  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(!(flags & WELCOME_LOCAL));  /* must not be local */
 +
@@ -1177,7 +1176,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +  assert(NULL != text);
@@ -1247,7 +1245,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +  assert(flags & (WELCOME_UNSET|WELCOME_INSERT|WELCOME_DELETE));   /* must be unset, insert or delete */
@@ -1320,7 +1317,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +  assert(NULL != text);
@@ -1407,7 +1403,6 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  assert(NULL != sptr);
 +  assert(WelcomeNameIsValid(nameint));
 +  assert(WelcomeArrayIsValid(namearray));
-+  assert(lastmod >= 0);
 +  assert(lastmod > 0 || flags & WELCOME_FORCE);   /* lastmod must not be 0 unless forced */
 +  assert(NULL != who);
 +  assert(flags & WELCOME_UNSET);    /* must be unset */
