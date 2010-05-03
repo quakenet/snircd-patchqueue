@@ -180,7 +180,7 @@ diff -r 8bf1b05cdfe7 include/numeric.h
 diff -r 8bf1b05cdfe7 include/welcome.h
 --- /dev/null
 +++ b/include/welcome.h
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,86 @@
 +#ifndef INCLUDED_welcome_h
 +#define INCLUDED_welcome_h
 +/*
@@ -212,8 +212,14 @@ diff -r 8bf1b05cdfe7 include/welcome.h
 +
 +/* Maximum number of welcome entries (per type; X global, X local) */
 +#define WELCOME_MAX_ENTRIES  10
-+/* Maximum length of a welcome message */
-+#define WELCOMELEN TOPICLEN
++/* Maximum length of a welcome message
++ *   the maximum value for this is 300
++ *   when set larger, this could lead to truncation when announcing
++ *     ":server.name NOTICE $server.name :[server.name] text"
++ *     510 - (1+63+1+6+1+1+63+1+1+1+63+1+1) = 306 for text
++ *   max length of a servername is 63 HOSTLEN
++ */
++#define WELCOMELEN 300
 +
 +
 +/* Test if a welcome entry is in a valid range */
