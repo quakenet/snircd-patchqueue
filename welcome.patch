@@ -1068,7 +1068,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +  if (!(flags & (WELCOME_INSERT|WELCOME_DELETE)))
 +    return 0;
 +
-+  /* loop over global entries - nameint+1 to max - 1 */
++  /* loop over global entries - namearray +1 to max - 1 */
 +  for (name = namearray +1; name <= WELCOME_MAX_ENTRIES - 1; name++) {
 +
 +    /* not set, force it to be unset on the other end */
