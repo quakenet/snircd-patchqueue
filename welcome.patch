@@ -1734,7 +1734,7 @@ diff -r 8bf1b05cdfe7 ircd/welcome.c
 +
 +  /* stats header */
 +  send_reply(sptr, SND_EXPLICIT | RPL_STATSWELCOME,
-+    "W # Target Who Created LastMod Text");
++    "W # Target Who Timestamp LastMod :Text");
 +
 +  /* loop over all entries - range 0 to 2 * max - 1 */
 +  for (name = 0; name <= 2 * WELCOME_MAX_ENTRIES - 1; name++) {
