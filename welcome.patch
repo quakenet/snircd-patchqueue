@@ -7,27 +7,28 @@ shows welcome messages set, same is shown on connect
 feature HIS_REMOTE controls whether ordinary users can request a listing from a remote server
 
 oper:
-/WELCOME [<server>] [[$][+]<N> :<message>]
+/WELCOME [<server>] [[$][!][+|-]<N> :<message>]
 to view welcome messages from a remote server
 to set a local welcome message on this server or a remote server
 set a global welcome message (server *)
 the $ prefix makes the server annouce the welcome message to its clients when setting
+the ! prefix forces the change, bypassing lastmod checks
 the + prefix moves message in N and all after that one spot down, and inserts the new message
 in spot N, if there is no room, the last entry is deleted
-when an entry is cleared (no text), then all entries after it are moved on place up, so all empty
-spots are at the end
+the - prefix is used when an entry is cleared (no text), then all entries after it are moved on place up, so all empty
+spots are at the end (this prefix is always used when an oper clears the text)
 
 server:
-:<source> WE <target> [[$][+]<N> <timestamp> <who> :<text>]
+:<source> WE <target> [[$][!][+|-]<N> <timestamp> <lastmod> <who> :<text>]
 who is who set the message, the server puts in the opername when a client sets it.
 :<N> is a number 1 to WELCOME_MAX_ENTRIES - currently set at 10 (should be more than we ever need)
 that means there is room for 10 local and 10 global entries
 
 STATS W/welcome (/STATS w/userload made case sensitive)
-:server 230 nick W Name Target Who Timestamp :Message
-:server 227 nick W 1 * opername 1233072583 :Latest news: testing this welcome patch :)
-:server 227 nick W 2 * opername 1233072583 :
-:server 227 nick W 1 servername opername 1233072590 :This is a test server, expect restarts.
+:server 227 nick W # Target Who Timestamp LastMod :Text
+:server 227 nick W 1 * opername 1233072583 1233072583 :Latest news: testing this welcome patch :)
+:server 227 nick W 2 * opername 1233072583 1233072583 :
+:server 227 nick W 1 servername opername 1233072590 1233072590 :This is a test server, expect restarts.
 :server 219 nick W :End of /STATS report
 
 listing welcomes or on connect:
