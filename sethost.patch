@@ -103,7 +103,7 @@ diff -r c6f3803ee169 include/s_user.h
 -extern int set_hostmask(struct Client *cptr, char *hostmask, char *password);
 -extern int is_hostmask(char *word);
 +extern int set_hostmask(struct Client *sptr, char *user, char *host);
-+extern int is_validsethost(char *mask, int maxlen);
++extern int is_validsethost(char *user, char *host);
  extern int set_user_mode(struct Client *cptr, struct Client *sptr,
                           int parc, char *parv[], int allow_modes);
  extern int is_silenced(struct Client *sptr, struct Client *acptr);
@@ -149,7 +149,7 @@ diff -r c6f3803ee169 ircd/m_oper.c
 diff -r c6f3803ee169 ircd/m_sethost.c
 --- a/ircd/m_sethost.c
 +++ b/ircd/m_sethost.c
-@@ -82,174 +82,222 @@
+@@ -82,174 +82,221 @@
  #include "config.h"
  
  #include "client.h"
@@ -244,8 +244,7 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +  }
 +
 +  /* check if user and host are valid */
-+  if ((user && !is_validsethost(user, USERLEN)) ||
-+               !is_validsethost(host, HOSTLEN))
++  if (!is_validsethost(user, host))
 +    return send_reply(sptr, ERR_BADHOSTMASK, user ? user : "", user ? "@" : "", host);
 +
 +  /* not freeform */
@@ -400,7 +399,7 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 -  if (IsSetHost(target) || IsAccount(target)) { 
 -    if ((0 == strcmp(parv[2], target->cli_user->username)) && (0 == strcmp(parv[3], target->cli_user->host))) 
 +  /* check user and host are valid */
-+  if (!is_validsethost(user, USERLEN) || !is_validsethost(host, HOSTLEN))
++  if (!is_validsethost(user, host))
 +    return protocol_violation(cptr,
 +      "Server %C tried to SETHOST user %C with a badmask: %s@%s",
 +      sptr, acptr, user, host);
@@ -728,7 +727,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
 -      return 1;
 -    }
 +    /* invalid */
-+    if (!is_validsethost(hostonly, HOSTLEN))
++    if (!is_validsethost(NULL, hostonly))
 +      continue;
 +
 +    /* do it and log */
@@ -836,13 +835,13 @@ diff -r c6f3803ee169 ircd/s_stats.c
 -    }
 +    if (IsAnOper(to))
 +      send_reply(to, RPL_STATSSLINE,
-+        is_validsethost(sline->spoofhost, HOSTLEN) ? 'S' : 's',   /* valid show S else s */ 
++        is_validsethost(NULL, sline->spoofhost) ? 'S' : 's',   /* valid show S else s */ 
 +        (EmptyString(sline->passwd)) ? "Oper" : "User",
 +        sline->spoofhost,
 +        (EmptyString(sline->username)) ? "" : sline->username,
 +        (!EmptyString(sline->username)) ? "@" : "",               /* always place a @ after the username */
 +        (EmptyString(sline->realhost)) ? "" : sline->realhost);
-+    else if (!EmptyString(sline->passwd) && is_validsethost(sline->spoofhost, HOSTLEN))
++    else if (!EmptyString(sline->passwd) && is_validsethost(NULL, sline->spoofhost))
 +      send_reply(to, RPL_STATSSLINE, 'S', "User", sline->spoofhost, "", "", "");
    }
  }
@@ -1279,7 +1278,7 @@ diff -r c6f3803ee169 ircd/s_user.c
 +           /* TODO: */
 +           if (IsServer(cptr)) {
 +             if (!*(p + 1))
-+               protocol_violation(cptr, "Received mode +h for user %C without sethost parameter", sptr);
++               protocol_violation(cptr, "Received MODE +h for user %C without sethost parameter", sptr);
               else {
 -               send_reply(sptr, ERR_BADHOSTMASK, *(p+1));
 -               p++; /* Swallow the arg anyway */
@@ -1307,7 +1306,7 @@ diff -r c6f3803ee169 ircd/s_user.c
      /*
       * only send wallops to opers
       */
-@@ -1521,11 +1420,35 @@
+@@ -1521,11 +1420,40 @@
    }
    if (!FlagHas(&setflags, FLAG_HIDDENHOST) && do_host_hiding && allow_modes != ALLOWMODES_DEFAULT)
      hide_hostmask(sptr, FLAG_HIDDENHOST);
@@ -1333,8 +1332,13 @@ diff -r c6f3803ee169 ircd/s_user.c
 +        host = hostmask;
 +
 +      /* invalid */
-+      if (!user || !is_validsethost(user, USERLEN) || !is_validsethost(host, HOSTLEN))
-+        protocol_violation(cptr, "Received mode +h for user %C with an invalid sethost parameter '%s@%s'",
++      /* if (!user || !is_validsethost(user, USERLEN) || !is_validsethost(host, HOSTLEN)) */
++      /* dont check if sethost from remote users is valid,
++       *   do check that user is not emtpy and
++       *   do check if they start with a : as things go horribly wrong then
++       */
++      if (*user == 0 || user[0] == ':' || host[0] == ':')
++        protocol_violation(cptr, "Received MODE +h for user %C with an invalid sethost parameter '%s@%s'",
 +          sptr, user ? user : "", host);
 +
 +      /* apply it */
@@ -1347,7 +1351,7 @@ diff -r c6f3803ee169 ircd/s_user.c
    }
  
    if (IsRegistered(sptr)) {
-@@ -1577,7 +1500,7 @@
+@@ -1577,7 +1505,7 @@
      }
      assert(UserStats.opers <= UserStats.clients + UserStats.unknowns);
      assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
@@ -1356,7 +1360,7 @@ diff -r c6f3803ee169 ircd/s_user.c
    }
  
    return 0;
-@@ -1652,9 +1575,11 @@
+@@ -1652,9 +1580,11 @@
   * @param[in] old Pre-change set of modes for \a sptr.
   * @param[in] sendset One of ALL_UMODES, SEND_UMODES_BUT_OPER,
   * SEND_UMODES, to select which changed user modes to send.
@@ -1369,7 +1373,7 @@ diff -r c6f3803ee169 ircd/s_user.c
  {
    int i;
    int flag;
-@@ -1697,12 +1622,15 @@
+@@ -1697,12 +1627,15 @@
      }
      /* Special case for SETHOST.. */
      if (flag == FLAG_SETHOST) {
@@ -1391,7 +1395,7 @@ diff -r c6f3803ee169 ircd/s_user.c
        	needhost++;    
      }
      if (FlagHas(old, flag))
-@@ -1741,7 +1669,7 @@
+@@ -1741,7 +1674,7 @@
    }
    if (needhost) {
      *m++ = ' ';
@@ -1400,7 +1404,7 @@ diff -r c6f3803ee169 ircd/s_user.c
           cli_user(sptr)->host);
    } else
      *m = '\0';
-@@ -1769,108 +1697,30 @@
+@@ -1769,108 +1702,85 @@
    return 0;
  }
  
@@ -1408,26 +1412,28 @@ diff -r c6f3803ee169 ircd/s_user.c
 -  * Check to see if it resembles a valid hostmask.
 -  */
 -int is_hostmask(char *word)
++/* TODO: */
 +/**
 + * Check to see if it resembles a valid sethost.
 + *
-+ * @param[in] mask     Mask to check (user or host part from a sethost)
-+ * @param[in] maxlen   Max length for parameter mask (USERLEN or HOSTLEN)
-+ * @return Non-zero if \a mask looks like a valid sethost
++ * @param[in] user   Username to check (can be NULL)
++ * @param[in] host   Hostname to check
++ * @return Non-zero if user and host look valid for a sethost
 + *
 + */
-+int is_validsethost(char *mask, int maxlen)
++int is_validsethost(char *user, char *host)
  {
 -  int i = 0;
 -  char *host;
-+  assert(mask != NULL);
-+  assert(maxlen > 0);
++  int i;
++  int validhost = 1;
  
 -  Debug((DEBUG_INFO, "is_hostmask() %s", word));
--
++  assert(host != NULL);
+ 
 -  if (strlen(word) > (HOSTLEN + USERLEN + 1) || strlen(word) <= 0)
-+  /* too long or too short */
-+  if (strlen(mask) > maxlen || strlen(mask) <= 0)
++  /* must not be empty, not longer than HOSTLEN, must not start with a : */
++  if (*host == 0 || strlen(host) > HOSTLEN || host[0] == ':')
      return 0;
  
 -  /* if a host is specified, make sure it's valid */
@@ -1437,10 +1443,32 @@ diff -r c6f3803ee169 ircd/s_user.c
 -       return 0;
 -     if (strlen(host) > HOSTLEN)
 -       return 0;
-+  /* check chars */
-+  for (; *mask; mask++) {
-+    if (!IsHostChar(*mask))
++  /* got a user part */
++  if (user) {
++
++    /* must not be empty, not longer than USERLEN, must not just be '~' */
++    if (*user == 0 || strlen(user) > USERLEN || (user[0] == '~' && user[1] == '\0'))
 +      return 0;
++
++    /* dont allow []{}\|^ chars (they are allowed by IsHostChar) */
++    for (i = 0; user[i]; i++) {
++      if (user[i] == '[' || user[i] == ']' ||
++          user[i] == '{' || user[i] == '}' ||
++          user[i] == '\\' || user[i] == '|' ||
++          (i > 0 && user[i] == '~') ||   /* only allow ~ at the start */
++          user[i] == '^' || user[i] == '.')   
++        return 0;
++    }
++
++    /* check if chars in user part are valid for a username
++     *  use IsHostChar instead of IsUserChar
++     *    as the latter allows a lot more chars
++     *    we dont want in a sethost
++     */
++    for (i = 0; user[i]; i++) {
++      if (!IsHostChar(user[i]))
++        return 0;
++    }
    }
  
 -  if (word) {
@@ -1493,16 +1521,41 @@ diff -r c6f3803ee169 ircd/s_user.c
 -        return sconf->spoofhost;
 -    }
 -    return NULL;
--  }
--
++  /* dont allow []{}\|~^ chars (they are allowed by IsHostChar) */
++  for (i = 0; host[i]; i++) {
++    if (host[i] == '[' || host[i] == ']' ||
++        host[i] == '{' || host[i] == '}' ||
++        host[i] == '\\' || host[i] == '|' ||
++        host[i] == '~' || host[i] == '^')
++      return 0;
+   }
+ 
 -  /* spoofhost specified as host, ie: host.cc */
 -  for (sconf = GlobalSList; sconf; sconf = sconf->next)
 -    if (strCasediff(hostmask, sconf->spoofhost) == 0)
 -      return sconf->spoofhost;
--
++  /* check host chars
++   *  IsHostChar allows -. 0-9 A-Z [\]^_ a-Z {|} ~ 
++   */
++  for (i = 0; host[i]; i++) {
++    if (IsHostChar(host[i]))
++      continue;
++    validhost = 0;
++    break;
++  }
++  if (validhost)   /* valid host */
++    return 1;
+ 
 -  return NULL;
 -}
--
++  /* check ipv6 chars
++   *  IsIP6Char allows 0-9 a-f A-F :.
++   */
++  for (i = 0; host[i]; i++) {
++    if (!IsIP6Char(host[i]))
++      return 0;
++  }
+ 
 - /*
 -  * IsVhostPass() - Check if given spoofhost has a password
 -  * associated with it, and if, return the password (cleartext)
@@ -1523,6 +1576,7 @@ diff -r c6f3803ee169 ircd/s_user.c
 -    }
 -
 -  return NULL;
++  /* valid ipv6 */
 +  return 1;
  }
  
