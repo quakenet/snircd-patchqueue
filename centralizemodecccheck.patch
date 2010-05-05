@@ -6,7 +6,7 @@ function uses a table to check for control codes, which is faster than what was 
 also corrects that an error is returned in WALLVOICES and WALLCHOPS in case +c or +C blocks the message, which is also done for other modes there
 also corrects that CTCP ACTION is only allowed for PRIVMSG, and not for NOTICE WALLCHOPS and WALLVOICES
 
-diff -r 748d1ac19fa9 include/channel.h
+diff -r 542bd1f8e673 include/channel.h
 --- a/include/channel.h
 +++ b/include/channel.h
 @@ -398,6 +398,7 @@
@@ -17,25 +17,44 @@ diff -r 748d1ac19fa9 include/channel.h
  
  extern void remove_user_from_channel(struct Client *sptr, struct Channel *chptr);
  extern void remove_user_from_all_channels(struct Client* cptr);
-diff -r 748d1ac19fa9 ircd/channel.c
+diff -r 542bd1f8e673 include/ircd_chattr.h
+--- a/include/ircd_chattr.h
++++ b/include/ircd_chattr.h
+@@ -59,6 +59,8 @@
+ #define NTL_KTIME  0x20000  /**< Valid character for a k:line time   */
+ #define NTL_CHPFX  0x40000  /**< channel prefix char # & +           */
+ #define NTL_IRCIP6 0x80000  /**< Numeric IPv6 character (hex or colon) */
++#define NTL_CTCP    0x100000 /**< CTCP char \\001 - snircd */
++#define NTL_CONTROL 0x200000 /**< control codes: bold \\002, colour \\003, reverse \\022, ansi escape \\027, underline \\031 - snircd */
+ 
+ /*
+  * Tables used for translation and classification macros
+@@ -104,6 +106,12 @@
+ #define IsUpper(c)         (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_UPPER)
+ /** Test whether a character is a control character. */
+ #define IsCntrl(c)         (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_CNTRL)
++/** Test whether a character is a CTCP character - snircd */
++#define IsCtcp(c)          (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_CTCP)
++/** Test whether a character is a control character - snircd */
++#define IsControl(c)       (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_CONTROL)
++/** Test whether a character is a CTCP or control character - snircd */
++#define IsCtcpOrControl(c) (IRCD_CharAttrTab[(c) - CHAR_MIN] & (NTL_CTCP|NTL_CONTROL))
+ 
+ /** Test whether a character is valid in a channel name. */
+ #define IsChannelChar(c)   (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCCH)
+@@ -129,5 +137,4 @@
+ #define IsKTimeChar(c)     (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_KTIME)
+ 
+ 
+-
+ #endif /* INCLUDED_ircd_chattr_h */
+diff -r 542bd1f8e673 ircd/channel.c
 --- a/ircd/channel.c
 +++ b/ircd/channel.c
-@@ -778,6 +778,68 @@
+@@ -778,6 +778,75 @@
    return member_can_send_to_channel(member, reveal);
  }
  
-+/** Table with control chars that should be blocked by chanmode +c
-+ *
-+ * codes: bold 2, colour 3, reverse 22, ansi escape 27, underline 31
-+ *
-+ */
-+static int control_codes[256] = {
-+  0, 0, 1, 1, 0, 0, 0, 0,
-+  0, 0, 0, 0, 0, 0, 0, 0,
-+  0, 0, 0, 0, 0, 0, 1, 0,
-+  0, 0, 0, 1, 0, 0, 0, 1,
-+};
-+
 +/** Check if a client can send control codes or CTCP to a channel
 + *
 + * @param cptr The client to check
@@ -59,37 +78,56 @@ diff -r 748d1ac19fa9 ircd/channel.c
 +  /* dont check this for remote users or servers - fail safe */
 +  if (!MyConnect(cptr) || IsServer(cptr))
 +    return 1;
-+  
++
 +  /* mode +c set */
 +  if (chptr->mode.mode & MODE_NOCOLOUR)
 +    control = 1;
-+  
++
 +  /* mode +C set */
 +  if (chptr->mode.mode & MODE_NOCTCP) {
 +    ctcp = 1;
-+  
++
 +    /* when action is 1, do allow CTCP ACTION though */
 +    if (action && !ircd_strncmp(text,"\001ACTION ",8))
 +      ctcp = 0;
 +  }
-+  
++
 +  /* nothing to check */
-+  if (!control && !ctcp)
++  if (!ctcp && !control)
 +    return 1;
-+  
-+  /* search for control codes and/or CTCP chars */
-+  for (chr=text;*chr;chr++) {
-+    if ((ctcp && *chr==1) || (control && control_codes[*chr])) 
-+      return 0;
++
++  /* search for CTCP and control codes */
++  if (ctcp && control) {
++    for (chr = text; *chr; chr++) {
++      if (IsCtcpOrControl(*chr)) 
++        return 0;
++    }
 +  }
-+  
++
++  /* search for CTCP */
++  else if (ctcp) {
++    for (chr = text; *chr; chr++) {
++      if (IsCtcp(*chr)) 
++        return 0;
++    }
++  }
++
++  /* search for control code */
++  else {
++    for (chr = text; *chr; chr++) {
++      if (IsControl(*chr)) 
++        return 0;
++    }
++  }
++
++  /* nothing found */
 +  return 1;  
 +}
 +
  /** Returns the name of a channel that prevents the user from changing nick.
   * if a member and not (opped or voiced) and (banned or moderated), return
   * the name of the first channel banned on.
-diff -r 748d1ac19fa9 ircd/ircd_relay.c
+diff -r 542bd1f8e673 ircd/ircd_relay.c
 --- a/ircd/ircd_relay.c
 +++ b/ircd/ircd_relay.c
 @@ -87,7 +87,6 @@
@@ -150,7 +188,7 @@ diff -r 748d1ac19fa9 ircd/ircd_relay.c
  
    if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
        check_target_limit(sptr, chptr, chptr->chname, 0))
-diff -r 748d1ac19fa9 ircd/m_wallchops.c
+diff -r 542bd1f8e673 ircd/m_wallchops.c
 --- a/ircd/m_wallchops.c
 +++ b/ircd/m_wallchops.c
 @@ -103,7 +103,6 @@
@@ -185,7 +223,7 @@ diff -r 748d1ac19fa9 ircd/m_wallchops.c
  
        if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
            check_target_limit(sptr, chptr, chptr->chname, 0))
-diff -r 748d1ac19fa9 ircd/m_wallvoices.c
+diff -r 542bd1f8e673 ircd/m_wallvoices.c
 --- a/ircd/m_wallvoices.c
 +++ b/ircd/m_wallvoices.c
 @@ -102,7 +102,6 @@
@@ -220,3 +258,19 @@ diff -r 748d1ac19fa9 ircd/m_wallvoices.c
  
        if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
            check_target_limit(sptr, chptr, chptr->chname, 0))
+diff -r 542bd1f8e673 ircd/table_gen.c
+--- a/ircd/table_gen.c
++++ b/ircd/table_gen.c
+@@ -87,6 +87,12 @@
+ 
+   markString(NTL_SPACE, "\011\012\013\014\015\040");
+ 
++  /* CTCP char - snircd */
++  markString(NTL_CTCP, "\001");
++
++  /* control codes bold, colour, reverse, ansi escape, underline - snircd */
++  markString(NTL_CONTROL, "\002\003\026\033\037");
++
+   /* Make the derived sets, 
+    * WARNING: The order of these calls is important, some depend on 
+    * the results of the previous ones ! */
