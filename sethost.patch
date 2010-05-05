@@ -60,6 +60,24 @@ diff -r c6f3803ee169 include/client.h
  
  /** Mark a client as having an in-progress net.burst. */
  #define SetBurst(x)             SetFlag(x, FLAG_BURST)
+diff -r c6f3803ee169 include/ircd_chattr.h
+--- a/include/ircd_chattr.h
++++ b/include/ircd_chattr.h
+@@ -117,6 +117,8 @@
+ #define IsUserChar(c)      (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCUI)
+ /** Test whether a character is valid in a hostname. */
+ #define IsHostChar(c)      (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCHN)
++/** Test whether a character is valid in a sethost */
++#define IsSetHostChar(c)   (IRCD_CharAttrTab[(c) - CHAR_MIN] & (NTL_IRCHN|NTL_IRCIP6))
+ /** Test whether a character is valid in an IPv4 address. */
+ #define IsIPChar(c)        (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCIP)
+ /** Test whether a character is valid in an IPv6 address. */
+@@ -127,4 +129,5 @@
+ #define IsKTimeChar(c)     (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_KTIME)
+ 
+ 
++
+ #endif /* INCLUDED_ircd_chattr_h */
 diff -r c6f3803ee169 include/numeric.h
 --- a/include/numeric.h
 +++ b/include/numeric.h
@@ -1402,7 +1420,7 @@ diff -r c6f3803ee169 ircd/s_user.c
           cli_user(sptr)->host);
    } else
      *m = '\0';
-@@ -1769,108 +1700,85 @@
+@@ -1769,108 +1700,53 @@
    return 0;
  }
  
@@ -1423,14 +1441,13 @@ diff -r c6f3803ee169 ircd/s_user.c
  {
 -  int i = 0;
 -  char *host;
-+  int i;
-+  int validhost = 1;
++  int i;   /* loop variable */
  
 -  Debug((DEBUG_INFO, "is_hostmask() %s", word));
 +  assert(host != NULL);
  
 -  if (strlen(word) > (HOSTLEN + USERLEN + 1) || strlen(word) <= 0)
-+  /* must not be empty, not longer than HOSTLEN, must not start with a : */
++  /* must not be empty, not longer than HOSTLEN, not start with a : */
 +  if (*host == 0 || strlen(host) > HOSTLEN || host[0] == ':')
      return 0;
  
@@ -1444,27 +1461,17 @@ diff -r c6f3803ee169 ircd/s_user.c
 +  /* got a user part */
 +  if (user) {
 +
-+    /* must not be empty, not longer than USERLEN, must not just be '~' */
-+    if (*user == 0 || strlen(user) > USERLEN || (user[0] == '~' && user[1] == '\0'))
++    /* must not be empty, not longer than USERLEN, not start with a : */
++    if (*user == 0 || strlen(user) > USERLEN || user[0] == ':')
 +      return 0;
 +
-+    /* dont allow []{}\|^ chars (they are allowed by IsHostChar) */
-+    for (i = 0; user[i]; i++) {
-+      if (user[i] == '[' || user[i] == ']' ||
-+          user[i] == '{' || user[i] == '}' ||
-+          user[i] == '\\' || user[i] == '|' ||
-+          (i > 0 && user[i] == '~') ||   /* only allow ~ at the start */
-+          user[i] == '^' || user[i] == '.')   
-+        return 0;
-+    }
-+
-+    /* check if chars in user part are valid for a username
-+     *  use IsHostChar instead of IsUserChar
++    /* check user chars
++     *  use IsSetHostChar instead of IsUserChar
 +     *    as the latter allows a lot more chars
 +     *    we dont want in a sethost
 +     */
 +    for (i = 0; user[i]; i++) {
-+      if (!IsHostChar(user[i]))
++      if (!IsSetHostChar(user[i]))
 +        return 0;
 +    }
    }
@@ -1519,12 +1526,11 @@ diff -r c6f3803ee169 ircd/s_user.c
 -        return sconf->spoofhost;
 -    }
 -    return NULL;
-+  /* dont allow []{}\|~^ chars (they are allowed by IsHostChar) */
++  /* check host chars
++   *  IsSetHostChar allows -. 0-9 A-Z [\]^_ a-Z {|} ~ and : 
++   */
 +  for (i = 0; host[i]; i++) {
-+    if (host[i] == '[' || host[i] == ']' ||
-+        host[i] == '{' || host[i] == '}' ||
-+        host[i] == '\\' || host[i] == '|' ||
-+        host[i] == '~' || host[i] == '^')
++    if (!IsSetHostChar(host[i]))
 +      return 0;
    }
  
@@ -1532,28 +1538,10 @@ diff -r c6f3803ee169 ircd/s_user.c
 -  for (sconf = GlobalSList; sconf; sconf = sconf->next)
 -    if (strCasediff(hostmask, sconf->spoofhost) == 0)
 -      return sconf->spoofhost;
-+  /* check host chars
-+   *  IsHostChar allows -. 0-9 A-Z [\]^_ a-Z {|} ~ 
-+   */
-+  for (i = 0; host[i]; i++) {
-+    if (IsHostChar(host[i]))
-+      continue;
-+    validhost = 0;
-+    break;
-+  }
-+  if (validhost)   /* valid host */
-+    return 1;
- 
+-
 -  return NULL;
 -}
-+  /* check ipv6 chars
-+   *  IsIP6Char allows 0-9 a-f A-F :.
-+   */
-+  for (i = 0; host[i]; i++) {
-+    if (!IsIP6Char(host[i]))
-+      return 0;
-+  }
- 
+-
 - /*
 -  * IsVhostPass() - Check if given spoofhost has a password
 -  * associated with it, and if, return the password (cleartext)
@@ -1574,7 +1562,7 @@ diff -r c6f3803ee169 ircd/s_user.c
 -    }
 -
 -  return NULL;
-+  /* valid ipv6 */
++  /* valid */
 +  return 1;
  }
  
