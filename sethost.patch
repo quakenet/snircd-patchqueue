@@ -35,6 +35,8 @@ applying the sethost and syncing of clients (quit user, rejoin user, restore mod
 
 remote sethost can come from any server, does not need to have a Uworld block or be a service (ACCOUNT doesnt require that either)
 
+allow chars -. 0-9 A-Z [\]^_ a-Z {|} ~: in user and host part of sethost (only change is that : is allowed because of IPv6)
+
 STATS s
 show if spoofhost is valid or not (S = valid, s = invalid)
 removed numbering (not required anymore?)
@@ -67,7 +69,7 @@ diff -r c6f3803ee169 include/ircd_chattr.h
  #define IsUserChar(c)      (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCUI)
  /** Test whether a character is valid in a hostname. */
  #define IsHostChar(c)      (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCHN)
-+/** Test whether a character is valid in a sethost */
++/** Test whether a character is valid in a sethost - snircd */
 +#define IsSetHostChar(c)   (IRCD_CharAttrTab[(c) - CHAR_MIN] & (NTL_IRCHN|NTL_IRCIP6))
  /** Test whether a character is valid in an IPv4 address. */
  #define IsIPChar(c)        (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCIP)
