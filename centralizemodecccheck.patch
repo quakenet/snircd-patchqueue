@@ -3,10 +3,12 @@ centralize mode checks for +c (no control codes) and +C (no CTCPs)
 add client_can_send_controlcode_or_ctcp_to_channel() function in channel.c
 and use that (2x ircd_relay.c, m_wallchops.c, m_wallvoices.c), instead of duplicating code 4 times
 function uses a table to check for control codes, which is faster than what was used before
-also corrects that an error is returned in WALLVOICES and WALLCHOPS in case +c or +C blocks the message, which is also done for other modes there
-also corrects that CTCP ACTION is only allowed for PRIVMSG, and not for NOTICE WALLCHOPS and WALLVOICES
+corrects that an error is returned in WALLVOICES and WALLCHOPS in case +c or +C blocks the message, which is also done for other modes there
+corrects that CTCP ACTION is only allowed for PRIVMSG, and not for NOTICE WALLCHOPS and WALLVOICES
 
-diff -r 542bd1f8e673 include/channel.h
+mode +c blocks bold (2), colour (3), reverse (22), ansi escape (27), italic (29) (mIRC 7 - ctrl+i), underline (31)
+
+diff -r 718a91e2ff02 include/channel.h
 --- a/include/channel.h
 +++ b/include/channel.h
 @@ -398,6 +398,7 @@
@@ -17,7 +19,7 @@ diff -r 542bd1f8e673 include/channel.h
  
  extern void remove_user_from_channel(struct Client *sptr, struct Channel *chptr);
  extern void remove_user_from_all_channels(struct Client* cptr);
-diff -r 542bd1f8e673 include/ircd_chattr.h
+diff -r 718a91e2ff02 include/ircd_chattr.h
 --- a/include/ircd_chattr.h
 +++ b/include/ircd_chattr.h
 @@ -59,6 +59,8 @@
@@ -25,7 +27,7 @@ diff -r 542bd1f8e673 include/ircd_chattr.h
  #define NTL_CHPFX  0x40000  /**< channel prefix char # & +           */
  #define NTL_IRCIP6 0x80000  /**< Numeric IPv6 character (hex or colon) */
 +#define NTL_CTCP    0x100000 /**< CTCP char \\001 - snircd */
-+#define NTL_CONTROL 0x200000 /**< control codes: bold \\002, colour \\003, reverse \\022, ansi escape \\027, underline \\031 - snircd */
++#define NTL_CONTROL 0x200000 /**< control codes: bold 2, colour 3, reverse 22, ansi escape 27, italic 29 (mIRC 7), underline 31 - snircd */
  
  /*
   * Tables used for translation and classification macros
@@ -48,7 +50,7 @@ diff -r 542bd1f8e673 include/ircd_chattr.h
  
 -
  #endif /* INCLUDED_ircd_chattr_h */
-diff -r 542bd1f8e673 ircd/channel.c
+diff -r 718a91e2ff02 ircd/channel.c
 --- a/ircd/channel.c
 +++ b/ircd/channel.c
 @@ -778,6 +778,75 @@
@@ -127,7 +129,7 @@ diff -r 542bd1f8e673 ircd/channel.c
  /** Returns the name of a channel that prevents the user from changing nick.
   * if a member and not (opped or voiced) and (banned or moderated), return
   * the name of the first channel banned on.
-diff -r 542bd1f8e673 ircd/ircd_relay.c
+diff -r 718a91e2ff02 ircd/ircd_relay.c
 --- a/ircd/ircd_relay.c
 +++ b/ircd/ircd_relay.c
 @@ -87,7 +87,6 @@
@@ -188,7 +190,7 @@ diff -r 542bd1f8e673 ircd/ircd_relay.c
  
    if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
        check_target_limit(sptr, chptr, chptr->chname, 0))
-diff -r 542bd1f8e673 ircd/m_wallchops.c
+diff -r 718a91e2ff02 ircd/m_wallchops.c
 --- a/ircd/m_wallchops.c
 +++ b/ircd/m_wallchops.c
 @@ -103,7 +103,6 @@
@@ -223,7 +225,7 @@ diff -r 542bd1f8e673 ircd/m_wallchops.c
  
        if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
            check_target_limit(sptr, chptr, chptr->chname, 0))
-diff -r 542bd1f8e673 ircd/m_wallvoices.c
+diff -r 718a91e2ff02 ircd/m_wallvoices.c
 --- a/ircd/m_wallvoices.c
 +++ b/ircd/m_wallvoices.c
 @@ -102,7 +102,6 @@
@@ -258,7 +260,7 @@ diff -r 542bd1f8e673 ircd/m_wallvoices.c
  
        if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
            check_target_limit(sptr, chptr, chptr->chname, 0))
-diff -r 542bd1f8e673 ircd/table_gen.c
+diff -r 718a91e2ff02 ircd/table_gen.c
 --- a/ircd/table_gen.c
 +++ b/ircd/table_gen.c
 @@ -87,6 +87,12 @@
@@ -268,8 +270,8 @@ diff -r 542bd1f8e673 ircd/table_gen.c
 +  /* CTCP char - snircd */
 +  markString(NTL_CTCP, "\001");
 +
-+  /* control codes bold, colour, reverse, ansi escape, underline - snircd */
-+  markString(NTL_CONTROL, "\002\003\026\033\037");
++  /* control codes bold, colour, reverse, ansi escape, italic, underline - snircd */
++  markString(NTL_CONTROL, "\002\003\026\033\035\037");
 +
    /* Make the derived sets, 
     * WARNING: The order of these calls is important, some depend on 
