@@ -1306,7 +1306,7 @@ diff -r c6f3803ee169 ircd/s_user.c
      /*
       * only send wallops to opers
       */
-@@ -1521,11 +1420,40 @@
+@@ -1521,11 +1420,38 @@
    }
    if (!FlagHas(&setflags, FLAG_HIDDENHOST) && do_host_hiding && allow_modes != ALLOWMODES_DEFAULT)
      hide_hostmask(sptr, FLAG_HIDDENHOST);
@@ -1331,13 +1331,11 @@ diff -r c6f3803ee169 ircd/s_user.c
 +      else
 +        host = hostmask;
 +
-+      /* invalid */
-+      /* if (!user || !is_validsethost(user, USERLEN) || !is_validsethost(host, HOSTLEN)) */
-+      /* dont check if sethost from remote users is valid,
-+       *   do check that user is not emtpy and
++      /* dont check if sethost from remote users is valid with is_validsethost(),
++       *   do check that user and host are not emtpy and
 +       *   do check if they start with a : as things go horribly wrong then
 +       */
-+      if (*user == 0 || user[0] == ':' || host[0] == ':')
++      if (*user == 0 || user[0] == ':' || *host == 0 || host[0] == ':')
 +        protocol_violation(cptr, "Received MODE +h for user %C with an invalid sethost parameter '%s@%s'",
 +          sptr, user ? user : "", host);
 +
@@ -1351,7 +1349,7 @@ diff -r c6f3803ee169 ircd/s_user.c
    }
  
    if (IsRegistered(sptr)) {
-@@ -1577,7 +1505,7 @@
+@@ -1577,7 +1503,7 @@
      }
      assert(UserStats.opers <= UserStats.clients + UserStats.unknowns);
      assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
@@ -1360,7 +1358,7 @@ diff -r c6f3803ee169 ircd/s_user.c
    }
  
    return 0;
-@@ -1652,9 +1580,11 @@
+@@ -1652,9 +1578,11 @@
   * @param[in] old Pre-change set of modes for \a sptr.
   * @param[in] sendset One of ALL_UMODES, SEND_UMODES_BUT_OPER,
   * SEND_UMODES, to select which changed user modes to send.
@@ -1373,7 +1371,7 @@ diff -r c6f3803ee169 ircd/s_user.c
  {
    int i;
    int flag;
-@@ -1697,12 +1627,15 @@
+@@ -1697,12 +1625,15 @@
      }
      /* Special case for SETHOST.. */
      if (flag == FLAG_SETHOST) {
@@ -1395,7 +1393,7 @@ diff -r c6f3803ee169 ircd/s_user.c
        	needhost++;    
      }
      if (FlagHas(old, flag))
-@@ -1741,7 +1674,7 @@
+@@ -1741,7 +1672,7 @@
    }
    if (needhost) {
      *m++ = ' ';
@@ -1404,7 +1402,7 @@ diff -r c6f3803ee169 ircd/s_user.c
           cli_user(sptr)->host);
    } else
      *m = '\0';
-@@ -1769,108 +1702,85 @@
+@@ -1769,108 +1700,85 @@
    return 0;
  }
  
