@@ -375,19 +375,21 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +  struct Client *acptr;
    struct Flags setflags;
  
++  /* not from a server */
++  if (!IsServer(sptr))
++    return protocol_violation(cptr, "Received SETHOST from user %C", sptr);
++
 +  /* check paramaters */
    if (parc < 4)
-     return need_more_params(sptr, "SETHOST");
+-    return need_more_params(sptr, "SETHOST");
++    return protocol_violation(cptr, "Received too few parameters for SETHOST from %C (got %d - need 4)", sptr, parc);
  
+-  if (!IsServer(sptr))
+-    return protocol_violation(cptr, "SETHOST from non-server %s",
+-                              cli_name(sptr));
 +  target = parv[1];
 +  user = parv[2];
 +  host = parv[3];
-+
-+  /* not from a server */
-   if (!IsServer(sptr))
--    return protocol_violation(cptr, "SETHOST from non-server %s",
--                              cli_name(sptr));
-+    return protocol_violation(cptr, "SETHOST from non-server %s", cli_name(sptr));
  
 -  /* Locate our target user; ignore the message if we can't */
 -  if(!(target = findNUser(parv[1])))
@@ -419,8 +421,8 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +  /* check user and host are valid */
 +  if (!is_validsethost(user, host))
 +    return protocol_violation(cptr,
-+      "Server %C tried to SETHOST user %C with a badmask: %s@%s",
-+      sptr, acptr, user, host);
++      "Received SETHOST for %C with invalid user host '%s %s' from %C",
++      acptr, user, host, sptr);
 +
 +  /* 'user host' is '0 0' - undo sethost */
 +  if (user[0] == '0' && user[1] == '\0' &&
@@ -1296,7 +1298,7 @@ diff -r c6f3803ee169 ircd/s_user.c
 +           /* TODO: */
 +           if (IsServer(cptr)) {
 +             if (!*(p + 1))
-+               protocol_violation(cptr, "Received MODE +h for user %C without sethost parameter", sptr);
++               protocol_violation(cptr, "Received MODE +h for %C without sethost parameter", sptr);
               else {
 -               send_reply(sptr, ERR_BADHOSTMASK, *(p+1));
 -               p++; /* Swallow the arg anyway */
@@ -1354,7 +1356,7 @@ diff -r c6f3803ee169 ircd/s_user.c
 +       *   do check if they start with a : as things go horribly wrong then
 +       */
 +      if (*user == 0 || user[0] == ':' || *host == 0 || host[0] == ':')
-+        protocol_violation(cptr, "Received MODE +h for user %C with an invalid sethost parameter '%s@%s'",
++        protocol_violation(cptr, "Received MODE +h for %C with an invalid user@host '%s@%s'",
 +          sptr, user ? user : "", host);
 +
 +      /* apply it */
