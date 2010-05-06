@@ -169,7 +169,7 @@ diff -r c6f3803ee169 ircd/m_oper.c
 diff -r c6f3803ee169 ircd/m_sethost.c
 --- a/ircd/m_sethost.c
 +++ b/ircd/m_sethost.c
-@@ -82,174 +82,225 @@
+@@ -82,174 +82,227 @@
  #include "config.h"
  
  #include "client.h"
@@ -340,10 +340,12 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +  if (freeform) {
 +
 +    sendto_opmask_butone(0, SNO_OLDSNO,
-+      "%C SETHOST %s@%s (freeform)", sptr, user, host);
++      "%C SETHOST %s%s%s (freeform)", sptr,
++      user ? user : "", user ? "@" : "", host);
 +
 +    log_write(LS_SETHOST, L_NOTICE, LOG_NOSNOTICE,
-+      "%s SETHOST %s@%s (freeform)", get_client_name(sptr, SHOW_IP), user, host);
++      "%s SETHOST %s%s%s (freeform)", get_client_name(sptr, SHOW_IP),
++      user ? user : "", user ? "@" : "", host);
 +  }
 +
 +  /* send the mode out */
@@ -594,7 +596,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
  #include "send.h"
  #include "struct.h"
  #include "sys.h"
-@@ -1239,44 +1240,159 @@
+@@ -1239,44 +1240,165 @@
   * -froo 1/2003
   *
   */
@@ -612,16 +614,10 @@ diff -r c6f3803ee169 ircd/s_conf.c
 + */
 +struct sline *find_spoofblock(struct Client *cptr, char *spoofhost, char *password) {
  
-+  char *error[4];  
 +  struct sline *sconf;
 +  int result = 0;
 +  int r = 0;
-+
-+  /* set error messages */  
-+  error[0] = "no such Spoof block";
-+  error[1] = "IP / host mismatch";
-+  error[2] = "username mismatch";
-+  error[3] = password ? "password mismatch" : "password required";
++  char *error = "unknown failure";
 +
 +  Debug((DEBUG_INFO, "find_spoofblock() cptr=%C spoofhost=%s password=%s",
 +    cptr, spoofhost, password));
@@ -672,16 +668,28 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +      continue;
 +
 +    /* got one */
-+    log_write(LS_SETHOST, L_INFO, 0, "%s SETHOST %s (ok)",
-+      get_client_name(cptr, SHOW_IP), sconf->spoofhost);
++    log_write(LS_SETHOST, L_INFO, 0, "%s SETHOST %s (ok) [password: %s]",
++      get_client_name(cptr, SHOW_IP), sconf->spoofhost,
++      password ? "yes" : "no");
 +    return sconf;
 +  }
++
++  /* set error messages */
++  if (result == 0)  
++    error = "no such Spoof block";
++  else if (result == 1)
++    error = "IP / host mismatch";
++  else if (result == 2)
++    error = "username mismatch";
++  else if (result == 3)
++    error = password ? "password mismatch" : "password required";
 +
 +  /* TODO: lookup LOG stuff */
 +  /* TODO: L_INFO LOG_NOSNOTICE */
 +  /* log best result we got */
-+  log_write(LS_SETHOST, L_INFO, 0, "%s SETHOST %s (%s)",
-+    get_client_name(cptr, SHOW_IP), spoofhost, error[result]);
++  log_write(LS_SETHOST, L_INFO, 0, "%s SETHOST %s (%s) [password: %s]",
++    get_client_name(cptr, SHOW_IP), spoofhost,
++    error, password ? "yes" : "no");
 +  return NULL;
 +}
 +
