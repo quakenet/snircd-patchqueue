@@ -17,6 +17,9 @@ change syntax to "SETHOST [<user>@]<host> [<password>]"
 disallow client to use MODE +h [<user>@]<host> [<pass>] (bug: mode +h took 2 parameters, even from remote users!)
 
 sethost can only be unset with "MODE <nick> -h"
+and only if the sethost was not remotely set by a service (unless the user is an oper)
+and only if the user has an account set, and is +x (or is allowed to set +x)
+so the +x host becomes visible, and never the realhost
 
 sethost #N no longer supported (N being the Nth configured spoof block)
 
