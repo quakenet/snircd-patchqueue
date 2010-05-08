@@ -438,7 +438,7 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +
 +    /* user has no sethost or has no account
 +     *
-+     * user has +h their host is hidden, do not remove it
++     * user has +h - their host is hidden, do not remove it
 +     *   unless the user has an account set
 +     *     we should not out of the blue expose the real host
 +     */
