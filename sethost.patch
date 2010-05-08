@@ -596,7 +596,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
  #include "send.h"
  #include "struct.h"
  #include "sys.h"
-@@ -1239,44 +1240,165 @@
+@@ -1239,44 +1240,173 @@
   * -froo 1/2003
   *
   */
@@ -617,7 +617,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +  struct sline *sconf;
 +  int result = 0;
 +  int r = 0;
-+  char *error = "unknown failure";
++  char *error;
 +
 +  Debug((DEBUG_INFO, "find_spoofblock() cptr=%C spoofhost=%s password=%s",
 +    cptr, spoofhost, password));
@@ -675,19 +675,27 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +  }
 +
 +  /* set error messages */
-+  if (result == 0)  
-+    error = "no such Spoof block";
-+  else if (result == 1)
-+    error = "IP / host mismatch";
-+  else if (result == 2)
-+    error = "username mismatch";
-+  else if (result == 3)
-+    error = password ? "password mismatch" : "password required";
++  switch (result) {
++    case 0:
++      error = "no such Spoof block";
++      break;
++    case 1:
++      error = "IP / host mismatch";
++      break;
++    case 2:
++      error = "username mismatch";
++      break;
++    case 3:
++      error = password ? "password mismatch" : "password required";
++      break;
++    default:
++      error = "unknown failure";
++  }
 +
 +  /* TODO: lookup LOG stuff */
 +  /* TODO: L_INFO LOG_NOSNOTICE */
 +  /* log best result we got */
-+  log_write(LS_SETHOST, L_INFO, 0, "%s SETHOST %s (%s) [password: %s]",
++  log_write(LS_SETHOST, L_INFO, 0, "%s SETHOST %s (failed: %s) [password: %s]",
 +    get_client_name(cptr, SHOW_IP), spoofhost,
 +    error, password ? "yes" : "no");
 +  return NULL;
