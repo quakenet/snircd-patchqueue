@@ -54,14 +54,42 @@ diff -r c6f3803ee169 include/client.h
  
  /** Character to indicate no oper name available */
  #define NOOPERNAMECHARACTER '-'
-@@ -627,7 +627,6 @@
+@@ -171,6 +171,7 @@
+     FLAG_BURST,                     /**< Server is receiving a net.burst */
+     FLAG_BURST_ACK,                 /**< Server is waiting for eob ack */
+     FLAG_IPCHECK,                   /**< Added or updated IPregistry data */
++    FLAG_REMOTESETHOST,             /**< user has a remote sethost */
+     FLAG_LOCOP,                     /**< Local operator -- SRB */
+     FLAG_SERVNOTICE,                /**< server notices such as kill */
+     FLAG_OPER,                      /**< Operator */
+@@ -627,7 +628,8 @@
  #define HasHiddenHost(x)        (IsHiddenHost(x) && IsAccount(x))
  /** Return non-zero if the client is using a spoofhost */
  #define IsSetHost(x)            HasFlag(x, FLAG_SETHOST)
 -#define HasSetHost(x)           (IsSetHost(x))
++/** Return non-zero if the client is using a spoofhost that was set by a service */
++#define IsRemoteSetHost(x)      HasFlag(x, FLAG_REMOTESETHOST)
  
  /** Mark a client as having an in-progress net.burst. */
  #define SetBurst(x)             SetFlag(x, FLAG_BURST)
+@@ -671,6 +673,8 @@
+ #define SetHiddenHost(x)        SetFlag(x, FLAG_HIDDENHOST)
+ /** Mark a client as having mode +h (spoofhost). */
+ #define SetSetHost(x)           SetFlag(x, FLAG_SETHOST)
++/** Mark a client as having a remote sethost. */
++#define SetRemoteSetHost(x)     SetFlag(x, FLAG_REMOTESETHOST)
+ /** Mark a client as having mode +X (xtraop). */
+ #define SetXtraOp(x)            SetFlag(x, FLAG_XTRAOP)
+ /** Mark a client as having mode +n (hide channels). */
+@@ -716,6 +720,8 @@
+ #define ClearHiddenHost(x)      ClrFlag(x, FLAG_HIDDENHOST)
+ /** Remove mode +h (spoofhost) from a client. */
+ #define ClearSetHost(x)         ClrFlag(x, FLAG_SETHOST)
++/** Clear the client's remote SETHOST flag. */
++#define ClearRemoteSetHost(x)   ClrFlag(x, FLAG_REMOTESETHOST)
+ /** Remove mode +X (xtraop) from a client. */
+ #define ClearXtraOp(x)          ClrFlag(x, FLAG_XTRAOP)
+ /** Remove mode +n (hide channels) from a client. */
 diff -r c6f3803ee169 include/ircd_chattr.h
 --- a/include/ircd_chattr.h
 +++ b/include/ircd_chattr.h
@@ -169,7 +197,7 @@ diff -r c6f3803ee169 ircd/m_oper.c
 diff -r c6f3803ee169 ircd/m_sethost.c
 --- a/ircd/m_sethost.c
 +++ b/ircd/m_sethost.c
-@@ -82,174 +82,227 @@
+@@ -82,174 +82,232 @@
  #include "config.h"
  
  #include "client.h"
@@ -285,10 +313,11 @@ diff -r c6f3803ee169 ircd/m_sethost.c
  
 -  if (parc < 2)
 -    return need_more_params(sptr, "SETHOST");
-+  /* already +h, clear flag to force mode +h to be sent out again */
++  /* already +h, clear flag to force mode +h to be sent out again, and clear remote sethost flag */
 +  if (IsSetHost(sptr)) {
 +    FlagClr(&setflags, FLAG_SETHOST);
 +    alreadyh = 1;
++    ClearRemoteSetHost(sptr);
 +  }
  
 -  if (0 == ircd_strcmp("undo", parv[1])) {
@@ -504,6 +533,10 @@ diff -r c6f3803ee169 ircd/m_sethost.c
    }
  
 -  send_umode_out(target, target, &setflags, 0);
++  /* setting remote sethost, set flag */
++  if (host)
++    SetRemoteSetHost(acptr);
++
 +  /* do it */
 +  set_hostmask(acptr, user, host);
 +
@@ -1004,7 +1037,6 @@ diff -r c6f3803ee169 ircd/s_user.c
 -  char hiddenhost[USERLEN + HOSTLEN + 2];
 +
 +  int userchange = 0;
-+  char hiddenhost[USERLEN + 1 + HOSTLEN + 1];
 +  char *msg = "Host change";
    struct Membership *chan;
  
@@ -1034,8 +1066,9 @@ diff -r c6f3803ee169 ircd/s_user.c
 +  /* remove sethost */
 +  if (!host) {
 +
-+    /* clear flag */
++    /* clear flags */
 +    ClearSetHost(cptr);
++    ClearRemoteSetHost(cptr);
 +
 +    /* restore user and host */
 +    if (HasHiddenHost(cptr))
@@ -1333,19 +1366,31 @@ diff -r c6f3803ee169 ircd/s_user.c
           }
           break;
        case 'R':
-@@ -1468,6 +1362,11 @@
+@@ -1468,6 +1362,23 @@
      if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
        ClearParanoid(sptr);
  
 +    /* TODO: */
-+    /* only opers can remove a sethost */
-+    if (do_set_host && !hostmask && !FlagHas(&setflags, FLAG_LOCOP) && !FlagHas(&setflags, FLAG_OPER))
-+      do_set_host = 0;
++    /* setting -h */
++    if (do_set_host && !hostmask && IsSetHost(sptr)) {
++      /* cannot do -h if user has a remote sethost, unless they are an oper */
++      if (!FlagHas(&setflags, FLAG_LOCOP) && !FlagHas(&setflags, FLAG_OPER) && IsRemoteSetHost(sptr))
++        do_set_host = 0;
++      /* cannot do -h if user has no account set */
++      else if (!IsAccount(sptr))
++        do_set_host = 0;
++      /* cannot do -h if user does not have +x set and is not allowed to set it */
++      else if (!IsHiddenHost(sptr) && !feature_bool(FEAT_HOST_HIDING))
++        do_set_host = 0;
++      /* all ok, set user +x */
++      else
++        SetHiddenHost(sptr);
++    }
 +
      /*
       * only send wallops to opers
       */
-@@ -1521,11 +1420,38 @@
+@@ -1521,11 +1432,38 @@
    }
    if (!FlagHas(&setflags, FLAG_HIDDENHOST) && do_host_hiding && allow_modes != ALLOWMODES_DEFAULT)
      hide_hostmask(sptr, FLAG_HIDDENHOST);
@@ -1388,7 +1433,7 @@ diff -r c6f3803ee169 ircd/s_user.c
    }
  
    if (IsRegistered(sptr)) {
-@@ -1577,7 +1503,7 @@
+@@ -1577,7 +1515,7 @@
      }
      assert(UserStats.opers <= UserStats.clients + UserStats.unknowns);
      assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
@@ -1397,7 +1442,7 @@ diff -r c6f3803ee169 ircd/s_user.c
    }
  
    return 0;
-@@ -1652,9 +1578,11 @@
+@@ -1652,9 +1590,11 @@
   * @param[in] old Pre-change set of modes for \a sptr.
   * @param[in] sendset One of ALL_UMODES, SEND_UMODES_BUT_OPER,
   * SEND_UMODES, to select which changed user modes to send.
@@ -1410,7 +1455,7 @@ diff -r c6f3803ee169 ircd/s_user.c
  {
    int i;
    int flag;
-@@ -1697,12 +1625,15 @@
+@@ -1697,12 +1637,15 @@
      }
      /* Special case for SETHOST.. */
      if (flag == FLAG_SETHOST) {
@@ -1432,7 +1477,7 @@ diff -r c6f3803ee169 ircd/s_user.c
        	needhost++;    
      }
      if (FlagHas(old, flag))
-@@ -1741,7 +1672,7 @@
+@@ -1741,7 +1684,7 @@
    }
    if (needhost) {
      *m++ = ' ';
@@ -1441,7 +1486,7 @@ diff -r c6f3803ee169 ircd/s_user.c
           cli_user(sptr)->host);
    } else
      *m = '\0';
-@@ -1769,108 +1700,53 @@
+@@ -1769,108 +1712,53 @@
    return 0;
  }
  
