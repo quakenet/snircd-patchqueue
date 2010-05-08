@@ -1,18 +1,18 @@
 add HasHiddenHostOrIsSetHost() macro instead of having to test HasHiddenHost() and IsSetHost() in many places
 
-diff -r 702b5aa2127f include/client.h
+diff -r e4e1d8d47a8e include/client.h
 --- a/include/client.h
 +++ b/include/client.h
-@@ -634,6 +634,8 @@
- #define HasHiddenHost(x)        (IsHiddenHost(x) && IsAccount(x))
- /** Return non-zero if the client is using a spoofhost */
+@@ -637,6 +637,8 @@
  #define IsSetHost(x)            HasFlag(x, FLAG_SETHOST)
+ /** Return non-zero if the client is using a spoofhost that was set by a service */
+ #define IsRemoteSetHost(x)      HasFlag(x, FLAG_REMOTESETHOST)
 +/** Return non-zero if the client's host is hidden or is using a spoofhost */
 +#define HasHiddenHostOrIsSetHost(x) (HasHiddenHost(x) || IsSetHost(x))
  
  /** Mark a client as having an in-progress net.burst. */
  #define SetBurst(x)             SetFlag(x, FLAG_BURST)
-diff -r 702b5aa2127f ircd/m_check.c
+diff -r e4e1d8d47a8e ircd/m_check.c
 --- a/ircd/m_check.c
 +++ b/ircd/m_check.c
 @@ -489,7 +489,7 @@
@@ -24,7 +24,7 @@ diff -r 702b5aa2127f ircd/m_check.c
      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ": Real User/Host:: %s@%s", cli_user(acptr)->realusername, cli_user(acptr)->realhost);
  
    /* COLOR_OFF ? */
-diff -r 702b5aa2127f ircd/m_userhost.c
+diff -r e4e1d8d47a8e ircd/m_userhost.c
 --- a/ircd/m_userhost.c
 +++ b/ircd/m_userhost.c
 @@ -104,7 +104,7 @@
@@ -36,7 +36,7 @@ diff -r 702b5aa2127f ircd/m_userhost.c
  	      cli_user(cptr)->host : cli_user(cptr)->realhost);
  }
  
-diff -r 702b5aa2127f ircd/m_userip.c
+diff -r e4e1d8d47a8e ircd/m_userip.c
 --- a/ircd/m_userip.c
 +++ b/ircd/m_userip.c
 @@ -106,7 +106,7 @@
@@ -48,10 +48,10 @@ diff -r 702b5aa2127f ircd/m_userip.c
  	      feature_str(FEAT_HIDDEN_IP) :
  	      ircd_ntoa(&cli_ip(cptr)));
  }
-diff -r 702b5aa2127f ircd/m_who.c
+diff -r e4e1d8d47a8e ircd/m_who.c
 --- a/ircd/m_who.c
 +++ b/ircd/m_who.c
-@@ -398,14 +398,13 @@
+@@ -402,14 +402,13 @@
                && ((!(matchsel & WHO_FIELD_HOS))
                || matchexec(cli_user(acptr)->host, mymask, minlen))
                && ((!(matchsel & WHO_FIELD_HOS))
@@ -68,7 +68,7 @@ diff -r 702b5aa2127f ircd/m_who.c
                || !ipmask_check(&cli_ip(acptr), &imask, ibits))
                && ((!(matchsel & WHO_FIELD_ACC))
                || matchexec(cli_user(acptr)->account, mymask, minlen)))
-@@ -437,14 +436,13 @@
+@@ -445,14 +444,13 @@
              && ((!(matchsel & WHO_FIELD_HOS))
              || matchexec(cli_user(acptr)->host, mymask, minlen))
              && ((!(matchsel & WHO_FIELD_HOS))
@@ -85,7 +85,7 @@ diff -r 702b5aa2127f ircd/m_who.c
              || !ipmask_check(&cli_ip(acptr), &imask, ibits))
              && ((!(matchsel & WHO_FIELD_ACC))
              || matchexec(cli_user(acptr)->account, mymask, minlen)))
-diff -r 702b5aa2127f ircd/m_whois.c
+diff -r e4e1d8d47a8e ircd/m_whois.c
 --- a/ircd/m_whois.c
 +++ b/ircd/m_whois.c
 @@ -214,7 +214,7 @@
@@ -97,7 +97,7 @@ diff -r 702b5aa2127f ircd/m_whois.c
        send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
                   user->realhost, ircd_ntoa(&cli_ip(acptr)));
  
-diff -r 702b5aa2127f ircd/send.c
+diff -r e4e1d8d47a8e ircd/send.c
 --- a/ircd/send.c
 +++ b/ircd/send.c
 @@ -281,7 +281,7 @@
@@ -109,7 +109,7 @@ diff -r 702b5aa2127f ircd/send.c
      case MATCH_SERVER:
      default:
        return (match(mask, cli_name(cli_user(one)->server)) == 0);
-diff -r 702b5aa2127f ircd/whocmds.c
+diff -r e4e1d8d47a8e ircd/whocmds.c
 --- a/ircd/whocmds.c
 +++ b/ircd/whocmds.c
 @@ -134,7 +134,7 @@
@@ -121,7 +121,7 @@ diff -r 702b5aa2127f ircd/whocmds.c
        feature_str(FEAT_HIDDEN_IP) :
        ircd_ntoa(&cli_ip(acptr));
      *(p1++) = ' ';
-diff -r 702b5aa2127f ircd/whowas.c
+diff -r e4e1d8d47a8e ircd/whowas.c
 --- a/ircd/whowas.c
 +++ b/ircd/whowas.c
 @@ -272,7 +272,7 @@
