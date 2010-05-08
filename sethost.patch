@@ -1421,7 +1421,7 @@ diff -r c6f3803ee169 ircd/s_user.c
 +       */
 +      if (*user == 0 || user[0] == ':' || *host == 0 || host[0] == ':')
 +        protocol_violation(cptr, "Received MODE +h for %C with an invalid user@host '%s@%s'",
-+          sptr, user ? user : "", host);
++          sptr, user ? user : "", host ? host : "");
 +
 +      /* apply it */
 +      else {
