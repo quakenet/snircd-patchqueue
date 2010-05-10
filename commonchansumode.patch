@@ -2,7 +2,7 @@ Add usermode +q which requires users /msg'ing or /notice'ing you to be in at lea
 This is designed to stop the spam bots which sit outside a channel, while a spy sits inside, preventing channel operators dealing with the problem.
 We currently also block invites, this might not be such a good idea, but these days everyone can get Q.
 
-diff -r ed4109685dc2 include/channel.h
+diff -r 0543ca28447d include/channel.h
 --- a/include/channel.h
 +++ b/include/channel.h
 @@ -462,5 +462,6 @@
@@ -12,7 +12,7 @@ diff -r ed4109685dc2 include/channel.h
 +extern int common_chan_count(struct Client *a, struct Client *b, int max);
  
  #endif /* INCLUDED_channel_h */
-diff -r ed4109685dc2 include/client.h
+diff -r 0543ca28447d include/client.h
 --- a/include/client.h
 +++ b/include/client.h
 @@ -90,7 +90,7 @@
@@ -24,17 +24,16 @@ diff -r ed4109685dc2 include/client.h
  
  /** Character to indicate no oper name available */
  #define NOOPERNAMECHARACTER '-'
-@@ -190,7 +190,8 @@
+@@ -191,6 +191,8 @@
+     FLAG_NOCHAN,                    /**< user's channels are hidden */
      FLAG_NOIDLE,                    /**< user's idletime is hidden */
      FLAG_XTRAOP,                    /**< oper has special powers */
-     FLAG_OPERNAME,                  /**< Server sends oper name in mode string */
--
 +    FLAG_COMMONCHANSONLY,           /**< SNIRCD_q: hide privmsgs/notices if in no
 +					 common channels (with +ok exceptions) */
+ 
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-     FLAG_GLOBAL_UMODES = FLAG_OPER  /**< First global mode flag */
-@@ -622,6 +623,8 @@
+@@ -623,6 +625,8 @@
  #define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
  /** Return non-zero if the server should send opername information */
  #define IsSendOperName(x)         HasFlag(x, FLAG_OPERNAME)
@@ -43,7 +42,7 @@ diff -r ed4109685dc2 include/client.h
  
  /** Return non-zero if the client has operator or server privileges. */
  #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
-@@ -684,6 +687,8 @@
+@@ -689,6 +693,8 @@
  #define SetAccountOnly(x)       SetFlag(x, FLAG_ACCOUNTONLY)
  /** Mark a client as having mode +P (paranoid). */
  #define SetParanoid(x)          SetFlag(x, FLAG_PARANOID)
@@ -52,7 +51,7 @@ diff -r ed4109685dc2 include/client.h
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
  #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
-@@ -731,6 +736,8 @@
+@@ -738,6 +744,8 @@
  #define ClearAccountOnly(x)     ClrFlag(x, FLAG_ACCOUNTONLY)
  /** Remove mode +P (paranoid) from a client */
  #define ClearParanoid(x)        ClrFlag(x, FLAG_PARANOID)
@@ -61,7 +60,7 @@ diff -r ed4109685dc2 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r ed4109685dc2 include/numeric.h
+diff -r 0543ca28447d include/numeric.h
 --- a/include/numeric.h
 +++ b/include/numeric.h
 @@ -420,6 +420,7 @@
@@ -72,10 +71,10 @@ diff -r ed4109685dc2 include/numeric.h
  /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
  #define ERR_VOICENEEDED      489        /* Undernet extension */
  
-diff -r ed4109685dc2 ircd/channel.c
+diff -r 0543ca28447d ircd/channel.c
 --- a/ircd/channel.c
 +++ b/ircd/channel.c
-@@ -3818,3 +3818,39 @@
+@@ -3819,3 +3819,39 @@
  
    return marker;
  }
@@ -115,7 +114,7 @@ diff -r ed4109685dc2 ircd/channel.c
 +
 +  return count;
 +}
-diff -r ed4109685dc2 ircd/ircd_relay.c
+diff -r 0543ca28447d ircd/ircd_relay.c
 --- a/ircd/ircd_relay.c
 +++ b/ircd/ircd_relay.c
 @@ -310,6 +310,10 @@
@@ -161,7 +160,7 @@ diff -r ed4109685dc2 ircd/ircd_relay.c
    /*
     * deliver the message
     */
-diff -r ed4109685dc2 ircd/m_invite.c
+diff -r 0543ca28447d ircd/m_invite.c
 --- a/ircd/m_invite.c
 +++ b/ircd/m_invite.c
 @@ -171,6 +171,9 @@
@@ -174,7 +173,7 @@ diff -r ed4109685dc2 ircd/m_invite.c
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
      return 0;
  
-diff -r ed4109685dc2 ircd/s_err.c
+diff -r 0543ca28447d ircd/s_err.c
 --- a/ircd/s_err.c
 +++ b/ircd/s_err.c
 @@ -1006,7 +1006,7 @@
@@ -186,7 +185,7 @@ diff -r ed4109685dc2 ircd/s_err.c
  /* 488 */
    { 0 },
  /* 489 */
-diff -r ed4109685dc2 ircd/s_user.c
+diff -r 0543ca28447d ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
 @@ -540,7 +540,8 @@
