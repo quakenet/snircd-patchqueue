@@ -5,10 +5,28 @@ and not on the client (thus the server link) that sent us this message.
 Now the IRCd has the correct info on remote servers whether they accepted
 opernames or not.
 
-
-diff -r 0ef8d9c66131 ircd/s_serv.c
---- a/ircd/s_serv.c	Wed Jan 21 18:00:00 2009 +0100
-+++ b/ircd/s_serv.c	Wed Jan 21 18:25:34 2009 +0100
+diff -r 39bad1079995 include/client.h
+--- a/include/client.h
++++ b/include/client.h
+@@ -162,6 +162,7 @@
+     FLAG_HUB,                       /**< server is a hub */
+     FLAG_IPV6,                      /**< server understands P10 IPv6 addrs */
+     FLAG_SERVICE,                   /**< server is a service */
++    FLAG_OPERNAME,                  /**< server sends oper name in mode string */
+     FLAG_GOTID,                     /**< successful ident lookup achieved */
+     FLAG_DOID,                      /**< I-lines say must use ident return */
+     FLAG_NONL,                      /**< No \n in buffer */
+@@ -190,7 +191,6 @@
+     FLAG_NOCHAN,                    /**< user's channels are hidden */
+     FLAG_NOIDLE,                    /**< user's idletime is hidden */
+     FLAG_XTRAOP,                    /**< oper has special powers */
+-    FLAG_OPERNAME,                  /**< Server sends oper name in mode string */
+ 
+     FLAG_LAST_FLAG,                 /**< number of flags */
+     FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
+diff -r 39bad1079995 ircd/s_serv.c
+--- a/ircd/s_serv.c
++++ b/ircd/s_serv.c
 @@ -231,7 +231,7 @@
  		    cli_hopcount(acptr) + 1, cli_serv(acptr)->timestamp,
  		    protocol_str, Protocol(acptr), NumServCap(acptr),
