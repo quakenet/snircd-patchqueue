@@ -271,7 +271,7 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +  /* need hostmask parameter
 +   *   and need password parameter from an ordinary user
 +   */
-+  if (parc < 2 || EmptyString(parv[1]) || (parc < 3 && !IsAnOper(sptr)))
++  if (parc < 2 || *parv[1] == 0 || (parc < 3 && !IsAnOper(sptr)))
 +    return need_more_params(sptr, "SETHOST");
 +
 +  hostmask = parv[1];
@@ -284,8 +284,8 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +  else
 +    host = hostmask;
 +
-+  /* got a pasword */
-+  if (parc > 2 && !EmptyString(parv[2]))
++  /* got a pasword and not empty */
++  if (parc > 2 && *parv[2])
 +    password = parv[2];
 +
 +  /* freeform - do not bother with password */
@@ -694,7 +694,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +    r = 3;
 +
 +    /* check password */
-+    if (password) {
++    if (!EmptyString(password)) {
 +      if (EmptyString(sconf->passwd) || strcmp(sconf->passwd, password) != 0)
 +        continue;
 +    }
