@@ -794,7 +794,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +      continue;
 +
 +    /* check username */
-+    if (match(sconf->username, cli_user(cptr)->username) != 0)
++    if (match(sconf->username, cli_user(cptr)->realusername) != 0)
 +      continue;
 +
 +    /* invalid */
