@@ -632,7 +632,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
  #include "send.h"
  #include "struct.h"
  #include "sys.h"
-@@ -1239,44 +1240,173 @@
+@@ -1239,44 +1240,166 @@
   * -froo 1/2003
   *
   */
@@ -650,15 +650,19 @@ diff -r c6f3803ee169 ircd/s_conf.c
 + */
 +struct sline *find_spoofblock(struct Client *cptr, char *spoofhost, char *password) {
  
-+  struct sline *sconf;
+-int
+-conf_check_slines(struct Client *cptr)
+-{
+   struct sline *sconf;
+-  char *hostonly;
 +  int result = 0;
 +  int r = 0;
 +  char *error;
 +
 +  Debug((DEBUG_INFO, "find_spoofblock() cptr=%C spoofhost=%s password=%s",
 +    cptr, spoofhost, password));
-+
-+  for (sconf = GlobalSList; sconf; sconf = sconf->next) {
+ 
+   for (sconf = GlobalSList; sconf; sconf = sconf->next) {
 +
 +    /* check result of previous loop */
 +    if (r > result)
@@ -671,23 +675,35 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +
 +    /* check cptr's host */
 +    /* cidr mask */
-+    if (sconf->flags == SLINE_FLAGS_IP) {
-+      if (!ipmask_check(&(cli_ip(cptr)), &(sconf->address), sconf->bits))
-+        continue;
+     if (sconf->flags == SLINE_FLAGS_IP) {
+       if (!ipmask_check(&(cli_ip(cptr)), &(sconf->address), sconf->bits))
+         continue;
+-    } else if (sconf->flags == SLINE_FLAGS_HOSTNAME) {
+-        if ((match(sconf->realhost, cli_sockhost(cptr)) != 0) &&
+-           (match(sconf->realhost, cli_sock_ip(cptr)) != 0))	/* wildcarded IP address */
+-          continue;
+-    } else {
 +    }
 +
 +    /* hostname */
 +    else if (sconf->flags == SLINE_FLAGS_HOSTNAME) {
 +      if ((match(sconf->realhost, cli_sockhost(cptr)) != 0) &&
 +          (match(sconf->realhost, cli_sock_ip(cptr)) != 0))	   /* wildcarded IP address */
-+        continue;
-+    }
-+
+         continue;
+     }
+ 
+-    if (match(sconf->username, cli_user(cptr)->username) == 0) {
+-     /* Ignore user part if u@h. */
+-     if ((hostonly = strchr(sconf->spoofhost, '@')))
+-        hostonly++;
+-      else
+-        hostonly = sconf->spoofhost;
 +    /* not cidr or hostname.. */ 
 +    else
 +      continue;
 +    r = 2;
-+
+ 
+-      if(!*hostonly)
 +    /* check cptr's username */
 +    if (!EmptyString(sconf->username) && match(sconf->username, cli_user(cptr)->realusername) != 0)
 +      continue;
@@ -747,69 +763,49 @@ diff -r c6f3803ee169 ircd/s_conf.c
 + * @return 1 for success, else 0
 + * 
 + */
- int
--conf_check_slines(struct Client *cptr)
++int
 +apply_spoofblock(struct Client *cptr)
- {
-   struct sline *sconf;
-   char *hostonly;
- 
++{
++  struct sline *sconf;
++
 +  /* disabled */
 +  if(!feature_bool(FEAT_SETHOST_AUTO))
 +    return 0;
 +
 +  /* go over spoof blocks */
-   for (sconf = GlobalSList; sconf; sconf = sconf->next) {
++  for (sconf = GlobalSList; sconf; sconf = sconf->next) {
 +
 +    /* check IP */
-     if (sconf->flags == SLINE_FLAGS_IP) {
-       if (!ipmask_check(&(cli_ip(cptr)), &(sconf->address), sconf->bits))
++    if (sconf->flags == SLINE_FLAGS_IP) {
++      if (!ipmask_check(&(cli_ip(cptr)), &(sconf->address), sconf->bits))
          continue;
-+
-+    /* check host */
-     } else if (sconf->flags == SLINE_FLAGS_HOSTNAME) {
-         if ((match(sconf->realhost, cli_sockhost(cptr)) != 0) &&
--           (match(sconf->realhost, cli_sock_ip(cptr)) != 0))	/* wildcarded IP address */
-+            (match(sconf->realhost, cli_sock_ip(cptr)) != 0))   /* wildcarded IP address */
-           continue;
--    } else {
--        continue;
--    }
-+    } else
-+      continue;
- 
--    if (match(sconf->username, cli_user(cptr)->username) == 0) {
--     /* Ignore user part if u@h. */
--     if ((hostonly = strchr(sconf->spoofhost, '@')))
--        hostonly++;
--      else
--        hostonly = sconf->spoofhost;
-+    /* check username */
-+    if (match(sconf->username, cli_user(cptr)->username) != 0)
-+      continue;
- 
--      if(!*hostonly)
--        continue;
-+    /* Ignore user part if u@h. */
-+    if ((hostonly = strchr(sconf->spoofhost, '@')))
-+      hostonly++;
-+    else
-+      hostonly = sconf->spoofhost;
  
 -      ircd_strncpy(cli_user(cptr)->host, hostonly, HOSTLEN);
 -      log_write(LS_USER, L_INFO, LOG_NOSNOTICE, "S-Line (%s@%s) by (%#R)",
 -          cli_user(cptr)->username, hostonly, cptr);
 -      return 1;
 -    }
++    /* check host */
++    } else if (sconf->flags == SLINE_FLAGS_HOSTNAME) {
++        if ((match(sconf->realhost, cli_sockhost(cptr)) != 0) &&
++            (match(sconf->realhost, cli_sock_ip(cptr)) != 0))   /* wildcarded IP address */
++          continue;
++    } else
++      continue;
++
++    /* check username */
++    if (match(sconf->username, cli_user(cptr)->username) != 0)
++      continue;
++
 +    /* invalid */
-+    if (!is_validsethost(NULL, hostonly))
++    if (!is_validsethost(NULL, sconf->spoofhost))
 +      continue;
 +
 +    /* do it and log */
-+    set_hostmask(cptr, NULL, hostonly);
++    set_hostmask(cptr, NULL, sconf->spoofhost);
 +    /* LOG_NOSNOTICE */
 +    log_write(LS_USER, L_INFO, 0, "AUTO SETHOST %s on %s",
-+      hostonly, get_client_name(cptr, SHOW_IP));
++      sconf->spoofhost, get_client_name(cptr, SHOW_IP));
 +    return 1;
    }
    return 0;
