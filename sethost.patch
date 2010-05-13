@@ -632,22 +632,45 @@ diff -r c6f3803ee169 ircd/s_conf.c
  #include "send.h"
  #include "struct.h"
  #include "sys.h"
-@@ -1239,44 +1240,168 @@
-  * -froo 1/2003
-  *
-  */
+@@ -1206,6 +1207,10 @@
+   return 0;
+ }
+ 
++/**
++ * clear spoof blocks
++ *
++ */
+ void clear_slines(void)
+ {
+   struct sline *sline;
+@@ -1222,61 +1227,164 @@
+   }
+ }
+ 
+-/*
+- * conf_check_slines()
 +/** 
 + * find_spoofblock
-+ *
+  *
+- * Check S lines for the specified client, passed in cptr struct.
+- * If the client's IP is S-lined, process the substitution here.
 + *  Find matching spoof block for a user for the given spoofhost and password
-+ *
+  *
+- * Precondition
+- *  cptr != NULL
 + *  @param cptr       User wanting to get a spoof host.
 + *  @param host       Spoof host to look for.
 + *  @param password   Password given by user (can be NULL).
-+ *
+  *
+- * Returns
+- *  0 = No S-line found
+- *  1 = S-line found and substitution done.
+- *
+- * -mbuna 9/2001
+- * -froo 1/2003
 + *  @return pointer to the matching spoofblock is found, else NULL
-+ *
-+ */
+  *
+  */
 +struct sline *find_spoofblock(struct Client *cptr, char *host, char *password) {
  
 -int
@@ -753,8 +776,6 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +  return NULL;
 +}
 +
-+
-+
 +/** 
 + * apply_spoofblock
 + *
@@ -813,10 +834,8 @@ diff -r c6f3803ee169 ircd/s_conf.c
    return 0;
  }
  
-+
-+
 +/**
-+ *
++ * free a spoofblock
 + *
 + */
  void free_spoofhost(struct sline *spoof) {
