@@ -131,7 +131,7 @@ diff -r c6f3803ee169 include/s_conf.h
  extern void conf_add_sline(const char* const* fields, int count);
  extern void clear_slines(void);
 -extern int conf_check_slines(struct Client *cptr);
-+extern struct sline *find_spoofblock(struct Client *cptr, char *spoofhost, char *password);
++extern struct sline *find_spoofblock(struct Client *cptr, char *host, char *password);
 +extern int apply_spoofblock(struct Client *cptr);
  extern void free_spoofhost(struct sline *spoof);
  
@@ -642,13 +642,13 @@ diff -r c6f3803ee169 ircd/s_conf.c
 + *  Find matching spoof block for a user for the given spoofhost and password
 + *
 + *  @param cptr       User wanting to get a spoof host.
-+ *  @param spoofhost  Spoof host to look for.
++ *  @param host       Spoof host to look for.
 + *  @param password   Password given by user (can be NULL).
 + *
 + *  @return pointer to the matching spoofblock is found, else NULL
 + *
 + */
-+struct sline *find_spoofblock(struct Client *cptr, char *spoofhost, char *password) {
++struct sline *find_spoofblock(struct Client *cptr, char *host, char *password) {
  
 -int
 -conf_check_slines(struct Client *cptr)
@@ -659,8 +659,8 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +  int r = 0;
 +  char *error;
 +
-+  Debug((DEBUG_INFO, "find_spoofblock() cptr=%C spoofhost=%s password=%s",
-+    cptr, spoofhost, password));
++  Debug((DEBUG_INFO, "find_spoofblock() cptr=%C host=%s password=%s",
++    cptr, host, password));
  
    for (sconf = GlobalSList; sconf; sconf = sconf->next) {
 +
@@ -669,7 +669,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +      result = r;
 +
 +    /* check spoofhost */
-+    if (strcasecmp(sconf->spoofhost, spoofhost) != 0)
++    if (strcasecmp(sconf->spoofhost, host) != 0)
 +      continue;
 +    r = 1;
 +
@@ -748,7 +748,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +  /* TODO: L_INFO LOG_NOSNOTICE */
 +  /* log best result we got */
 +  log_write(LS_SETHOST, L_INFO, 0, "%s SETHOST %s (failed: %s) [password: %s]",
-+    get_client_name(cptr, SHOW_IP), spoofhost,
++    get_client_name(cptr, SHOW_IP), host,
 +    error, password ? "yes" : "no");
 +  return NULL;
 +}
