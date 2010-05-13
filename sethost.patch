@@ -632,7 +632,7 @@ diff -r c6f3803ee169 ircd/s_conf.c
  #include "send.h"
  #include "struct.h"
  #include "sys.h"
-@@ -1239,44 +1240,166 @@
+@@ -1239,44 +1240,168 @@
   * -froo 1/2003
   *
   */
@@ -801,11 +801,13 @@ diff -r c6f3803ee169 ircd/s_conf.c
 +    if (!is_validsethost(NULL, sconf->spoofhost))
 +      continue;
 +
-+    /* do it and log */
++    /* do it */
 +    set_hostmask(cptr, NULL, sconf->spoofhost);
-+    /* LOG_NOSNOTICE */
-+    log_write(LS_USER, L_INFO, 0, "AUTO SETHOST %s on %s",
-+      sconf->spoofhost, get_client_name(cptr, SHOW_IP));
++
++    /* TODO: LOG_NOSNOTICE */
++    /* log it */
++    log_write(LS_USER, L_INFO, 0, "%s SETHOST %s (auto)",
++      get_client_name(cptr, SHOW_IP), sconf->spoofhost);
 +    return 1;
    }
    return 0;
