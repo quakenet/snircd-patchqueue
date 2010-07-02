@@ -3,12 +3,12 @@ never gets a reply in case of succes
 
 this patch sends a copy of the snomask message shown to local opers to the remote source oper
 
-diff -r 62d884e43ad9 ircd/gline.c
+diff -r 032bd91a5810 ircd/gline.c
 --- a/ircd/gline.c
 +++ b/ircd/gline.c
 @@ -595,6 +595,18 @@
  	    flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : host,
- 	    expire + TSoffset, reason);
+ 	    expire, reason);
  
 +  /* local gline set by remote user, inform oper of success */
 +  if ((flags & GLINE_LOCAL) && IsUser(sptr) && !MyConnect(sptr))
@@ -59,7 +59,7 @@ diff -r 62d884e43ad9 ircd/gline.c
    gline_free(gline); /* get rid of the G-line */
  
    return 0; /* convenience return */
-diff -r 62d884e43ad9 ircd/jupe.c
+diff -r 032bd91a5810 ircd/jupe.c
 --- a/ircd/jupe.c
 +++ b/ircd/jupe.c
 @@ -166,6 +166,20 @@
