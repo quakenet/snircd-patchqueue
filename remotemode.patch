@@ -50,7 +50,7 @@ diff -r 37c9c7460603 ircd/Makefile.in
 diff -r 37c9c7460603 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
-@@ -0,0 +1,363 @@
+@@ -0,0 +1,359 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -293,10 +293,6 @@ diff -r 37c9c7460603 ircd/m_remotemode.c
 +      }
 +    }
 +  }
-+
-+  /* only send wallops to opers */
-+  if (feature_bool(FEAT_WALLOPS_OPER_ONLY) && !IsAnOper(acptr) && !FlagHas(&setflags, FLAG_WALLOP))
-+    ClearWallops(acptr);
 +
 +  /* do host hiding for +x */
 +  if (!FlagHas(&setflags, FLAG_HIDDENHOST) && do_host_hiding)
