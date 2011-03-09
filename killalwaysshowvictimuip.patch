@@ -1,6 +1,6 @@
 show nick[user@host] in kills for remote users (user part is not shown in case the user did not have an ident reply)
 
-diff -r 43c64cf43c35 ircd/m_kill.c
+diff -r 8920af84f7c9 ircd/m_kill.c
 --- a/ircd/m_kill.c
 +++ b/ircd/m_kill.c
 @@ -125,10 +125,17 @@
@@ -15,7 +15,7 @@ diff -r 43c64cf43c35 ircd/m_kill.c
                         inpath, path, msg);
 +  else
 +    sendto_opmask_butone(0, snomask,
-+                       "Received KILL message for %s[%s@%s] from %s Path: %s!%s %s",
++                       "Received KILL message for %s(%s@%s) from %s Path: %s!%s %s",
 +                       cli_name(victim), cli_user(victim)->realusername[0] != '~' ? cli_user(victim)->realusername : "", ircd_ntoa(&cli_ip(victim)),
 +                       get_client_name_and_opername(sptr),
 +                       inpath, path, msg);
