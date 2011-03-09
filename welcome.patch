@@ -1,12 +1,65 @@
 Add welcome message functionality.
 
+To inform our users about events we currently have 3 means at our disposal.
+
+Outside of IRC like our website and other external/3rd party means such as facebook/twitter/whatever.
+I never visit the website, and I cannot imagine many people do just so they wont miss that lonely newspost every couple of months.
+(If it were an RSS newsfeed, then maybe it would reach more people..., but that's a different topic altogether.)
+
+Within the IRC world there are two ways to mass relay information to users.
+
+The first is the MOTD (Message of the Day).
+This is a misleading name, it simply is a text file played to connecting clients, and in practice never changes
+(our MOTDs display outdated information, and done so for years..., but again, that's a different topic altogether).
+The MOTD cannot be altered from IRC, so it cannot be used to inform users about upcoming events or news.
+
+The second are message on IRC sent to many recipients,
+broadcasts to all users on the network/server/country/host,
+and WALLUSERS to all users with mode +w set.
+They are not suitable to inform users about upcoming events or news:
+
+They only reach users which are connected at that time, and not everyone is connected to IRC all the time.
+Doing a broadcast one time a few days in advance and again a few minutes in advance, simply does not reach all of our users.
+Doing multiple broadcasts to make up of this, is annoying for users
+(as seen in the past when several broadcasts were made for a tutorial session) and thus not an option.
+
+Broadcasts are rather intrusive, and sending many of them probably wont be appreciated,
+leading to people adding the service(s) to ignore or filtering them.
+
+WALLUSERS is only received by a very small portion of our userbase, 1 to 2% of users on the network have set mode +w.
+We could make +w a default usermode (opt-out instead of opt-in), but we are left with the same problem as with broadcasts.
+
+
+We need a way to be able to announce news to all users,
+in a timely manner straight from IRC (so not the website, not the MOTD),
+in a non-intrusive way with a message on connect, and when people want to see it by command (so not broadcasts or wallusers).
+
+This is where WELCOME comes in.
+Messages set on IRC.
+Messages set per server (mostly for maintenance) or global (for news/pr/and such).
+Messages announced to connecting clients, and shown when users use /welcome.
+
+
+Why not use a service for this?
+Implemented in the IRCd it only uses local traffic, that is from server to client,
+instead of traffic over server links from service to server, and then server to client.
+Implemented in the IRCd it is not affected by netsplits as it would when done by a service.
+
+
+(But even if this patch is accepted, it will not be on quakenet any time soon.
+So it may still be worth it to create service for this in the mean time.)
+
+
+
+
+
 client commands:
 user:
 /WELCOME [<server>]
 shows welcome messages set, same is shown on connect
 feature HIS_REMOTE controls whether ordinary users can request a listing from a remote server
 
-oper:
+operator:
 /WELCOME [<server>] [[$][!][+|-]<N> :<message>]
 to view welcome messages from a remote server
 to set a local welcome message on this server or a remote server
@@ -39,6 +92,7 @@ announcement is done by a notice by the local server to $* ($servername for loca
 format as for listing welcome messages.
 :server NOTICE $* :[QuakeNet] Latest news: testing this welcome patch :)
 :server NOTICE $server :[server] This is a test server, expect restarts.
+
 
 
 Files:
