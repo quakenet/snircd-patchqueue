@@ -1,11 +1,11 @@
 dont sent kicks upstream for local channels
 
-diff -r 6bfd0ffcda13 ircd/gline.c
---- a/ircd/gline.c	Fri Mar 19 17:36:23 2010 +0100
-+++ b/ircd/gline.c	Fri Mar 19 17:41:08 2010 +0100
-@@ -233,7 +233,11 @@
+diff -r fdb96a159967 ircd/gline.c
+--- a/ircd/gline.c	Sat Jun 29 18:44:35 2013 +0200
++++ b/ircd/gline.c	Sat Jun 29 18:46:20 2013 +0200
+@@ -231,7 +231,11 @@
          nmember=member->next_member;
-         if (!MyUser(member->user) || IsAnOper(member->user))
+         if (!MyUser(member->user) || IsZombie(member) || IsAnOper(member->user))
            continue;
 -        sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
 +
@@ -13,6 +13,6 @@ diff -r 6bfd0ffcda13 ircd/gline.c
 +        if (!IsLocalChannel(chptr->chname))
 +          sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
 +
-         sendcmdto_channel_butserv_butone(&his, CMD_KICK, chptr, NULL, 0, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
+         sendcmdto_channel_butserv_butone(&me, CMD_KICK, chptr, NULL, 0, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
          make_zombie(member, member->user, &me, &me, chptr);
          retval=1;
