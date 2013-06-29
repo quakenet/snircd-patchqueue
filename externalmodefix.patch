@@ -1,0 +1,35 @@
+# HG changeset patch
+# Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
+
+Disallow users to view the banlist when they are not on the channel - fix implementation done in snircd 1.3.4.
+
+Do not allow ordinary users to view the banlist when they are not on the channel - as it was in snircd 1.3.4.
+Do allow IRC Operators to see the banlist when they are not on the channel - fixed.
+Do allow anyone to see the channel modes and creation timestamp when they are not on the channel (default ircu) - fixed.
+
+diff -r e4f53aeb83c3 ircd/m_mode.c
+--- a/ircd/m_mode.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/m_mode.c	Sat Jun 29 23:34:03 2013 +0200
+@@ -134,11 +134,6 @@
+ 
+   member = find_member_link(chptr, sptr);
+ 
+-  if (!member) {
+-    send_reply(sptr, ERR_NOTONCHANNEL, chptr->chname);
+-    return 0;
+-  }
+-
+   if (parc < 3) {
+     char modebuf[MODEBUFLEN];
+     char parabuf[MODEBUFLEN];
+@@ -161,6 +156,10 @@
+ 		  MODE_PARSE_FORCE),  /* Force it to take */
+ 		  member);
+       return modebuf_flush(&mbuf);
++    /* do not allow users to view the banlist
++       when they are not on the channel - snircd */
++    } else if (!member && !IsAnOper(sptr)) {
++      send_reply(sptr, ERR_NOTONCHANNEL, chptr->chname);
+     } else
+       mode_parse(0, cptr, sptr, chptr, parc - 2, parv + 2,
+ 		 (member ? MODE_PARSE_NOTOPER : MODE_PARSE_NOTMEMBER), member);
