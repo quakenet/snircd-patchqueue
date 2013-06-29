@@ -4,7 +4,7 @@ We currently also block invites, this might not be such a good idea, but these d
 
 diff -r 51ca25725201 include/channel.h
 --- a/include/channel.h	Sat Jun 29 19:05:59 2013 +0200
-+++ b/include/channel.h	Sat Jun 29 19:12:11 2013 +0200
++++ b/include/channel.h	Sat Jun 29 19:30:45 2013 +0200
 @@ -280,6 +280,7 @@
    struct SLink*      invites;	   /**< List of invites on this channel */
    struct Ban*        banlist;      /**< List of bans on this channel */
@@ -24,7 +24,7 @@ diff -r 51ca25725201 include/channel.h
  #endif /* INCLUDED_channel_h */
 diff -r 51ca25725201 include/client.h
 --- a/include/client.h	Sat Jun 29 19:05:59 2013 +0200
-+++ b/include/client.h	Sat Jun 29 19:12:11 2013 +0200
++++ b/include/client.h	Sat Jun 29 19:30:45 2013 +0200
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -43,6 +43,15 @@ diff -r 51ca25725201 include/client.h
  
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
+@@ -268,7 +270,7 @@
+                                      server, XXX if this is a user */
+   time_t         cli_firsttime;   /**< time client was created */
+   time_t         cli_lastnick;    /**< TimeStamp on nick */
+-  int            cli_marker;      /**< /who processing marker */
++  unsigned int   cli_marker;      /**< processing marker */
+   struct Flags   cli_flags;       /**< client flags */
+   unsigned int   cli_hopcount;    /**< number of servers to this 0 = local */
+   struct irc_in_addr cli_ip;      /**< Real IP of client */
 @@ -613,6 +615,8 @@
  #define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
  /** Return non-zero if the server should send opername information */
@@ -70,9 +79,17 @@ diff -r 51ca25725201 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
+@@ -794,6 +802,7 @@
+ 			     struct Connection** con_p);
+ extern void client_set_privs(struct Client *client, struct ConfItem *oper);
+ extern int client_report_privs(struct Client* to, struct Client* client);
++extern unsigned int get_client_marker(void);
+ 
+ #endif /* INCLUDED_client_h */
+ 
 diff -r 51ca25725201 include/numeric.h
 --- a/include/numeric.h	Sat Jun 29 19:05:59 2013 +0200
-+++ b/include/numeric.h	Sat Jun 29 19:12:11 2013 +0200
++++ b/include/numeric.h	Sat Jun 29 19:30:45 2013 +0200
 @@ -420,6 +420,7 @@
  /*	ERR_HTMDISABLED      486	   unreal */
  #define ERR_ACCOUNTONLY      486	/* QuakeNet/ASUKA extension */
@@ -83,7 +100,7 @@ diff -r 51ca25725201 include/numeric.h
  
 diff -r 51ca25725201 ircd/channel.c
 --- a/ircd/channel.c	Sat Jun 29 19:05:59 2013 +0200
-+++ b/ircd/channel.c	Sat Jun 29 19:12:11 2013 +0200
++++ b/ircd/channel.c	Sat Jun 29 19:30:45 2013 +0200
 @@ -3737,3 +3737,57 @@
                                       "%H -d", chan);
    }
@@ -142,9 +159,37 @@ diff -r 51ca25725201 ircd/channel.c
 +
 +  return marker;
 +}
+diff -r 51ca25725201 ircd/client.c
+--- a/ircd/client.c	Sat Jun 29 19:05:59 2013 +0200
++++ b/ircd/client.c	Sat Jun 29 19:30:45 2013 +0200
+@@ -266,3 +266,24 @@
+ 
+   return 0;
+ }
++
++/*
++ * A little spin-marking utility to tell us which clients we have already
++ * processed and which not
++ */
++unsigned int get_client_marker(void)
++{
++  static unsigned int marker = 0;
++
++  if (!++marker)
++  {
++    struct Client *cptr;
++    for (cptr=GlobalClientList;cptr;cptr=cli_next(cptr))
++    {
++      cli_marker(cptr) = 0;
++    }
++    marker++;
++  }
++
++  return marker;
++}
 diff -r 51ca25725201 ircd/ircd_relay.c
 --- a/ircd/ircd_relay.c	Sat Jun 29 19:05:59 2013 +0200
-+++ b/ircd/ircd_relay.c	Sat Jun 29 19:12:11 2013 +0200
++++ b/ircd/ircd_relay.c	Sat Jun 29 19:30:45 2013 +0200
 @@ -304,6 +304,10 @@
    if (host)
      *--host = '%';
@@ -190,7 +235,7 @@ diff -r 51ca25725201 ircd/ircd_relay.c
     */
 diff -r 51ca25725201 ircd/m_invite.c
 --- a/ircd/m_invite.c	Sat Jun 29 19:05:59 2013 +0200
-+++ b/ircd/m_invite.c	Sat Jun 29 19:12:11 2013 +0200
++++ b/ircd/m_invite.c	Sat Jun 29 19:30:45 2013 +0200
 @@ -171,6 +171,9 @@
      return 0;
    }
@@ -201,9 +246,56 @@ diff -r 51ca25725201 ircd/m_invite.c
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
      return 0;
  
+diff -r 51ca25725201 ircd/m_who.c
+--- a/ircd/m_who.c	Sat Jun 29 19:05:59 2013 +0200
++++ b/ircd/m_who.c	Sat Jun 29 19:30:45 2013 +0200
+@@ -99,26 +99,6 @@
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+ #include <string.h>
+ 
+-
+-/*
+- * A little spin-marking utility to tell us which clients we have already
+- * processed and which not
+- */
+-static int who_marker = 0;
+-static void move_marker(void)
+-{
+-  if (!++who_marker)
+-  {
+-    struct Client *cptr = GlobalClientList;
+-    while (cptr)
+-    {
+-      cli_marker(cptr) = 0;
+-      cptr = cli_next(cptr);
+-    }
+-    who_marker++;
+-  }
+-}
+-
+ #define CheckMark(x, y) ((x == y) ? 0 : (x = y))
+ #define Process(cptr) CheckMark(cli_marker(cptr), who_marker)
+ 
+@@ -155,6 +135,7 @@
+   char *p;                      /* Scratch char pointer                     */
+   char *qrt;                    /* Pointer to the query type                */
+   static char mymask[512];      /* To save the mask before corrupting it    */
++  unsigned int who_marker;      /* Used to mark clients we've touched       */
+ 
+   /* Let's find where is our mask, and if actually contains something */
+   mask = ((parc > 1) ? parv[1] : 0);
+@@ -312,7 +293,7 @@
+   counter = (2048 / (counter + 4));
+   if (mask && (strlen(mask) > 510))
+     mask[510] = '\0';
+-  move_marker();
++  who_marker = get_client_marker();
+   commas = (mask && strchr(mask, ','));
+ 
+   /* First treat mask as a list of plain nicks/channels */
 diff -r 51ca25725201 ircd/s_err.c
 --- a/ircd/s_err.c	Sat Jun 29 19:05:59 2013 +0200
-+++ b/ircd/s_err.c	Sat Jun 29 19:12:11 2013 +0200
++++ b/ircd/s_err.c	Sat Jun 29 19:30:45 2013 +0200
 @@ -1006,7 +1006,7 @@
  /* 486 */
    { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user -- For details of how to obtain an account visit %s", "486" },
@@ -215,7 +307,7 @@ diff -r 51ca25725201 ircd/s_err.c
  /* 489 */
 diff -r 51ca25725201 ircd/s_user.c
 --- a/ircd/s_user.c	Sat Jun 29 19:05:59 2013 +0200
-+++ b/ircd/s_user.c	Sat Jun 29 19:12:11 2013 +0200
++++ b/ircd/s_user.c	Sat Jun 29 19:30:45 2013 +0200
 @@ -552,7 +552,8 @@
    { FLAG_NOCHAN,      'n' },
    { FLAG_NOIDLE,      'I' },
