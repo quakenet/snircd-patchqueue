@@ -1,10 +1,10 @@
 only disallow _local_ users setting usermode -i when feature AUTOINVISIBLE is turned on
 and do not enforce this setting on remote users, leads to desynch
 
-diff -r c7e5032326a7 ircd/s_user.c
---- a/ircd/s_user.c
-+++ b/ircd/s_user.c
-@@ -1252,8 +1252,7 @@
+diff -r 71fe467decbf ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jun 29 18:48:55 2013 +0200
++++ b/ircd/s_user.c	Sat Jun 29 18:49:28 2013 +0200
+@@ -1350,8 +1350,7 @@
          if (what == MODE_ADD)
            SetInvisible(sptr);
          else
@@ -14,9 +14,9 @@ diff -r c7e5032326a7 ircd/s_user.c
          break;
        case 'd':
          if (what == MODE_ADD)
-@@ -1380,6 +1379,12 @@
-         SetHiddenHost(sptr);
-     }
+@@ -1469,6 +1468,12 @@
+     if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
+       ClearParanoid(sptr);
  
 +    /* disallow ordinary users to do MODE -i when feature AUTOINVISIBLE is enabled */
 +    if (FlagHas(&setflags, FLAG_INVISIBLE) && !IsInvisible(sptr) &&          /* MODE -i */
