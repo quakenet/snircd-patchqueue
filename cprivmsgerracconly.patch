@@ -1,14 +1,14 @@
 correct wrong user in ERR_ACCOUNTONLY reply for CPRIVMSG command (should be dest, not source).
 
-diff -r 6bd1fce70230 ircd/s_user.c
---- a/ircd/s_user.c	Thu Mar 25 12:07:21 2010 +0100
-+++ b/ircd/s_user.c	Thu Mar 25 12:10:07 2010 +0100
-@@ -851,9 +851,10 @@
+diff -r 1681593e1a43 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jun 29 18:46:20 2013 +0200
++++ b/ircd/s_user.c	Sat Jun 29 18:48:55 2013 +0200
+@@ -857,9 +857,10 @@
    if (is_silenced(source, dest))
      return 0;
  
 +  /* check usermode +R */
-   if (IsAccountOnly(dest) && !IsAccount(source) && !IsXtraOp(source)) {
+   if (IsAccountOnly(dest) && !IsAccount(source) && !IsOper(source)) {
      if(!is_notice)
 -      send_reply(source, ERR_ACCOUNTONLY, cli_name(source), feature_str(FEAT_URLREG));
 +      send_reply(source, ERR_ACCOUNTONLY, cli_name(dest), feature_str(FEAT_URLREG));
