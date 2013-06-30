@@ -1,0 +1,30 @@
+# HG changeset patch
+# Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
+Do not enforce channel mode N on remote users in wallchops and wallvoices.
+
+Backported from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/ee21279cce9b
+
+diff -r e4f53aeb83c3 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/m_wallchops.c	Sun Jun 30 13:37:48 2013 +0200
+@@ -160,7 +160,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
++    if (client_can_send_to_channel(sptr, chptr, 0)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
+ 			       "%H :%s", chptr, parv[parc - 1]);
+diff -r e4f53aeb83c3 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/m_wallvoices.c	Sun Jun 30 13:37:48 2013 +0200
+@@ -159,7 +159,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
++    if (client_can_send_to_channel(sptr, chptr, 0)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
+ 			       "%H :%s", chptr, parv[parc - 1]);
