@@ -3,7 +3,7 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 21:03:26 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 21:07:07 2013 +0200
 @@ -30,63 +30,63 @@
  #
  # Uplinks
@@ -165,12 +165,16 @@ diff -r 0d60587c3068 doc/quakenet.conf
  };
  
  
-@@ -294,61 +294,28 @@
+@@ -292,63 +292,31 @@
+ 
+ features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
++  "LOG" = "SYSTEM" "LEVEL" "CRIT";
    "LOG" = "CONFIG" "FILE" "conf.log";
-   "LOG" = "SYSTEM" "LEVEL" "CRIT";
+-  "LOG" = "SYSTEM" "LEVEL" "CRIT";
 -  "DOMAINNAME"="quakenet.org";
 -  "RELIABLE_CLOCK"="FALSE";
++  "LOG" = "OPER" "FILE" "oper.log";
 +# "DOMAINNAME"="<obtained from /etc/resolv.conf by ./configure>";
    "BUFFERPOOL"="96000000";
 -# "HAS_FERGUSON_FLUSHER"="FALSE";
