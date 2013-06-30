@@ -3,7 +3,7 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 20:36:52 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 20:53:27 2013 +0200
 @@ -30,63 +30,63 @@
  #
  # Uplinks
@@ -165,16 +165,48 @@ diff -r 0d60587c3068 doc/quakenet.conf
  };
  
  
-@@ -294,7 +294,7 @@
+@@ -294,43 +294,39 @@
    "LOG" = "SYSTEM" "FILE" "ircd.log";
    "LOG" = "CONFIG" "FILE" "conf.log";
    "LOG" = "SYSTEM" "LEVEL" "CRIT";
 -  "DOMAINNAME"="quakenet.org";
+-  "RELIABLE_CLOCK"="FALSE";
 +# "DOMAINNAME"="<obtained from /etc/resolv.conf by ./configure>";
-   "RELIABLE_CLOCK"="FALSE";
++# "RELIABLE_CLOCK"="FALSE";
    "BUFFERPOOL"="96000000";
  # "HAS_FERGUSON_FLUSHER"="FALSE";
-@@ -327,10 +327,6 @@
+ # "CLIENT_FLOOD"="1024";
+ # "SERVER_PORT"="4400";
+   "NODEFAULTMOTD"="FALSE";
+-# "MOTD_BANNER"="TRUE";
++# "MOTD_BANNER"="one-line banner to be sent if NODEFAULTMOTD is TRUE";
+ # "KILL_IPMISMATCH"="FALSE";
+ # "IDLE_FROM_MSG"="TRUE";
+-  "HUB"="FALSE";
++# "HUB"="FALSE";
+ # "WALLOPS_OPER_ONLY"="FALSE";
+ # "NODNS"="FALSE";
+   "RANDOM_SEED"="@@@@@@@@@@@@@@@@";
+-# "DEFAULT_LIST_PARAM"="TRUE";
++# "DEFAULT_LIST_PARAM"="";
+ # "NICKNAMEHISTORYLENGTH"="800";
+   "NETWORK"="QuakeNet";
+-  "HOST_HIDING"="TRUE";
++# "HOST_HIDING"="TRUE";
+   "SETHOST" = "TRUE";
+   "SETHOST_USER" = "TRUE";
+   "SETHOST_AUTO" = "TRUE";
+   "HIDDEN_HOST"="users.quakenet.org";
+-  "HIDDEN_IP"="127.0.0.1";
++# "HIDDEN_IP"="127.0.0.1";
+   "URLREG"="http://www.quakenet.org/getauthed";
+ # "KILLCHASETIMELIMIT"="30";
+   "MAXCHANNELSPERUSER"="20";
+-  "NICKLEN" = "15";
++# "NICKLEN" = "15";
+ # "AVBANLEN"="40";
+ # "MAXBANS"="45";
+ # "MAXSILES"="15";
  # "HANGONGOODLINK"="300";
  # "HANGONRETRYDELAY" = "10";
  # "CONNECTTIMEOUT" = "90";
