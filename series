@@ -1,3 +1,6 @@
+checkendof.patch
+blockitaliccodeinchanmodec.patch
+fixkickforzombie.patch
 enforcechanmodebignlocalonly.patch
 banfix.patch
 revealdelayedjoinuserumodextraoper.patch
