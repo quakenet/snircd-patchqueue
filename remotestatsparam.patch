@@ -1,0 +1,34 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+
+Fix optional param for remote STATS requests.
+
+Forward port from snircd 1.4.0 / ircu - http://hg.quakenet.org/snircd/diff/0760b66e7816/ircd/m_stats.c
+
+diff -r 0d60587c3068 ircd/m_stats.c
+--- a/ircd/m_stats.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/m_stats.c	Sun Jun 30 23:01:32 2013 +0200
+@@ -140,6 +140,12 @@
+        ((sd->sd_flags & STAT_FLAG_OPERFEAT) && feature_bool(sd->sd_control))))
+     return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
++  /* Check for extra parameter */
++  if ((sd->sd_flags & STAT_FLAG_VARPARAM) && parc > 3 && !EmptyString(parv[3]))
++    param = parv[3];
++  else
++    param = NULL;
++
+   /* Ok, track down who's supposed to get this... */
+   if (hunt_server_cmd(sptr, CMD_STATS, cptr, feature_int(FEAT_HIS_REMOTE),
+ 		      param ? "%s %C :%s" : "%s :%C", 2, parc, parv) !=
+@@ -150,10 +156,6 @@
+   if ((sd->sd_flags & STAT_FLAG_LOCONLY) && !MyUser(sptr))
+     return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
+-  /* Check for extra parameter */
+-  if ((sd->sd_flags & STAT_FLAG_VARPARAM) && parc > 3 && !EmptyString(parv[3]))
+-    param = parv[3];
+-
+   assert(sd->sd_func != 0);
+ 
+   /* Ok, dispatch the stats function */
