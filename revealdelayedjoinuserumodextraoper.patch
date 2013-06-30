@@ -1,0 +1,45 @@
+# HG changeset patch
+# Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
+
+Fix for delayedjoin user with usermode +X not being revealed.
+
+Backport from snircd 1.4.0
+
+diff -r e4f53aeb83c3 ircd/channel.c
+--- a/ircd/channel.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/channel.c	Sun Jun 30 12:30:25 2013 +0200
+@@ -692,6 +692,13 @@
+     return 1;
+   }
+ 
++  /* user with usermode +X can always speak on the channel - snircd */
++  if (IsXtraOp(member->user)) {
++    if (IsDelayedJoin(member) && reveal)
++      RevealDelayedJoin(member);
++    return 1;
++  }
++
+   /* Discourage using the Apass to get op.  They should use the Upass. */
+   if (IsChannelManager(member) && member->channel->mode.apass[0])
+     return 0;
+@@ -743,7 +750,7 @@
+   /*
+    * Servers can always speak on channels.
+    */
+-  if (IsServer(cptr) || IsXtraOp(cptr))
++  if (IsServer(cptr))
+     return 1;
+ 
+   member = find_channel_member(cptr, chptr);
+@@ -753,7 +760,10 @@
+    * or +m (moderated).
+    */
+   if (!member) {
+-    if ((chptr->mode.mode & (MODE_NOPRIVMSGS|MODE_MODERATED)) ||
++    /* user with usermode +X can always speak on the channel - snircd */
++    if (IsXtraOp(cptr))
++      return 1;
++    else if ((chptr->mode.mode & (MODE_NOPRIVMSGS|MODE_MODERATED)) ||
+ 	((chptr->mode.mode & (MODE_REGONLY|MODE_MODERATENOREG)) && !IsAccount(cptr)))
+       return 0;
+     else
