@@ -1,0 +1,18 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+
+Do not take two params for usermode +h from remote users, there will be only one param.
+
+diff -r 0d60587c3068 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/s_user.c	Mon Jul 01 00:39:54 2013 +0200
+@@ -1398,7 +1398,8 @@
+              do_set_host = 1;
+              hostmask = *++p;
+              /* DON'T step p onto the trailing NULL in the parameter array! - splidge */
+-             if (*(p+1))
++             /* only take password param from local users! */
++             if (!IsServer(cptr) && *(p+1))
+                password = *++p;
+              else
+                password = NULL;
