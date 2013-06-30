@@ -3,7 +3,7 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 21:08:26 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 21:13:04 2013 +0200
 @@ -30,63 +30,63 @@
  #
  # Uplinks
@@ -116,7 +116,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
 -Client { class = "Users"; maxlinks = 1; host = "*@*.wanadoo.nl"; };
 -Client { class = "Users"; maxlinks = 2; host = "*@*.wanadoo.fr"; };
 -Client { class = "Users"; maxlinks = 1; host = "*@*.rima-tde.net"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.t-dialin.net"; };
++Client { class = "Users"; maxlinks = 3; host = "*@*.dip0.t-ipconnect.de"; };
 +Client { class = "Users"; maxlinks = 3; host = "*@*.proxad.net"; };
 +Client { class = "Users"; maxlinks = 3; host = "*@*.bezeqint.net"; };
 +Client { class = "Users"; maxlinks = 3; host = "*@*.ono.com"; };
