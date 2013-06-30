@@ -3,7 +3,7 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 21:13:04 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 21:20:35 2013 +0200
 @@ -30,63 +30,63 @@
  #
  # Uplinks
@@ -126,7 +126,29 @@ diff -r 0d60587c3068 doc/quakenet.conf
  
  # -----------------------------------------------------------------------------
  # UWorld/Jupe (aka ulines)
-@@ -157,38 +157,38 @@
+@@ -116,13 +116,15 @@
+ UWorld {
+   name = "CServe.quakenet.org";
+   name = "operserv.quakenet.org";
+-  name = "operserv2.quakenet.org";
++  name = "operserv?.quakenet.org";
+   name = "proxyscan.quakenet.org";
+-  name = "services4.uk.quakenet.org";
+-  name = "services.no.quakenet.org";
+-  name = "services.de.quakenet.org";
+-  name = "services.se.quakenet.org";
+-  name = "services.uk.quakenet.org";
++  name = "proxyscan?.quakenet.org";
++  name = "services.??.quakenet.org";
++  name = "services?.??.quakenet.org";
++  name = "services??.??.quakenet.org";
++  name = "services.??.??.quakenet.org";
++  name = "services?.??.??.quakenet.org";
++  name = "services??.??.??.quakenet.org";
+ };
+ 
+ Jupe {
+@@ -157,38 +159,38 @@
  #
  
  Connect {
@@ -186,7 +208,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
  };
  
  
-@@ -292,63 +292,31 @@
+@@ -292,63 +294,31 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
