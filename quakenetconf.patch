@@ -1,2 +1,167 @@
 # HG changeset patch
 # Parent 0d60587c3068d25c107ee81893791469b2623f0c
+
+diff -r 0d60587c3068 doc/quakenet.conf
+--- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 20:16:28 2013 +0200
+@@ -30,63 +30,63 @@
+ #
+ # Uplinks
+ Class {
+- name = "Server";
+- pingfreq = 3 minutes;
+- connectfreq = 5 minutes;
+- maxlinks = 1;
+- sendq = 40000000;
++  name = "Server";
++  pingfreq = 3 minutes;
++  connectfreq = 5 minutes;
++  maxlinks = 1;
++  sendq = 40000000;
+ };
+ 
+ # All the leaf servers you hub for.
+ Class {
+- name = "LeafServer";
+- pingfreq = 3 minutes;
+- connectfreq = 5 minutes;
+- maxlinks = 0;
+- sendq = 40000000;
++  name = "LeafServer";
++  pingfreq = 3 minutes;
++  connectfreq = 5 minutes;
++  maxlinks = 0;
++  sendq = 40000000;
+ };
+ 
+ # Client class (i.e. everyone)
+ Class {
+- name = "Users";
+- pingfreq = 3 minutes;
+- sendq = 300000;
+- maxlinks = 30000;
+- usermode = "+i";
++  name = "Users";
++  pingfreq = 3 minutes;
++  sendq = 300000;
++  maxlinks = 30000;
++  usermode = "+i";
+ };
+ 
+ # VIP user class (aka locals, opers etc..)
+ Class {
+- name = "Local";
+- pingfreq = 3 minutes;
+- sendq = 600000;
+- maxlinks = 100;
+- usermode = "+iw";
++  name = "Local";
++  pingfreq = 3 minutes;
++  sendq = 600000;
++  maxlinks = 100;
++  usermode = "+iw";
+ };
+ 
+ # Oper class (global)
+ Class {
+- name = "Opers";
+- pingfreq = 3 minutes;
+- sendq = 10240000;
+- maxlinks = 10;
+- local = no;
+- # privs
+- die = no;
+- restart = no;
+- rehash = no;
+- jupe = no;
+- local_jupe = no;
+- freeform = yes; # change this if you want to disable freeform sethost for your opers 
++  name = "Opers";
++  pingfreq = 3 minutes;
++  sendq = 10240000;
++  maxlinks = 10;
++  local = no;
++  # privs
++  die = no;
++  restart = no;
++  rehash = no;
++  jupe = no;
++  local_jupe = no;
++  freeform = yes; # change this if you want to disable freeform sethost for your opers 
+ };
+ 
+ # Oper class (global)
+ Class {
+- name = "Admin";
+- pingfreq = 3 minutes;
+- sendq = 10240000;
+- maxlinks = 10;
+- local = no;
++  name = "Admin";
++  pingfreq = 3 minutes;
++  sendq = 10240000;
++  maxlinks = 10;
++  local = no;
+ };
+ 
+ # -----------------------------------------------------------------------------
+@@ -157,38 +157,38 @@
+ #
+ 
+ Connect {
+- name = "hub.@@@.quakenet.org";
+- host = "@@@.@@@.@@@.@@@";
+- password = "@@@";
+- port = 4400;
+- class = "Server";
+- hub;
+- autoconnect = yes;
++  name = "hub.@@@.quakenet.org";
++  host = "@@@.@@@.@@@.@@@";
++  password = "@@@";
++  port = 4400;
++  class = "Server";
++  hub;
++  autoconnect = yes;
+ };
+ 
+ # Our secondary uplink.
+ #
+ Connect {
+- name = "hub.@@@.quakenet.org";
+- host = "@@@.@@@.@@@.@@@";
+- password = "@@@";
+- port = 4400;
+- class = "Server";
+- hub;
+- autoconnect = yes;
++  name = "hub.@@@.quakenet.org";
++  host = "@@@.@@@.@@@.@@@";
++  password = "@@@";
++  port = 4400;
++  class = "Server";
++  hub;
++  autoconnect = yes;
+ };
+ 
+ # Our tertiary uplink.
+ #
+ #
+ Connect {
+- name = "hub.@@@.quakenet.org";
+- host = "@@@.@@@.@@@.@@@";
+- password = "@@@";
+- port = 4400;
+- class = "Server";
+- hub;
+- autoconnect = yes;
++  name = "hub.@@@.quakenet.org";
++  host = "@@@.@@@.@@@.@@@";
++  password = "@@@";
++  port = 4400;
++  class = "Server";
++  hub;
++  autoconnect = yes;
+ };
+ 
+ 
