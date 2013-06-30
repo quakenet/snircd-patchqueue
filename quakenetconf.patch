@@ -3,7 +3,7 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 21:50:57 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 22:11:45 2013 +0200
 @@ -30,63 +30,82 @@
  #
  # Uplinks
@@ -227,7 +227,56 @@ diff -r 0d60587c3068 doc/quakenet.conf
  };
  
  
-@@ -292,63 +313,31 @@
+@@ -260,29 +281,34 @@
+ # -----------------------------------------------------------------------------
+ # Port (aka plines)
+ # -----------------------------------------------------------------------------
+-# port   = number;      mask   = "ipmask"    vhost = "virtualhostinterfaceip"
+-# server = yes;         hidden = yes
++# port   = [ipv4|ipv6] number;
++# mask   = "ipmask"    vhost = "virtualhostinterfaceip"
++# server = yes         hidden = yes
++#
++# default is to bind to ALL interfaces, IPv4 and IPv6!
++# explicitly specificy the type of interfaces to bind to!
+ # mask only contains IP addresses or '*'
+-# hidden, hides a port from stats
++# hidden, hides a port from stats from ordinary users (HIS already removes STATS p completely from them)
+ 
+ Port {
+-  port   = 4400;
++  port   = ipv4 4400;
+   server = yes;
+   hidden = yes;
+   vhost  = "@@@";
+ };
+ 
+ Port {
+-  vhost = "@@@" 6660;
+-  vhost = "@@@" 6661;
+-  vhost = "@@@" 6662;
+-  vhost = "@@@" 6663;
+-  vhost = "@@@" 6664;
+-  vhost = "@@@" 6665;
+-  vhost = "@@@" 6666;
+-  vhost = "@@@" 6667;
+-  vhost = "@@@" 6668;
+-  vhost = "@@@" 6669;
++  port = ipv4 6660;
++  port = ipv4 6661;
++  port = ipv4 6662;
++  port = ipv4 6663;
++  port = ipv4 6664;
++  port = ipv4 6665;
++  port = ipv4 6666;
++  port = ipv4 6667;
++  port = ipv4 6668;
++  port = ipv4 6669;
++  port = ipv4 7000;
+ };
+ 
+ # -----------------------------------------------------------------------------
+@@ -292,63 +318,31 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
