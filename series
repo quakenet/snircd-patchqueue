@@ -5,7 +5,6 @@ enforcechanmodebignlocalonly.patch
 banfix.patch
 revealdelayedjoinuserumodextraoper.patch
 externalmodefix.patch
-remotemode.patch
 badchanlocalkick.patch
 cprivmsgerracconly.patch
 enforceinvisible.patch
@@ -15,3 +14,4 @@ commonchansumode.patch
 who-accountid.patch
 upstreamiauthfixes.patch
 xquery.patch
+remotemode.patch
