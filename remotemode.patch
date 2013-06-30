@@ -2,14 +2,21 @@
 # Parent 026b2e424d696e005ba9a01fa3201341c5b9d97d
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
+#
 # <source numeric server> RM <target numeric user> <mode changes and arguments> (note: no : prefixing last parameter)
-# only allow +-diwRnIx, allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
+#
+# only allow +-diwRnIxq, allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
+#
 # usermode x can only be set, not unset (same as normal)
 # usermode h can only be unset, if the user is +rx (or +r and allowed to set +x) - this prevents exposing the realhost out of the blue
+#
 # easy to add/remove modes
+#
 # REMOTEMODE travels from source server to victim server, from where a normal usermode change is broadcasted to the network
+#
 # unfortunately the code is a bit messy because of the sethost stuff, should we in the future accept the sethost.patch (see queue), it can be cleaned up quite a bit
-# after snircd1.3.5 this patch will be moved further down in the patch queue, to clean up the sethost part, and add other usermodes such as +q
+#
+# part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
 
 diff -r 026b2e424d69 include/handlers.h
 --- a/include/handlers.h	Sun Jun 30 19:56:14 2013 +0200
