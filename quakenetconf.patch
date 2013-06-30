@@ -3,7 +3,7 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 21:20:35 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 21:31:11 2013 +0200
 @@ -30,63 +30,63 @@
  #
  # Uplinks
@@ -79,7 +79,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
 +  name = "Opers";
 +  pingfreq = 3 minutes;
 +  sendq = 10240000;
-+  maxlinks = 10;
++  maxlinks = 100;
 +  local = no;
 +  # privs
 +  die = no;
@@ -100,7 +100,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
 +  name = "Admin";
 +  pingfreq = 3 minutes;
 +  sendq = 10240000;
-+  maxlinks = 10;
++  maxlinks = 50;
 +  local = no;
  };
  
