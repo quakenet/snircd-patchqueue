@@ -3,8 +3,8 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 21:31:11 2013 +0200
-@@ -30,63 +30,63 @@
++++ b/doc/quakenet.conf	Sun Jun 30 21:45:53 2013 +0200
+@@ -30,63 +30,82 @@
  #
  # Uplinks
  Class {
@@ -81,13 +81,23 @@ diff -r 0d60587c3068 doc/quakenet.conf
 +  sendq = 10240000;
 +  maxlinks = 100;
 +  local = no;
-+  # privs
++  # change this if you want to disable freeform sethost for your opers
++  freeform = yes;
++  # privs for admins
 +  die = no;
 +  restart = no;
 +  rehash = no;
 +  jupe = no;
 +  local_jupe = no;
-+  freeform = yes; # change this if you want to disable freeform sethost for your opers 
++  # privs related to local channels
++  mode_lchan = no;
++  deop_lchan = no;
++  local_opmode = no;
++  force_local_opmode = no;
++  # channel quarantines not used 
++  force_opmode = no;
++  # whox usage not logged
++  whox = no;
  };
  
  # Oper class (global)
@@ -102,10 +112,19 @@ diff -r 0d60587c3068 doc/quakenet.conf
 +  sendq = 10240000;
 +  maxlinks = 50;
 +  local = no;
++  # privs related to local channels
++  mode_lchan = no;
++  deop_lchan = no;
++  local_opmode = no;
++  force_local_opmode = no;
++  # channel quarantines not used 
++  force_opmode = no;
++  # whox usage not logged
++  whox = no;
  };
  
  # -----------------------------------------------------------------------------
-@@ -100,13 +100,13 @@
+@@ -100,13 +119,13 @@
  Client { class = "Users"; host = "*@*"; };
  
  # Providers that we've decided to restrict due to abuse mainly.
@@ -126,7 +145,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
  
  # -----------------------------------------------------------------------------
  # UWorld/Jupe (aka ulines)
-@@ -116,13 +116,15 @@
+@@ -116,13 +135,15 @@
  UWorld {
    name = "CServe.quakenet.org";
    name = "operserv.quakenet.org";
@@ -148,7 +167,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
  };
  
  Jupe {
-@@ -157,38 +159,38 @@
+@@ -157,38 +178,38 @@
  #
  
  Connect {
@@ -208,7 +227,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
  };
  
  
-@@ -292,63 +294,31 @@
+@@ -292,63 +313,31 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
