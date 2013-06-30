@@ -1,10 +1,15 @@
 make RPL_ENDOFCHECK consistent with other end of replies, changed text and feed back the input from the client
 
-diff -r cb747bd739fe ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 13:58:42 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 14:03:15 2010 +0100
-@@ -356,7 +356,7 @@
-       send_reply(sptr, RPL_DATASTR, ":<none>");
+not sure this is worth it for snircd 1.3.5
+it should feed back the input the client gave
+and not the found nick, channel, server (different case)
+not worth correcting that here now though
+
+diff -r e4f53aeb83c3 ircd/m_check.c
+--- a/ircd/m_check.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/m_check.c	Sun Jun 30 16:40:30 2013 +0200
+@@ -302,7 +302,7 @@
+       send_reply(sptr, RPL_DATASTR, "<none>");
    }
  
 -  send_reply(sptr, RPL_ENDOFCHECK, " ");
@@ -12,7 +17,7 @@ diff -r cb747bd739fe ircd/m_check.c
  }
  
  void checkChannel(struct Client *sptr, struct Channel *chptr) {
-@@ -532,7 +532,7 @@
+@@ -508,7 +508,7 @@
    }
  
    /* Send 'END OF CHECK' message */
@@ -21,7 +26,7 @@ diff -r cb747bd739fe ircd/m_check.c
  }
  
  void checkServer(struct Client *sptr, struct Client *acptr) {
-@@ -583,7 +583,7 @@
+@@ -559,7 +559,7 @@
    }
  
    /* Send 'END OF CHECK' message */
@@ -29,22 +34,49 @@ diff -r cb747bd739fe ircd/m_check.c
 +  send_reply(sptr, RPL_ENDOFCHECK, acptr->cli_name);
  }
  
- signed int checkHostmask(struct Client *sptr, char *orighoststr, int flags) {
-@@ -772,7 +772,7 @@
-   if (count > 0) {
-     send_reply(sptr, RPL_DATASTR, ": ");
-     send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":Matching records found:: %d", count);
+ signed int checkHostmask(struct Client *sptr, char *hoststr, int flags) {
+@@ -570,6 +570,7 @@
+   char outbuf[BUFSIZE];
+   char targhost[NICKLEN + USERLEN + HOSTLEN + 3], curhost[NICKLEN + USERLEN + HOSTLEN + 3];
+   char nickm[NICKLEN + 1], userm[USERLEN + 1], hostm[HOSTLEN + 1];
++  char input[NICKLEN + USERLEN + HOSTLEN + 3];
+   char *p = NULL;
+   struct irc_in_addr cidr_check;
+   unsigned char cidr_check_bits;
+@@ -578,6 +579,9 @@
+   strcpy(userm,"*");
+   strcpy(hostm,"*");
+ 
++  /* backup the input */
++  ircd_strncpy(input, hoststr, NICKLEN + USERLEN + HOSTLEN + 2);
++
+   if (!strchr(hoststr, '!') && !strchr(hoststr, '@'))
+     ircd_strncpy(hostm,hoststr,HOSTLEN);
+   else {
+@@ -624,7 +628,7 @@
+       break;
+ 
+     if(count > 500) { /* sanity stuff */
+-      send_reply(sptr, RPL_ENDOFCHECK, " ");
++      send_reply(sptr, RPL_ENDOFCHECK, input);
+       break;
+     }
+ 
+@@ -723,7 +727,7 @@
+     ircd_snprintf(0, outbuf, sizeof(outbuf), "Matching records found:: %d", count);
+     send_reply(sptr, RPL_DATASTR, outbuf);
+ 
 -    send_reply(sptr, RPL_ENDOFCHECK, " ");
-+    send_reply(sptr, RPL_ENDOFCHECK, orighoststr);
++    send_reply(sptr, RPL_ENDOFCHECK, input);
    }
  
    return count;
-diff -r cb747bd739fe ircd/s_err.c
---- a/ircd/s_err.c	Tue Mar 23 13:58:42 2010 +0100
-+++ b/ircd/s_err.c	Tue Mar 23 14:03:15 2010 +0100
+diff -r e4f53aeb83c3 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/s_err.c	Sun Jun 30 16:40:30 2013 +0200
 @@ -614,7 +614,7 @@
  /* 290 */
-   { RPL_DATASTR, "%s", "290" },
+   { RPL_DATASTR, ":%s", "290" },
  /* 291 */
 -  { RPL_ENDOFCHECK, ":%s", "291" },
 +  { RPL_ENDOFCHECK, "%s :End of /CHECK list.", "291" },
