@@ -1,0 +1,597 @@
+Contains the xquery patches from upstream.
+
+ircu subversion IDs:
+
+1925, 1926
+
+diff -r 84777dbfb7fe ChangeLog
+--- a/ChangeLog	Sun Jun 30 16:48:35 2013 +0200
++++ b/ChangeLog	Sun Jun 30 17:08:56 2013 +0200
+@@ -1,3 +1,40 @@
++2010-01-03  Michael Poole <mdpoole@troilus.org>
++
++	* ircd/Makefile.in (IRCD_SRC): Add m_xquery.c and m_xreply.c to
++	the build.
++
++	* ircd/m_xquery.c: Add missing include.
++	(mo_xquery): Fix spelling of struct Client.
++	(ms_xquery): Likewise.
++
++	* ircd/m_xreply.c: Add missing includes.
++	(ms_xreply): Fix spelling of struct Client and findNUser().
++
++2010-01-01  Kevin L. Mitchell  <klmitch@mit.edu>
++
++	* doc/readme.xquery: documentation for design and use of the
++	extension query mechanism
++
++	* doc/readme.iauth: document X iauth message and X and x server
++	messages
++
++	* include/msg.h: declare XQUERY/XQ and XREPLY/XR commands/tokens
++
++	* include/handlers.h: declare mo_xquery(), ms_xquery(), and
++	ms_xreply() message handlers
++
++	* include/s_auth.h: declare auth_send_xreply() to forward replies
++	to extension queries to the iauth instance
++
++	* ircd/m_xquery.c: process extension queries
++
++	* ircd/m_xreply.c: process replies to extension queries
++
++	* ircd/parse.c: add XQUERY and XREPLY commands to the list
++
++	* ircd/s_auth.c: add support for extension queries to iauth
++	protocol
++
+ 2010-01-01  Michael Poole <mdpoole@troilus.org>
+ 
+ 	* ircd/s_auth.c (iauth_do_spawn): Add debug output to diagnose
+diff -r 84777dbfb7fe doc/readme.iauth
+--- a/doc/readme.iauth	Sun Jun 30 16:48:35 2013 +0200
++++ b/doc/readme.iauth	Sun Jun 30 17:08:56 2013 +0200
+@@ -114,8 +114,8 @@
+   message may be sent during those states (restrictions only make
+   sense when Next State is -).  The Next State field indicates which
+   new state is implied by the message; a hyphen indicates no state
+-  change is implied.  The X (Example) message is not a real message
+-  type.
++  change is implied.  This is an example, not a description of the
++  actual X message.
+ Compatibility: If we believe ircu behavior is different than ircd's,
+   this describes ircd's behavior or expectations.
+ 
+@@ -235,6 +235,33 @@
+ Compatibility: ircd does not include the <capacity> information.
+   The <id> should be ignored: ircd sends 0 and ircu sends -1.
+ 
++X - Extension Query Reply
++Syntax: <id> X <servername> <routing> :<reply>
++Example: -1 X channels.undernet.org 5/127.0.0.1/6667 :OK kev Logged in
++States: N/A
++Next State: -
++Comments: Used to deliver the reply to an extension query to the iauth
++  instance.  The <servername> parameter indicates the origin of the
++  reply.  The <routing> parameter is the same as was used in the X
++  message from the iauth instance, and can be used to pair the reply
++  with the original request.  The <reply> parameter contains the text
++  of the reply.
++Compatibility: This is an Undernet extension and ircd does not send
++  it.
++
++x - Extension Query Server Not Linked
++Syntax: <id> x <servername> <routing> :Server not online
++Example: -1 x channels.undernet.org 5/127.0.0.1/6667 :Server not online
++States: N/A
++Next State: -
++Comments: Used to indicate to the iauth instance that the server
++  specified in the X message is not presently linked to the network.
++  This will not detect the extension query being lost due to a network
++  break, so iauth instances should further implement a timeout
++  mechanism for extension queries.
++Compatibility: This is an Undernet extension and ircd does not send
++  it.
++
+ IAUTH MESSAGES
+ ==============
+ 
+@@ -251,6 +278,7 @@
+   accept this message.  Clients in other states should ignore the
+   message or treat it as an error.  The Next State field, where
+   present, indicates what the next state should be for the client.
++  This is an example, not a description of the actual X message.
+ Compatibility: If we believe ircu behavior is different than ircd's,
+   this describes ircd's behavior or expectations.
+ 
+@@ -430,3 +458,15 @@
+   should be assigned to that class.
+ Compatibility: This is an Undernet extension and ircd does not support
+   this message.
++
++X - Extension Query
++Syntax: X <servername> <routing> :<query>
++Example: X channels.undernet.org 5/127.0.0.1/6667 :login kev pass
++Comments: Used by the iauth instance to send an extension query to
++  the server specified by <servername>.  The <routing> parameter is
++  not interpreted by the servers; it will be returned unchanged in
++  the extension query reply message (the X server message) and may be
++  used to pair the query with its reply.  The <query> parameter is
++  sent to <servername>.
++Compatibility: This is an Undernet extension and ircd does not support
++  this message.
+diff -r 84777dbfb7fe include/handlers.h
+--- a/include/handlers.h	Sun Jun 30 16:48:35 2013 +0200
++++ b/include/handlers.h	Sun Jun 30 17:08:56 2013 +0200
+@@ -184,6 +184,7 @@
+ extern int mo_version(struct Client*, struct Client*, int, char*[]);
+ extern int mo_wallops(struct Client*, struct Client*, int, char*[]);
+ extern int mo_wallusers(struct Client*, struct Client*, int, char*[]);
++extern int mo_xquery(struct Client*, struct Client*, int, char*[]);
+ extern int mr_error(struct Client*, struct Client*, int, char*[]);
+ extern int mr_error(struct Client*, struct Client*, int, char*[]);
+ extern int mr_pong(struct Client*, struct Client*, int, char*[]);
+@@ -241,6 +242,8 @@
+ extern int ms_wallusers(struct Client*, struct Client*, int, char*[]);
+ extern int ms_wallvoices(struct Client*, struct Client*, int, char*[]);
+ extern int ms_whois(struct Client*, struct Client*, int, char*[]);
++extern int ms_xquery(struct Client*, struct Client*, int, char*[]);
++extern int ms_xreply(struct Client*, struct Client*, int, char*[]);
+ 
+ #endif /* INCLUDED_handlers_h */
+ 
+diff -r 84777dbfb7fe include/msg.h
+--- a/include/msg.h	Sun Jun 30 16:48:35 2013 +0200
++++ b/include/msg.h	Sun Jun 30 17:08:56 2013 +0200
+@@ -371,6 +371,14 @@
+ #define TOK_CAP			"CAP"
+ #define CMD_CAP			MSG_CAP, TOK_CAP
+ 
++#define MSG_XQUERY		"XQUERY"
++#define TOK_XQUERY		"XQ"
++#define CMD_XQUERY		MSG_XQUERY, TOK_XQUERY
++
++#define MSG_XREPLY		"XREPLY"
++#define TOK_XREPLY		"XR"
++#define CMD_XREPLY		MSG_XREPLY, TOK_XREPLY
++
+ /*
+  * Constants
+  */
+diff -r 84777dbfb7fe include/s_auth.h
+--- a/include/s_auth.h	Sun Jun 30 16:48:35 2013 +0200
++++ b/include/s_auth.h	Sun Jun 30 17:08:56 2013 +0200
+@@ -45,6 +45,7 @@
+ 
+ extern int auth_spawn(int argc, char *argv[]);
+ extern void auth_send_exit(struct Client *cptr);
++extern void auth_send_xreply(struct Client *sptr, const char *routing, const char *reply);
+ extern void auth_mark_closing(void);
+ extern void auth_close_unused(void);
+ extern void report_iauth_conf(struct Client *cptr, const struct StatDesc *sd, char *param);
+diff -r 84777dbfb7fe ircd/Makefile.in
+--- a/ircd/Makefile.in	Sun Jun 30 16:48:35 2013 +0200
++++ b/ircd/Makefile.in	Sun Jun 30 17:08:56 2013 +0200
+@@ -189,6 +189,8 @@
+ 	m_who.c \
+ 	m_whois.c \
+ 	m_whowas.c \
++	m_xreply.c \
++	m_xquery.c \
+ 	match.c \
+ 	memdebug.c \
+ 	motd.c \
+diff -r 84777dbfb7fe ircd/m_xquery.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ircd/m_xquery.c	Sun Jun 30 17:08:56 2013 +0200
+@@ -0,0 +1,148 @@
++/*
++ * IRC - Internet Relay Chat, ircd/m_xquery.c
++ * Copyright (C) 2010 Kevin L. Mitchell <klmitch@mit.edu>
++ *
++ * See file AUTHORS in IRC package for additional names of
++ * the programmers.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 1, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ *
++ * $Id$
++ */
++
++/*
++ * m_functions execute protocol messages on this server:
++ *
++ *    cptr    is always NON-NULL, pointing to a *LOCAL* client
++ *            structure (with an open socket connected!). This
++ *            identifies the physical socket where the message
++ *            originated (or which caused the m_function to be
++ *            executed--some m_functions may call others...).
++ *
++ *    sptr    is the source of the message, defined by the
++ *            prefix part of the message if present. If not
++ *            or prefix not found, then sptr==cptr.
++ *
++ *            (!IsServer(cptr)) => (cptr == sptr), because
++ *            prefixes are taken *only* from servers...
++ *
++ *            (IsServer(cptr))
++ *                    (sptr == cptr) => the message didn't
++ *                    have the prefix.
++ *
++ *                    (sptr != cptr && IsServer(sptr) means
++ *                    the prefix specified servername. (?)
++ *
++ *                    (sptr != cptr && !IsServer(sptr) means
++ *                    that message originated from a remote
++ *                    user (not local).
++ *
++ *            combining
++ *
++ *            (!IsServer(sptr)) means that, sptr can safely
++ *            taken as defining the target structure of the
++ *            message in this server.
++ *
++ *    *Always* true (if 'parse' and others are working correct):
++ *
++ *    1)      sptr->from == cptr  (note: cptr->from == cptr)
++ *
++ *    2)      MyConnect(sptr) <=> sptr == cptr (e.g. sptr
++ *            *cannot* be a local connection, unless it's
++ *            actually cptr!). [MyConnect(x) should probably
++ *            be defined as (x == x->from) --msa ]
++ *
++ *    parc    number of variable parameter strings (if zero,
++ *            parv is allowed to be NULL)
++ *
++ *    parv    a NULL terminated list of parameter pointers,
++ *
++ *                    parv[0], sender (prefix string), if not present
++ *                            this points to an empty string.
++ *                    parv[1]...parv[parc-1]
++ *                            pointers to additional parameters
++ *                    parv[parc] == NULL, *always*
++ *
++ *            note:   it is guaranteed that parv[0]..parv[parc-1] are all
++ *                    non-NULL pointers.
++ */
++#include "config.h"
++
++#include "client.h"
++#include "ircd.h"
++#include "ircd_log.h"
++#include "ircd_reply.h"
++#include "ircd_string.h"
++#include "msg.h"
++#include "numeric.h"
++#include "numnicks.h"
++#include "send.h"
++
++#include <string.h>
++
++/*
++ * m_xquery - extension message handler
++ *
++ * parv[0] = sender prefix
++ * parv[1] = target server
++ * parv[2] = routing information
++ * parv[3] = extension message
++ */
++int mo_xquery(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  struct Client* acptr;
++
++  if (parc < 4) /* have enough parameters? */
++    return need_more_params(sptr, "XQUERY");
++
++  /* Look up the target server */
++  if (!(acptr = find_match_server(parv[1])))
++    return send_reply(sptr, ERR_NOSUCHSERVER, parv[1]);
++
++  /* If it's to us, do nothing; otherwise, forward the query */
++  if (!IsMe(acptr))
++    sendcmdto_one(sptr, CMD_XQUERY, acptr, "%C %s :%s", acptr, parv[2],
++		  parv[3]);
++
++  return 0;
++}
++
++/*
++ * ms_xquery - extension message handler
++ *
++ * parv[0] = sender prefix
++ * parv[1] = target server numeric
++ * parv[2] = routing information
++ * parv[3] = extension message
++ */
++int ms_xquery(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  struct Client* acptr;
++
++  if (parc < 4) /* have enough parameters? */
++    return need_more_params(sptr, "XQUERY");
++
++  /* Look up the target server */
++  if (!(acptr = FindNServer(parv[1])))
++    return send_reply(sptr, SND_EXPLICIT | ERR_NOSUCHSERVER,
++		      "* :Server has disconnected");
++
++  /* If it's to us, do nothing; otherwise, forward the query */
++  if (!IsMe(acptr))
++    sendcmdto_one(sptr, CMD_XQUERY, acptr, "%C %s :%s", acptr, parv[2],
++		  parv[3]);
++
++  return 0;
++}
+diff -r 84777dbfb7fe ircd/m_xreply.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ircd/m_xreply.c	Sun Jun 30 17:08:56 2013 +0200
+@@ -0,0 +1,141 @@
++/*
++ * IRC - Internet Relay Chat, ircd/m_xreply.c
++ * Copyright (C) 2010 Kevin L. Mitchell <klmitch@mit.edu>
++ *
++ * See file AUTHORS in IRC package for additional names of
++ * the programmers.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 1, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ *
++ * $Id$
++ */
++
++/*
++ * m_functions execute protocol messages on this server:
++ *
++ *    cptr    is always NON-NULL, pointing to a *LOCAL* client
++ *            structure (with an open socket connected!). This
++ *            identifies the physical socket where the message
++ *            originated (or which caused the m_function to be
++ *            executed--some m_functions may call others...).
++ *
++ *    sptr    is the source of the message, defined by the
++ *            prefix part of the message if present. If not
++ *            or prefix not found, then sptr==cptr.
++ *
++ *            (!IsServer(cptr)) => (cptr == sptr), because
++ *            prefixes are taken *only* from servers...
++ *
++ *            (IsServer(cptr))
++ *                    (sptr == cptr) => the message didn't
++ *                    have the prefix.
++ *
++ *                    (sptr != cptr && IsServer(sptr) means
++ *                    the prefix specified servername. (?)
++ *
++ *                    (sptr != cptr && !IsServer(sptr) means
++ *                    that message originated from a remote
++ *                    user (not local).
++ *
++ *            combining
++ *
++ *            (!IsServer(sptr)) means that, sptr can safely
++ *            taken as defining the target structure of the
++ *            message in this server.
++ *
++ *    *Always* true (if 'parse' and others are working correct):
++ *
++ *    1)      sptr->from == cptr  (note: cptr->from == cptr)
++ *
++ *    2)      MyConnect(sptr) <=> sptr == cptr (e.g. sptr
++ *            *cannot* be a local connection, unless it's
++ *            actually cptr!). [MyConnect(x) should probably
++ *            be defined as (x == x->from) --msa ]
++ *
++ *    parc    number of variable parameter strings (if zero,
++ *            parv is allowed to be NULL)
++ *
++ *    parv    a NULL terminated list of parameter pointers,
++ *
++ *                    parv[0], sender (prefix string), if not present
++ *                            this points to an empty string.
++ *                    parv[1]...parv[parc-1]
++ *                            pointers to additional parameters
++ *                    parv[parc] == NULL, *always*
++ *
++ *            note:   it is guaranteed that parv[0]..parv[parc-1] are all
++ *                    non-NULL pointers.
++ */
++#include "config.h"
++
++#include "client.h"
++#include "ircd.h"
++#include "ircd_log.h"
++#include "ircd_reply.h"
++#include "ircd_string.h"
++#include "msg.h"
++#include "numeric.h"
++#include "numnicks.h"
++#include "s_auth.h"
++#include "send.h"
++
++#include <string.h>
++
++/*
++ * ms_xreply - extension message reply handler
++ *
++ * parv[0] = sender prefix
++ * parv[1] = target server numeric
++ * parv[2] = routing information
++ * parv[3] = extension message reply
++ */
++int ms_xreply(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  struct Client* acptr;
++  const char* routing;
++  const char* reply;
++
++  if (parc < 4) /* have enough parameters? */
++    return need_more_params(sptr, "XREPLY");
++
++  routing = parv[2];
++  reply = parv[3];
++
++  /* Look up the target */
++  if (!(acptr = FindNServer(parv[1])) && !(acptr = findNUser(parv[1])))
++    return send_reply(sptr, SND_EXPLICIT | ERR_NOSUCHSERVER,
++		      "* :Server has disconnected");
++
++  /* If it's not to us, forward the reply */
++  if (!IsMe(acptr)) {
++    sendcmdto_one(sptr, CMD_XREPLY, acptr, "%C %s :%s", acptr, routing,
++		  reply);
++    return 0;
++  }
++
++  /* OK, figure out where to route the message */
++  if (!ircd_strncmp("iauth:", routing, 6)) {
++    /* Forward the reply to the iauth */
++    routing += 6;
++
++    auth_send_xreply(sptr, routing, reply);
++  } else
++    /* If we don't know where to route it, log it and drop it */
++    log_write(LS_SYSTEM, L_NOTICE, 0, "Received unroutable extension reply "
++	      "from %#C to %#C routing %s; message: %s", sptr, acptr,
++	      routing, reply);
++
++  return 0;
++}
+diff -r 84777dbfb7fe ircd/parse.c
+--- a/ircd/parse.c	Sun Jun 30 16:48:35 2013 +0200
++++ b/ircd/parse.c	Sun Jun 30 17:08:56 2013 +0200
+@@ -631,6 +631,20 @@
+     /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+     { m_unregistered, m_sethost, ms_sethost, m_sethost, m_ignore }
+   },
++  {
++    MSG_XQUERY,
++    TOK_XQUERY,
++    0, MAXPARA, MFLG_SLOW, 0, NULL,
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
++    { m_ignore, m_ignore, ms_xquery, mo_xquery, m_ignore }
++  },
++  {
++    MSG_XREPLY,
++    TOK_XREPLY,
++    0, MAXPARA, MFLG_SLOW, 0, NULL,
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
++    { m_ignore, m_ignore, ms_xreply, m_ignore, m_ignore }
++  },
+ #if WE_HAVE_A_REAL_CAPABILITY_NOW
+   {
+     MSG_CAP,
+diff -r 84777dbfb7fe ircd/s_auth.c
+--- a/ircd/s_auth.c	Sun Jun 30 16:48:35 2013 +0200
++++ b/ircd/s_auth.c	Sun Jun 30 17:08:56 2013 +0200
+@@ -52,6 +52,7 @@
+ #include "list.h"
+ #include "msg.h"	/* for MAXPARA */
+ #include "numeric.h"
++#include "numnicks.h"
+ #include "querycmds.h"
+ #include "random.h"
+ #include "res.h"
+@@ -1114,6 +1115,17 @@
+   sendto_iauth(cptr, "D");
+ }
+ 
++/** Forward an XREPLY on to iauth.
++ * @param[in] sptr Source of the XREPLY.
++ * @param[in] routing Routing information for the original XQUERY.
++ * @param[in] reply Contents of the reply.
++ */
++void auth_send_xreply(struct Client *sptr, const char *routing,
++		      const char *reply)
++{
++  sendto_iauth(NULL, "X %#C %s :%s", sptr, routing, reply);
++}
++
+ /** Mark that a user has started capabilities negotiation.
+  * This blocks authorization until auth_cap_done() is called.
+  * @param[in] auth Authorization request for client.
+@@ -1982,6 +1994,55 @@
+   return 0;
+ }
+ 
++/** Send an extension query to a specified remote server.
++ * @param[in] iauth Active IAuth session.
++ * @param[in] cli Client referenced by command.
++ * @param[in] parc Number of parameters (3).
++ * @param[in] params Remote server, routing information, and query.
++ * @return Zero.
++ */
++static int iauth_cmd_xquery(struct IAuth *iauth, struct Client *cli,
++			    int parc, char **params)
++{
++  const char *serv;
++  const char *routing;
++  const char *query;
++  struct Client *acptr;
++
++  /* Process parameters */
++  if (EmptyString(params[0])) {
++    sendto_iauth(cli, "E Missing :Missing server parameter");
++    return 0;
++  } else
++    serv = params[0];
++
++  if (EmptyString(params[1])) {
++    sendto_iauth(cli, "E Missing :Missing routing parameter");
++    return 0;
++  } else
++    routing = params[1];
++
++  if (EmptyString(params[2])) {
++    sendto_iauth(cli, "E Missing :Missing query parameter");
++    return 0;
++  } else
++    query = params[2];
++
++  /* Try to find the specified server */
++  if (!(acptr = find_match_server(serv))) {
++    sendto_iauth(cli, "x %s %s :Server not online", serv, routing);
++    return 0;
++  }
++
++  /* If it's to us, do nothing; otherwise, forward the query */
++  if (!IsMe(acptr))
++    /* The "iauth:" prefix helps ircu route the reply to iauth */
++    sendcmdto_one(&me, CMD_XQUERY, acptr, "%C iauth:%s :%s", acptr, routing,
++		  query);
++
++  return 0;
++}
++
+ /** Parse a \a message from \a iauth.
+  * @param[in] iauth Active IAuth session.
+  * @param[in] message Message to be parsed.
+@@ -2006,6 +2067,7 @@
+   case 'A': handler = iauth_cmd_config; has_cli = 0; break;
+   case 's': handler = iauth_cmd_newstats; has_cli = 0; break;
+   case 'S': handler = iauth_cmd_stats; has_cli = 0; break;
++  case 'X': handler = iauth_cmd_xquery; has_cli = 0; break;
+   case 'o': handler = iauth_cmd_username_forced; has_cli = 1; break;
+   case 'U': handler = iauth_cmd_username_good; has_cli = 1; break;
+   case 'u': handler = iauth_cmd_username_bad; has_cli = 1; break;
