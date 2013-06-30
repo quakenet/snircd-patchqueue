@@ -1,0 +1,50 @@
+# HG changeset patch
+# Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
+
+Block italic control code (mIRC version 7.xx) with channel mode +c.
+
+diff -r e4f53aeb83c3 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/ircd_relay.c	Sun Jun 30 15:11:03 2013 +0200
+@@ -116,7 +116,7 @@
+   /* +cC checks */
+   if (chptr->mode.mode & MODE_NOCOLOUR)
+     for (ch=text;*ch;ch++)
+-      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
++      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==29 || *ch==31) {
+         send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
+         return;
+       }
+@@ -170,7 +170,7 @@
+   /* +cC checks */
+   if (chptr->mode.mode & MODE_NOCOLOUR)
+     for (ch=text;*ch;ch++)
+-      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31)
++      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==29 || *ch==31)
+         return;
+ 
+   if (chptr->mode.mode & MODE_NOCTCP)
+diff -r e4f53aeb83c3 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/m_wallchops.c	Sun Jun 30 15:11:03 2013 +0200
+@@ -124,7 +124,7 @@
+       /* +cC checks */
+       if (chptr->mode.mode & MODE_NOCOLOUR)
+         for (ch=parv[parc - 1];*ch;ch++)
+-          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
++          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==29 || *ch==31) {
+             return 0;
+           }
+ 
+diff -r e4f53aeb83c3 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Sat Jun 29 16:18:12 2013 +0200
++++ b/ircd/m_wallvoices.c	Sun Jun 30 15:11:03 2013 +0200
+@@ -123,7 +123,7 @@
+       /* +cC checks */
+       if (chptr->mode.mode & MODE_NOCOLOUR)
+         for (ch=parv[parc - 1];*ch;ch++)
+-          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
++          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==29 || *ch==31) {
+             return 0;
+           }
+ 
