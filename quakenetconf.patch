@@ -3,7 +3,7 @@
 
 diff -r 0d60587c3068 doc/quakenet.conf
 --- a/doc/quakenet.conf	Sun Jun 30 17:45:29 2013 +0200
-+++ b/doc/quakenet.conf	Sun Jun 30 21:46:56 2013 +0200
++++ b/doc/quakenet.conf	Sun Jun 30 21:50:57 2013 +0200
 @@ -30,63 +30,82 @@
  #
  # Uplinks
@@ -42,7 +42,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
 - maxlinks = 30000;
 - usermode = "+i";
 +  name = "Users";
-+  pingfreq = 3 minutes;
++  pingfreq = 1 minutes 30 seconds;
 +  sendq = 300000;
 +  maxlinks = 30000;
 +  usermode = "+iw";
@@ -56,7 +56,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
 - maxlinks = 100;
 - usermode = "+iw";
 +  name = "Local";
-+  pingfreq = 3 minutes;
++  pingfreq = 1 minutes 30 seconds;
 +  sendq = 600000;
 +  maxlinks = 100;
 +  usermode = "+iw";
@@ -77,7 +77,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
 - local_jupe = no;
 - freeform = yes; # change this if you want to disable freeform sethost for your opers 
 +  name = "Opers";
-+  pingfreq = 3 minutes;
++  pingfreq = 1 minutes 30 seconds;
 +  sendq = 10240000;
 +  maxlinks = 100;
 +  local = no;
@@ -108,7 +108,7 @@ diff -r 0d60587c3068 doc/quakenet.conf
 - maxlinks = 10;
 - local = no;
 +  name = "Admin";
-+  pingfreq = 3 minutes;
++  pingfreq = 1 minutes 30 seconds;
 +  sendq = 10240000;
 +  maxlinks = 50;
 +  local = no;
