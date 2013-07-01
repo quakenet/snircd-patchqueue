@@ -12,6 +12,7 @@ enforceinvisible.patch
 netriderkickoutsideburst.patch
 nserverflag.patch
 commonchansumode.patch
+commonchansrestrictedumode.patch
 who-accountid.patch
 upstreamiauthfixes.patch
 xquery.patch
