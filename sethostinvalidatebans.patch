@@ -1,0 +1,37 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+When a user gets a sethost (or loses it), invalidate all bans against the user so they are checked again.
+
+diff -r 0d60587c3068 ircd/m_sethost.c
+--- a/ircd/m_sethost.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/m_sethost.c	Mon Jul 01 19:54:29 2013 +0200
+@@ -229,6 +229,8 @@
+    * and set the modes, if any
+    */
+   for (chan = cli_user(target)->channel; chan; chan = chan->next_channel) {
++    /* Invalidate bans against the user so we check them again */
++    ClearBanValid(chan);
+     if (IsZombie(chan))
+       continue;
+     /* If this channel has delayed joins and the user has no modes, just set
+diff -r 0d60587c3068 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/s_user.c	Mon Jul 01 19:54:29 2013 +0200
+@@ -1160,6 +1160,8 @@
+    * and set the modes, if any
+    */
+   for (chan = cli_user(cptr)->channel; chan; chan = chan->next_channel) {
++    /* Invalidate bans against the user so we check them again */
++    ClearBanValid(chan);
+     if (IsZombie(chan))
+       continue;
+     sendcmdto_channel_butserv_butone(cptr, CMD_JOIN, chan->channel, cptr,
+@@ -1179,6 +1181,8 @@
+    * and set the modes, if any
+    */
+   for (chan = cli_user(cptr)->channel; chan; chan = chan->next_channel) {
++    /* Invalidate bans against the user so we check them again */
++    ClearBanValid(chan);
+     if (IsZombie(chan))
+       continue;
+     /* If this channel has delayed joins and the user has no modes, just set
