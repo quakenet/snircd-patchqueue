@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 01137a4347a6eb67806db1aab380bb23e7a7c786
+# Parent f6cfe00fff6ad9cbae3e88a145a51546db5ffe51
 
-diff -r 01137a4347a6 include/client.h
---- a/include/client.h	Mon Jul 01 21:06:24 2013 +0200
-+++ b/include/client.h	Mon Jul 01 21:08:00 2013 +0200
+diff -r f6cfe00fff6a include/client.h
+--- a/include/client.h	Mon Jul 01 21:09:49 2013 +0200
++++ b/include/client.h	Mon Jul 01 21:28:46 2013 +0200
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -51,9 +51,9 @@ diff -r 01137a4347a6 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r 01137a4347a6 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Mon Jul 01 21:06:24 2013 +0200
-+++ b/ircd/ircd_relay.c	Mon Jul 01 21:08:00 2013 +0200
+diff -r f6cfe00fff6a ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Mon Jul 01 21:09:49 2013 +0200
++++ b/ircd/ircd_relay.c	Mon Jul 01 21:28:46 2013 +0200
 @@ -305,7 +305,8 @@
      *--host = '%';
  
@@ -94,9 +94,9 @@ diff -r 01137a4347a6 ircd/ircd_relay.c
      return;
  
    /*
-diff -r 01137a4347a6 ircd/m_invite.c
---- a/ircd/m_invite.c	Mon Jul 01 21:06:24 2013 +0200
-+++ b/ircd/m_invite.c	Mon Jul 01 21:08:00 2013 +0200
+diff -r f6cfe00fff6a ircd/m_invite.c
+--- a/ircd/m_invite.c	Mon Jul 01 21:09:49 2013 +0200
++++ b/ircd/m_invite.c	Mon Jul 01 21:28:46 2013 +0200
 @@ -171,7 +171,8 @@
      return 0;
    }
@@ -107,9 +107,9 @@ diff -r 01137a4347a6 ircd/m_invite.c
      return;
  
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
-diff -r 01137a4347a6 ircd/s_user.c
---- a/ircd/s_user.c	Mon Jul 01 21:06:24 2013 +0200
-+++ b/ircd/s_user.c	Mon Jul 01 21:08:00 2013 +0200
+diff -r f6cfe00fff6a ircd/s_user.c
+--- a/ircd/s_user.c	Mon Jul 01 21:09:49 2013 +0200
++++ b/ircd/s_user.c	Mon Jul 01 21:28:46 2013 +0200
 @@ -553,7 +553,8 @@
    { FLAG_NOIDLE,      'I' },
    { FLAG_SETHOST,     'h' },
@@ -120,17 +120,37 @@ diff -r 01137a4347a6 ircd/s_user.c
  };
  
  /** Length of #userModeList. */
-@@ -1445,6 +1446,13 @@
+@@ -1445,6 +1446,12 @@
          else
            ClearCommonChansOnly(sptr);
  	break;
 +      case 'Q':
-+        /* Only allow sources other than the user itself. */
-+        if (what == MODE_ADD && cptr != sptr)
++        if (what == MODE_ADD)
 +          SetCommonChansOnlyRestricted(sptr);
-+        else if (cptr != sptr || IsAnOper(sptr))
++        else
 +          ClearCommonChansOnlyRestricted(sptr);
 +        break;
        case 'r':
  	if ((what == MODE_ADD) && *(p + 1)) {
  	  account = *(++p);
+@@ -1484,6 +1491,8 @@
+       ClearNoIdle(sptr);
+     if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
+       ClearParanoid(sptr);
++    if (!FlagHas(&setflags, FLAG_COMMONCHANSONLY_RESTRICTED) && !IsOper(sptr))
++      ClearCommonChansOnlyRestricted(sptr);
+ 
+     /* disallow ordinary users to do MODE -i when feature AUTOINVISIBLE is enabled */
+     if (FlagHas(&setflags, FLAG_INVISIBLE) && !IsInvisible(sptr) &&          /* MODE -i */
+@@ -1491,6 +1500,11 @@
+         !FlagHas(&setflags, FLAG_OPER) && !FlagHas(&setflags, FLAG_LOCOP))   /* (was) not opered */
+        SetInvisible(sptr);
+ 
++    /* disallow ordinary users to do MODE -Q */
++    if (FlagHas(&setflags, FLAG_COMMONCHANSONLY_RESTRICTED) && !IsCommonChansOnlyRestricted(sptr) && /* MODE -Q */
++        !FlagHas(&setflags, FLAG_OPER) && !FlagHas(&setflags, FLAG_LOCOP))                           /* (was) not opered */
++      SetCommonChansOnlyRestricted(sptr);
++
+     /*
+      * only send wallops to opers
+      */
