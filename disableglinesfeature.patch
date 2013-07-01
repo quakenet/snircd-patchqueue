@@ -1,0 +1,59 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+
+Backport feature DISABLE_GLINES from ircu, failsafe.
+
+http://hg.quakenet.org/snircd/annotate/cbe949e1747d/ChangeLog#l1032
+
+http://hg.quakenet.org/snircd/diff/ca5d46b8b58c/include/ircd_features.h
+http://hg.quakenet.org/snircd/diff/ca5d46b8b58c/ircd/ircd_features.c
+http://hg.quakenet.org/snircd/diff/c72fde627760/ircd/s_conf.c
+http://hg.quakenet.org/snircd/diff/ca5d46b8b58c/ircd/gline.c#l1.127
+
+diff -r 0d60587c3068 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jun 30 17:45:29 2013 +0200
++++ b/include/ircd_features.h	Mon Jul 01 21:09:18 2013 +0200
+@@ -62,6 +62,7 @@
+   FEAT_ZANNELS,
+   FEAT_LOCAL_CHANNELS,
+   FEAT_TOPIC_BURST,
++  FEAT_DISABLE_GLINES,
+   FEAT_AUTOCHANMODES,
+   FEAT_AUTOCHANMODES_LIST,
+ 
+diff -r 0d60587c3068 ircd/gline.c
+--- a/ircd/gline.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/gline.c	Mon Jul 01 21:09:18 2013 +0200
+@@ -215,6 +215,9 @@
+   struct Client *acptr;
+   int fd, retval = 0, tval;
+ 
++  if (feature_bool(FEAT_DISABLE_GLINES))
++    return 0; /* G-lines are disabled */
++
+   if (!GlineIsActive(gline)) /* no action taken on inactive glines */
+     return 0;
+ 
+diff -r 0d60587c3068 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/ircd_features.c	Mon Jul 01 21:09:18 2013 +0200
+@@ -315,6 +315,7 @@
+   F_B(ZANNELS, 0, 1, 0),
+   F_B(LOCAL_CHANNELS, 0, 1, 0),
+   F_B(TOPIC_BURST, 0, 0, 0),
++  F_B(DISABLE_GLINES, 0, 0, 0),
+   F_B(AUTOCHANMODES, 0, 1, 0),
+   F_S(AUTOCHANMODES_LIST, FEAT_CASE | FEAT_NULL, "ntCN", 0),
+ 
+diff -r 0d60587c3068 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/s_conf.c	Mon Jul 01 21:09:18 2013 +0200
+@@ -1095,7 +1095,7 @@
+    * cause the server to split from the net.
+    * -skater_x
+    */
+-  if (glinecheck && (agline = gline_lookup(cptr, 0)) && GlineIsActive(agline)) {
++  if (glinecheck && !feature_bool(FEAT_DISABLE_GLINES) && (agline = gline_lookup(cptr, 0)) && GlineIsActive(agline)) {
+     /*
+      * find active glines
+      * added a check against the user's IP address to find_gline() -Kev
