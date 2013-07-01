@@ -1,20 +1,27 @@
 # HG changeset patch
-# Parent 5e527f48167b4b32c8fbe70b5c484d2f2ae4bf9a
+# Parent 026b2e424d696e005ba9a01fa3201341c5b9d97d
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
+#
 # <source numeric server> RM <target numeric user> <mode changes and arguments> (note: no : prefixing last parameter)
-# only allow +-diwRnIx, allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
+#
+# only allow +-diwRnIxq, allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
+#
 # usermode x can only be set, not unset (same as normal)
 # usermode h can only be unset, if the user is +rx (or +r and allowed to set +x) - this prevents exposing the realhost out of the blue
+#
 # easy to add/remove modes
+#
 # REMOTEMODE travels from source server to victim server, from where a normal usermode change is broadcasted to the network
+#
 # unfortunately the code is a bit messy because of the sethost stuff, should we in the future accept the sethost.patch (see queue), it can be cleaned up quite a bit
-# after snircd1.3.5 this patch will be moved further down in the patch queue, to clean up the sethost part, and add other usermodes such as +q
+#
+# part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
 
-diff -r 5e527f48167b include/handlers.h
---- a/include/handlers.h	Sat Jun 29 17:52:37 2013 +0200
-+++ b/include/handlers.h	Sat Jun 29 17:53:38 2013 +0200
-@@ -223,6 +223,7 @@
+diff -r 026b2e424d69 include/handlers.h
+--- a/include/handlers.h	Sun Jun 30 19:56:14 2013 +0200
++++ b/include/handlers.h	Sun Jun 30 19:58:49 2013 +0200
+@@ -224,6 +224,7 @@
  extern int ms_privmsg(struct Client*, struct Client*, int, char*[]);
  extern int ms_privs(struct Client*, struct Client*, int, char*[]);
  extern int ms_quit(struct Client*, struct Client*, int, char*[]);
@@ -22,9 +29,9 @@ diff -r 5e527f48167b include/handlers.h
  extern int ms_rping(struct Client*, struct Client*, int, char*[]);
  extern int ms_rpong(struct Client*, struct Client*, int, char*[]);
  extern int ms_server(struct Client*, struct Client*, int, char*[]);
-diff -r 5e527f48167b include/msg.h
---- a/include/msg.h	Sat Jun 29 17:52:37 2013 +0200
-+++ b/include/msg.h	Sat Jun 29 17:53:38 2013 +0200
+diff -r 026b2e424d69 include/msg.h
+--- a/include/msg.h	Sun Jun 30 19:56:14 2013 +0200
++++ b/include/msg.h	Sun Jun 30 19:58:49 2013 +0200
 @@ -363,6 +363,10 @@
  #define TOK_SETHOST		"SH"
  #define CMD_SETHOST		MSG_SETHOST, TOK_SETHOST
@@ -36,9 +43,9 @@ diff -r 5e527f48167b include/msg.h
  #define MSG_CAP			"CAP"
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
-diff -r 5e527f48167b ircd/Makefile.in
---- a/ircd/Makefile.in	Sat Jun 29 17:52:37 2013 +0200
-+++ b/ircd/Makefile.in	Sat Jun 29 17:53:38 2013 +0200
+diff -r 026b2e424d69 ircd/Makefile.in
+--- a/ircd/Makefile.in	Sun Jun 30 19:56:14 2013 +0200
++++ b/ircd/Makefile.in	Sun Jun 30 19:58:49 2013 +0200
 @@ -162,6 +162,7 @@
  	m_pseudo.c \
  	m_quit.c \
@@ -47,10 +54,10 @@ diff -r 5e527f48167b ircd/Makefile.in
  	m_reset.c \
  	m_restart.c \
  	m_rping.c \
-diff -r 5e527f48167b ircd/m_remotemode.c
+diff -r 026b2e424d69 ircd/m_remotemode.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_remotemode.c	Sat Jun 29 17:53:38 2013 +0200
-@@ -0,0 +1,359 @@
++++ b/ircd/m_remotemode.c	Sun Jun 30 19:58:49 2013 +0200
+@@ -0,0 +1,364 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -73,7 +80,7 @@ diff -r 5e527f48167b ircd/m_remotemode.c
 + * along with this program; if not, write to the Free Software
 + * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 + *
-+ * $Id: m_mode.c 1818 2007-07-14 02:40:01Z isomer $
++ *
 + */
 +
 +/*
@@ -263,6 +270,11 @@ diff -r 5e527f48167b ircd/m_remotemode.c
 +          else
 +            ClearAccountOnly(acptr);
 +          break;
++        case 'q':
++          if (what == MODE_ADD)
++            SetCommonChansOnly(acptr);
++          else
++            ClearCommonChansOnly(acptr);
 +        case 'x':
 +          if (what == MODE_ADD)
 +            do_host_hiding = 1;
@@ -410,9 +422,9 @@ diff -r 5e527f48167b ircd/m_remotemode.c
 +
 +  return 0;
 +}
-diff -r 5e527f48167b ircd/parse.c
---- a/ircd/parse.c	Sat Jun 29 17:52:37 2013 +0200
-+++ b/ircd/parse.c	Sat Jun 29 17:53:38 2013 +0200
+diff -r 026b2e424d69 ircd/parse.c
+--- a/ircd/parse.c	Sun Jun 30 19:56:14 2013 +0200
++++ b/ircd/parse.c	Sun Jun 30 19:58:49 2013 +0200
 @@ -541,6 +541,13 @@
      { m_ignore, m_ignore, ms_end_of_burst_ack, m_ignore, m_ignore }
    },

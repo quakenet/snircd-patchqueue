@@ -1,3 +1,9 @@
+sethostinvalidatebans.patch
+sethostundo.patch
+sethostremotepassparam.patch
+getconnectlikepost.patch
+remotestatsparam.patch
+quakenetconf.patch
 checkendof.patch
 blockitaliccodeinchanmodec.patch
 fixkickforzombie.patch
@@ -5,7 +11,6 @@ enforcechanmodebignlocalonly.patch
 banfix.patch
 revealdelayedjoinuserumodextraoper.patch
 externalmodefix.patch
-remotemode.patch
 badchanlocalkick.patch
 cprivmsgerracconly.patch
 enforceinvisible.patch
@@ -16,3 +21,4 @@ commonchansrestrictedumode.patch
 who-accountid.patch
 upstreamiauthfixes.patch
 xquery.patch
+remotemode.patch
