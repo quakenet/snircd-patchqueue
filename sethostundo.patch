@@ -1,0 +1,21 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+Apply restrictions for removal of sethost only to local users.
+
+diff -r 0d60587c3068 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/s_user.c	Mon Jul 01 19:31:30 2013 +0200
+@@ -1033,8 +1033,11 @@
+  
+   /* MODE_DEL: restore original hostmask */
+   if (EmptyString(hostmask)) {
+-    /* is already sethost'ed? and only opers can remove a sethost */
+-    if (IsSetHost(cptr) && IsAnOper(cptr)) {
++    /* is already sethost'ed? */
++    if (IsSetHost(cptr)) {
++    	/* only an oper can remove sethost */
++      if (MyConnect(cptr) && !IsAnOper(cptr))
++        return 0;
+       restore = 1;
+       sendcmdto_common_channels_butone(cptr, CMD_QUIT, cptr, ":Host change");
+       /* If they are +rx, we need to return to their +x host, not their "real" host */
