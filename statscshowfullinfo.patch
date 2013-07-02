@@ -1,0 +1,51 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+
+Show host and pass for Connect blocks to a service.
+
+diff -r 0d60587c3068 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/s_err.c	Tue Jul 02 22:13:55 2013 +0200
+@@ -458,7 +458,7 @@
+ /* 212 */
+   { RPL_STATSCOMMANDS, "%s %u %u", "212" },
+ /* 213 */
+-  { RPL_STATSCLINE, "C %s * %d %d %s %s", "213" },
++  { RPL_STATSCLINE, "C %s %s %d %s %d %s %s", "213" },
+ /* 214 */
+   { 0 },
+ /* 215 */
+diff -r 0d60587c3068 ircd/s_stats.c
+--- a/ircd/s_stats.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/s_stats.c	Tue Jul 02 22:13:55 2013 +0200
+@@ -91,6 +91,21 @@
+   unsigned short int port;
+   int maximum;
+   char *host, *pass, *name, *username, *hub_limit;
++  int unmask = 0;
++
++  /*
++   * allow a channel service (+k) on an service server (+s)
++   * with a Uworld block on this server
++   * to see host and pass for Connect blocks - snircd
++   */
++  if (sd->sd_funcdata & CONF_SERVER) {                      /* report Connect blocks    */
++    if (IsUser(sptr) &&                                     /* a user                   */
++        IsChannelService(sptr) &&                           /* as channel service (+k)  */
++        IsService(cli_user(sptr)->server) &&                /* on a service server (+s) */
++        find_conf_byhost(cli_confs(cli_user(sptr)->server), /* with a Uworld block      */
++                          cli_name(cli_user(sptr)->server), CONF_UWORLD))
++      unmask = 1;  /* all shall be revealed */
++  }
+ 
+   for (tmp = GlobalConfList; tmp; tmp = tmp->next)
+   {
+@@ -107,7 +122,7 @@
+       if (tmp->status & CONF_UWORLD)
+ 	send_reply(sptr, RPL_STATSULINE, host);
+       else if (tmp->status & CONF_SERVER)
+-	send_reply(sptr, RPL_STATSCLINE, name, port, maximum, hub_limit, get_conf_class(tmp));
++	send_reply(sptr, RPL_STATSCLINE, name, unmask ? host : "*", port, unmask ? pass : "*", maximum, hub_limit, get_conf_class(tmp));
+       else if (tmp->status & CONF_CLIENT)
+         send_reply(sptr, RPL_STATSILINE,
+                    (tmp->username ? tmp->username : ""), (tmp->username ? "@" : ""),
