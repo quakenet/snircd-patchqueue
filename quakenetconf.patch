@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 01da11ebe069e27c37b023ae709926acbc20bd28
+# Parent b24d1d4b3f338405919ac4bd93ffd793378282d8
 
-diff -r 01da11ebe069 doc/quakenet.conf
---- a/doc/quakenet.conf	Mon Jul 01 00:00:04 2013 +0200
-+++ b/doc/quakenet.conf	Mon Jul 01 00:19:16 2013 +0200
+diff -r b24d1d4b3f33 doc/quakenet.conf
+--- a/doc/quakenet.conf	Tue Jul 02 23:01:39 2013 +0200
++++ b/doc/quakenet.conf	Tue Jul 02 23:02:57 2013 +0200
 @@ -28,65 +28,93 @@
  # name     = "<class>";      pingfreq = time;  connectfreq = time;
  # maxlinks = number 0 or 1;  sendq    = size;     usermode = "+i";
@@ -327,11 +327,11 @@ diff -r 01da11ebe069 doc/quakenet.conf
 -  "HIDDEN_IP"="127.0.0.1";
    "URLREG"="http://www.quakenet.org/getauthed";
 -# "KILLCHASETIMELIMIT"="30";
-   "MAXCHANNELSPERUSER"="20";
+-  "MAXCHANNELSPERUSER"="20";
 -  "NICKLEN" = "15";
 -# "AVBANLEN"="40";
- # "MAXBANS"="45";
- # "MAXSILES"="15";
+-# "MAXBANS"="45";
+-# "MAXSILES"="15";
 -# "HANGONGOODLINK"="300";
 -# "HANGONRETRYDELAY" = "10";
 -# "CONNECTTIMEOUT" = "90";
@@ -353,6 +353,9 @@ diff -r 01da11ebe069 doc/quakenet.conf
 -# "IPCHECK_CLONE_PERIOD" = "40";
 -# "IPCHECK_CLONE_DELAY" = "600";
 -# "CHANNELLEN" = "200";
++  "MAXCHANNELSPERUSER"="30";
++  "MAXBANS"="50";
++  "MAXSILES"="25";
    "CONFIG_OPERCMDS" = "TRUE";
    "OPLEVELS" = "FALSE";
    "ZANNELS" = "FALSE";
