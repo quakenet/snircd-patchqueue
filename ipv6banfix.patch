@@ -1,0 +1,15 @@
+# HG changeset patch
+# Parent 3c608fabb8ab860399bd9788b4df4104c19ab3e4
+
+diff -r 3c608fabb8ab ircd/ircd_string.c
+--- a/ircd/ircd_string.c	Tue Jul 02 21:34:15 2013 +0200
++++ b/ircd/ircd_string.c	Tue Jul 02 22:21:37 2013 +0200
+@@ -629,6 +629,8 @@
+       for (jj = 0; jj < 8 - ii; jj++)
+         ip->in6_16[colon + jj] = 0;
+     }
++    if (ii == 8 && input[pos])
++      return 0;
+     return pos;
+   } else if (dot || strchr(input, '/')) {
+     unsigned int addr;
