@@ -5,10 +5,12 @@ and not on the client (thus the server link) that sent us this message.
 Now the IRCd has the correct info on remote servers whether they accepted
 opernames or not.
 
-diff -r 39bad1079995 include/client.h
---- a/include/client.h
-+++ b/include/client.h
-@@ -162,6 +162,7 @@
+And backport n server flag propagation fix from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/711d770fb4dd
+
+diff -r d1398ba685a4 include/client.h
+--- a/include/client.h	Wed Jul 03 17:52:18 2013 +0200
++++ b/include/client.h	Wed Jul 03 18:01:08 2013 +0200
+@@ -155,6 +155,7 @@
      FLAG_HUB,                       /**< server is a hub */
      FLAG_IPV6,                      /**< server understands P10 IPv6 addrs */
      FLAG_SERVICE,                   /**< server is a service */
@@ -16,7 +18,7 @@ diff -r 39bad1079995 include/client.h
      FLAG_GOTID,                     /**< successful ident lookup achieved */
      FLAG_DOID,                      /**< I-lines say must use ident return */
      FLAG_NONL,                      /**< No \n in buffer */
-@@ -190,7 +191,6 @@
+@@ -182,7 +183,6 @@
      FLAG_NOCHAN,                    /**< user's channels are hidden */
      FLAG_NOIDLE,                    /**< user's idletime is hidden */
      FLAG_XTRAOP,                    /**< oper has special powers */
@@ -24,9 +26,25 @@ diff -r 39bad1079995 include/client.h
  
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-diff -r 39bad1079995 ircd/s_serv.c
---- a/ircd/s_serv.c
-+++ b/ircd/s_serv.c
+diff -r d1398ba685a4 ircd/m_server.c
+--- a/ircd/m_server.c	Wed Jul 03 17:52:18 2013 +0200
++++ b/ircd/m_server.c	Wed Jul 03 18:01:08 2013 +0200
+@@ -775,10 +775,11 @@
+       continue;
+     if (0 == match(cli_name(&me), cli_name(acptr)))
+       continue;
+-    sendcmdto_one(sptr, CMD_SERVER, bcptr, "%s %d 0 %s %s %s%s +%s%s%s :%s",
++    sendcmdto_one(sptr, CMD_SERVER, bcptr, "%s %d 0 %s %s %s%s +%s%s%s%s :%s",
+                   cli_name(acptr), hop + 1, parv[4], parv[5],
+                   NumServCap(acptr), IsHub(acptr) ? "h" : "",
+                   IsService(acptr) ? "s" : "", IsIPv6(acptr) ? "6" : "",
++                  IsSendOperName(acptr) ? "n" : "",
+                   cli_info(acptr));
+   }
+   return 0;
+diff -r d1398ba685a4 ircd/s_serv.c
+--- a/ircd/s_serv.c	Wed Jul 03 17:52:18 2013 +0200
++++ b/ircd/s_serv.c	Wed Jul 03 18:01:08 2013 +0200
 @@ -231,7 +231,7 @@
  		    cli_hopcount(acptr) + 1, cli_serv(acptr)->timestamp,
  		    protocol_str, Protocol(acptr), NumServCap(acptr),
