@@ -1,11 +1,11 @@
 # HG changeset patch
-# Parent fb12f148811551b5a699735f938f60ed429e887f
+# Parent b325b315cdee3c6d1760b95f8ab7aebbebd2ed3c
 
 Show host and pass for Connect blocks to a service.
 
-diff -r fb12f1488115 ircd/s_err.c
---- a/ircd/s_err.c	Wed Jul 03 19:44:06 2013 +0200
-+++ b/ircd/s_err.c	Wed Jul 03 20:19:06 2013 +0200
+diff -r b325b315cdee ircd/s_err.c
+--- a/ircd/s_err.c	Wed Jul 03 20:25:43 2013 +0200
++++ b/ircd/s_err.c	Wed Jul 03 20:45:32 2013 +0200
 @@ -458,7 +458,7 @@
  /* 212 */
    { RPL_STATSCOMMANDS, "%s %u %u", "212" },
@@ -15,9 +15,9 @@ diff -r fb12f1488115 ircd/s_err.c
  /* 214 */
    { 0 },
  /* 215 */
-diff -r fb12f1488115 ircd/s_stats.c
---- a/ircd/s_stats.c	Wed Jul 03 19:44:06 2013 +0200
-+++ b/ircd/s_stats.c	Wed Jul 03 20:19:06 2013 +0200
+diff -r b325b315cdee ircd/s_stats.c
+--- a/ircd/s_stats.c	Wed Jul 03 20:25:43 2013 +0200
++++ b/ircd/s_stats.c	Wed Jul 03 20:45:32 2013 +0200
 @@ -91,6 +91,26 @@
    unsigned short int port;
    int maximum;
@@ -45,12 +45,15 @@ diff -r fb12f1488115 ircd/s_stats.c
  
    for (tmp = GlobalConfList; tmp; tmp = tmp->next)
    {
-@@ -107,7 +127,7 @@
+@@ -107,7 +127,10 @@
        if (tmp->status & CONF_UWORLD)
  	send_reply(sptr, RPL_STATSULINE, host);
        else if (tmp->status & CONF_SERVER)
 -	send_reply(sptr, RPL_STATSCLINE, name, port, maximum, hub_limit, get_conf_class(tmp));
-+	send_reply(sptr, RPL_STATSCLINE, name, unmask ? host : "*", port, unmask ? pass : "*", maximum, hub_limit, get_conf_class(tmp));
++	send_reply(sptr, RPL_STATSCLINE, name,
++	           unmask ? host : "*", port,
++	           unmask ? pass : "*", maximum,
++	           hub_limit, get_conf_class(tmp));
        else if (tmp->status & CONF_CLIENT)
          send_reply(sptr, RPL_STATSILINE,
                     (tmp->username ? tmp->username : ""), (tmp->username ? "@" : ""),
