@@ -1,0 +1,20 @@
+# HG changeset patch
+# Parent 4073a3c843b223bc93454a9d12ebf945f9c6143f
+
+Do not require remote sethost to come from Uworld server.
+Account does not require this either and it only caused problems.
+
+diff -r 4073a3c843b2 ircd/m_sethost.c
+--- a/ircd/m_sethost.c	Wed Jul 03 17:43:26 2013 +0200
++++ b/ircd/m_sethost.c	Wed Jul 03 17:45:45 2013 +0200
+@@ -192,10 +192,6 @@
+   if(!(target = findNUser(parv[1])))
+     return 0;
+ 
+-  /* Fake host assignments must be from services */
+-  if (!find_conf_byhost(cli_confs(sptr), cli_name(sptr), CONF_UWORLD))
+-    return protocol_violation(cptr, "Non-U:lined server %s set fake host on user %s", cli_name(sptr), cli_name(target));
+-
+   if (!MyConnect(target)) {
+     sendcmdto_one(sptr, CMD_SETHOST, cli_user(target)->server, "%C %s %s", target,
+                  parv[2], parv[3]);

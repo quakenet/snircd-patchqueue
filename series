@@ -4,6 +4,7 @@ disableglinesfeature.patch
 sethostinvalidatebans.patch
 sethostundo.patch
 sethostremotepassparam.patch
+sethostulined.patch
 getconnectlikepost.patch
 remotestatsparam.patch
 quakenetconf.patch
