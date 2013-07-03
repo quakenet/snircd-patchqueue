@@ -1,0 +1,19 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+
+Reorganise if statement in sendcmdto_match_butone so approx 50,000 unnecessary matches aren't done.
+
+Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/d11e7e9effcd
+
+--- a/ircd/send.c	Mon Aug 25 22:32:30 2008 +0100
++++ b/ircd/send.c	Tue Oct 07 20:07:01 2008 +0100
+@@ -826,8 +826,8 @@
+   bump_sentalong(one);
+   for (cptr = GlobalClientList; cptr; cptr = cli_next(cptr)) {
+     if (!IsRegistered(cptr) || IsServer(cptr) ||
+-	!match_it(from, cptr, to, who) || cli_fd(cli_from(cptr)) < 0 ||
+-	cli_sentalong(cptr) == sentalong_marker)
++        cli_sentalong(cptr) == sentalong_marker ||
++	!match_it(from, cptr, to, who) || cli_fd(cli_from(cptr)) < 0)
+       continue; /* skip it */
+     cli_sentalong(cptr) = sentalong_marker;
