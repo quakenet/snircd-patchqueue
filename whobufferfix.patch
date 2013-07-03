@@ -1,0 +1,34 @@
+# HG changeset patch
+# Parent fdcfd6dd34136af403d336324632278911f46d98
+
+Extend buffer used for /who as we're getting close to the end and I'd rather have truncation than an exploit.
+
+Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/a772803650c2
+
+--- a/ircd/whocmds.c	Wed Dec 31 01:03:32 2008 +0100
++++ b/ircd/whocmds.c	Fri Jan 09 21:59:30 2009 +0000
+@@ -74,9 +74,14 @@
+   char *p1;
+   struct Membership *chan = 0;
+ 
+-  static char buf1[512];
++  static char buf1[1024];
+   /* NOTE: with current fields list and sizes this _cannot_ overrun, 
+      and also the message finally sent shouldn't ever be truncated */
++  /* NOTE2: HACK this has been doubled to 1024 as we're getting far too close...
++     ideally this would be rewritten but that's likely to introduce more bugs.
++     truncation is better than a buffer overflow exploit...
++     now we truncate to 512 manually at the end of the function,
++     I guess it's truncated in one of the functions in send_reply too... */
+ 
+   p1 = buf1;
+   buf1[1] = '\0';
+@@ -276,5 +281,8 @@
+      need to terminate buf1 */
+   *p1 = '\0';
+   p1 = buf1;
++
++  buf1[511] = '\0';
++
+   send_reply(sptr, fields ? RPL_WHOSPCRPL : RPL_WHOREPLY, ++p1);
+ }

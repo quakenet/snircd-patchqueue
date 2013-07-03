@@ -21,6 +21,7 @@ netriderkickoutsideburst.patch
 nserverflag.patch
 commonchansumode.patch
 commonchansrestrictedumode.patch
+whobufferfix.patch
 who-accountid.patch
 upstreamiauthfixes.patch
 xquery.patch
