@@ -1,11 +1,11 @@
 # HG changeset patch
-# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+# Parent fb12f148811551b5a699735f938f60ed429e887f
 
 Show host and pass for Connect blocks to a service.
 
-diff -r 0d60587c3068 ircd/s_err.c
---- a/ircd/s_err.c	Sun Jun 30 17:45:29 2013 +0200
-+++ b/ircd/s_err.c	Tue Jul 02 22:13:55 2013 +0200
+diff -r fb12f1488115 ircd/s_err.c
+--- a/ircd/s_err.c	Wed Jul 03 19:44:06 2013 +0200
++++ b/ircd/s_err.c	Wed Jul 03 20:19:06 2013 +0200
 @@ -458,7 +458,7 @@
  /* 212 */
    { RPL_STATSCOMMANDS, "%s %u %u", "212" },
@@ -15,10 +15,10 @@ diff -r 0d60587c3068 ircd/s_err.c
  /* 214 */
    { 0 },
  /* 215 */
-diff -r 0d60587c3068 ircd/s_stats.c
---- a/ircd/s_stats.c	Sun Jun 30 17:45:29 2013 +0200
-+++ b/ircd/s_stats.c	Tue Jul 02 22:13:55 2013 +0200
-@@ -91,6 +91,21 @@
+diff -r fb12f1488115 ircd/s_stats.c
+--- a/ircd/s_stats.c	Wed Jul 03 19:44:06 2013 +0200
++++ b/ircd/s_stats.c	Wed Jul 03 20:19:06 2013 +0200
+@@ -91,6 +91,26 @@
    unsigned short int port;
    int maximum;
    char *host, *pass, *name, *username, *hub_limit;
@@ -34,13 +34,18 @@ diff -r 0d60587c3068 ircd/s_stats.c
 +        IsChannelService(sptr) &&                           /* as channel service (+k)  */
 +        IsService(cli_user(sptr)->server) &&                /* on a service server (+s) */
 +        find_conf_byhost(cli_confs(cli_user(sptr)->server), /* with a Uworld block      */
-+                          cli_name(cli_user(sptr)->server), CONF_UWORLD))
-+      unmask = 1;  /* all shall be revealed */
++                          cli_name(cli_user(sptr)->server), CONF_UWORLD)) {
++      /* all shall be revealed, WALLOPS for accountability */
++      unmask = 1;
++      sendwallto_group_butone(&me, WALL_WALLOPS, 0,
++                              "Received STATS connect from %s on %s -- showing full details",
++                              cli_name(sptr), cli_name(cli_user(sptr)->server));
++    }
 +  }
  
    for (tmp = GlobalConfList; tmp; tmp = tmp->next)
    {
-@@ -107,7 +122,7 @@
+@@ -107,7 +127,7 @@
        if (tmp->status & CONF_UWORLD)
  	send_reply(sptr, RPL_STATSULINE, host);
        else if (tmp->status & CONF_SERVER)
