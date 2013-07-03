@@ -1,0 +1,32 @@
+# HG changeset patch
+# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+
+Restore the correct non-+h/+x penetrating behaviour for opers (/userip|/userhost), prevents /ban revealing hidden hosts.
+Also allow users to see their own ip with those commands.
+
+Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/18a330d57bdf
+
+diff -r 0d60587c3068 ircd/m_userhost.c
+--- a/ircd/m_userhost.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/m_userhost.c	Wed Jul 03 18:21:48 2013 +0200
+@@ -104,7 +104,7 @@
+ 	       * of +x.  If an oper wants the real host, he should go to
+ 	       * /whois to get it.
+ 	       */
+-	      !IsAnOper(sptr) ?
++	      (HasHiddenHost(cptr) || HasSetHost(cptr)) && (sptr != cptr) ?
+ 	      cli_user(cptr)->host : cli_user(cptr)->realhost);
+ }
+ 
+diff -r 0d60587c3068 ircd/m_userip.c
+--- a/ircd/m_userip.c	Sun Jun 30 17:45:29 2013 +0200
++++ b/ircd/m_userip.c	Wed Jul 03 18:21:48 2013 +0200
+@@ -106,7 +106,7 @@
+ 	       * of +x.  If an oper wants the real IP, he should go to
+ 	       * /whois to get it.
+ 	       */
+-	      (HasHiddenHost(cptr) || HasSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && !IsAnOper(sptr) ?
++	      (HasHiddenHost(cptr) || HasSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && (sptr != cptr) ?
+ 	      feature_str(FEAT_HIDDEN_IP) :
+ 	      ircd_ntoa(&cli_ip(cptr)));
+ }
