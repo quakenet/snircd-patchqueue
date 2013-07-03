@@ -1,0 +1,94 @@
+# HG changeset patch
+# Parent 163ac585cb74966bcf8ef55fd8008ae9b277c284
+
+Reveal Delayedjoin user when sending wallchops and wallvoices, or changing the channel topic.
+
+Backport from snircd 1.4.0
+
+http://hg.quakenet.org/snircd/rev/1b452072b7d2
+http://hg.quakenet.org/snircd/rev/009cf0ea7cb8
+
+diff -r 163ac585cb74 ircd/m_topic.c
+--- a/ircd/m_topic.c	Wed Jul 03 18:47:41 2013 +0200
++++ b/ircd/m_topic.c	Wed Jul 03 18:59:07 2013 +0200
+@@ -159,6 +159,7 @@
+ int ms_topic(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+   struct Channel *chptr;
++  struct Membership* member;
+   char *topic = 0, *name, *p = 0;
+   time_t ts = 0;
+ 
+@@ -191,6 +192,10 @@
+     if (parc > 4 && (ts = atoi(parv[3])) && chptr->topic_time > ts)
+       continue;
+ 
++    /* Reveal delayedjoin user */
++    if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
++      RevealDelayedJoin(member);
++
+     do_settopic(sptr,cptr,chptr,topic, ts);
+   }
+   return 0;
+diff -r 163ac585cb74 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Wed Jul 03 18:47:41 2013 +0200
++++ b/ircd/m_wallchops.c	Wed Jul 03 18:59:07 2013 +0200
+@@ -102,6 +102,7 @@
+ int m_wallchops(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+   struct Channel *chptr;
++  struct Membership* member;
+   const char *ch;
+ 
+   assert(0 != cptr);
+@@ -134,6 +135,10 @@
+             return 0;
+           }
+ 
++      /* Reveal delayedjoin user */
++      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
++        RevealDelayedJoin(member);
++
+       sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
+ 			       "%H :@ %s", chptr, parv[parc - 1]);
+@@ -160,7 +165,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0)) {
++    if (client_can_send_to_channel(sptr, chptr, 1)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
+ 			       "%H :%s", chptr, parv[parc - 1]);
+diff -r 163ac585cb74 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Wed Jul 03 18:47:41 2013 +0200
++++ b/ircd/m_wallvoices.c	Wed Jul 03 18:59:07 2013 +0200
+@@ -101,6 +101,7 @@
+ int m_wallvoices(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+   struct Channel *chptr;
++  struct Membership* member;
+   const char *ch;
+ 
+   assert(0 != cptr);
+@@ -133,6 +134,10 @@
+             return 0;
+           }
+ 
++      /* Reveal delayedjoin user */
++      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
++        RevealDelayedJoin(member);
++
+       sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
+ 			       "%H :+ %s", chptr, parv[parc - 1]);
+@@ -159,7 +164,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0)) {
++    if (client_can_send_to_channel(sptr, chptr, 1)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
+ 			       "%H :%s", chptr, parv[parc - 1]);
