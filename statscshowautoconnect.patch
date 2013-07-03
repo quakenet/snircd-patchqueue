@@ -1,11 +1,11 @@
 # HG changeset patch
-# Parent c99c968e39753b4284641d99cb154babfe6e021f
+# Parent 39e14c62ed71308735c7091928f9cb83b83865a1
 
 Show auto connect setting in STATS connect.
 
-diff -r c99c968e3975 ircd/s_err.c
---- a/ircd/s_err.c	Wed Jul 03 20:25:44 2013 +0200
-+++ b/ircd/s_err.c	Wed Jul 03 20:43:07 2013 +0200
+diff -r 39e14c62ed71 ircd/s_err.c
+--- a/ircd/s_err.c	Wed Jul 03 20:46:33 2013 +0200
++++ b/ircd/s_err.c	Wed Jul 03 20:48:38 2013 +0200
 @@ -458,7 +458,7 @@
  /* 212 */
    { RPL_STATSCOMMANDS, "%s %u %u", "212" },
@@ -15,9 +15,9 @@ diff -r c99c968e3975 ircd/s_err.c
  /* 214 */
    { 0 },
  /* 215 */
-diff -r c99c968e3975 ircd/s_stats.c
---- a/ircd/s_stats.c	Wed Jul 03 20:25:44 2013 +0200
-+++ b/ircd/s_stats.c	Wed Jul 03 20:43:07 2013 +0200
+diff -r 39e14c62ed71 ircd/s_stats.c
+--- a/ircd/s_stats.c	Wed Jul 03 20:46:33 2013 +0200
++++ b/ircd/s_stats.c	Wed Jul 03 20:48:38 2013 +0200
 @@ -89,7 +89,7 @@
    static char null[] = "<NULL>";
    struct ConfItem *tmp;
@@ -27,7 +27,7 @@ diff -r c99c968e3975 ircd/s_stats.c
    char *host, *pass, *name, *username, *hub_limit;
    int unmask = 0;
  
-@@ -123,11 +123,16 @@
+@@ -123,11 +123,13 @@
        hub_limit = BadPtr(tmp->hub_limit) ? null : tmp->hub_limit;
        maximum = tmp->maximum;
        port = tmp->address.port;
@@ -36,12 +36,8 @@ diff -r c99c968e3975 ircd/s_stats.c
        if (tmp->status & CONF_UWORLD)
  	send_reply(sptr, RPL_STATSULINE, host);
        else if (tmp->status & CONF_SERVER)
--	send_reply(sptr, RPL_STATSCLINE, name, unmask ? host : "*", port, unmask ? pass : "*", maximum, hub_limit, get_conf_class(tmp));
-+	send_reply(sptr, RPL_STATSCLINE, name,
+ 	send_reply(sptr, RPL_STATSCLINE, name,
 +	           autoconnect ? '+' : '-',
-+	           unmask ? host : "*", port,
-+	           unmask ? pass : "*", maximum,
-+	           hub_limit, get_conf_class(tmp));
-       else if (tmp->status & CONF_CLIENT)
-         send_reply(sptr, RPL_STATSILINE,
-                    (tmp->username ? tmp->username : ""), (tmp->username ? "@" : ""),
+ 	           unmask ? host : "*", port,
+ 	           unmask ? pass : "*", maximum,
+ 	           hub_limit, get_conf_class(tmp));
