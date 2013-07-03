@@ -2,6 +2,7 @@ iauthaccountfix.patch
 userhostipfix.patch
 broadcastmatchfix.patch
 statscshowfullinfo.patch
+statscshowautoconnect.patch
 infofix.patch
 disableglinesfeature.patch
 sethostinvalidatebans.patch
