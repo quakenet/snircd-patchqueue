@@ -1,0 +1,21 @@
+# HG changeset patch
+# Parent 059a1d81b9fb4fb9ca5069ebe7677a3e7f07e0fc
+
+Restore ircu value for define GLINE_MAX_EXPIRE (7 days instead of 1 year).
+
+This is the max duration a gline can have when an operator uses /GLINE.
+
+This does not affect glines set by servers/services.
+
+diff -r 059a1d81b9fb include/gline.h
+--- a/include/gline.h	Wed Jul 03 19:00:21 2013 +0200
++++ b/include/gline.h	Thu Jul 04 16:57:31 2013 +0200
+@@ -36,7 +36,7 @@
+ struct Client;
+ struct StatDesc;
+ 
+-#define GLINE_MAX_EXPIRE 31536000	/**< max expire: 1 year */
++#define GLINE_MAX_EXPIRE 604800	/**< max expire: 7 days */
+ 
+ /** Description of a G-line. */
+ struct Gline {
