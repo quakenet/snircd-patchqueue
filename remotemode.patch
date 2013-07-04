@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 0324ec2cf12ec98608925059fc54e43fadbe75a6
+# Parent 03fe3c8ff52c874b9b86ef62c801ebf409d47ca3
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
 #
@@ -18,9 +18,9 @@
 #
 # part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
 
-diff -r 0324ec2cf12e include/handlers.h
---- a/include/handlers.h	Mon Jul 01 21:26:33 2013 +0200
-+++ b/include/handlers.h	Mon Jul 01 21:29:30 2013 +0200
+diff -r 03fe3c8ff52c include/handlers.h
+--- a/include/handlers.h	Wed Jun 20 20:20:25 2012 -0400
++++ b/include/handlers.h	Thu Jul 04 17:09:01 2013 +0200
 @@ -224,6 +224,7 @@
  extern int ms_privmsg(struct Client*, struct Client*, int, char*[]);
  extern int ms_privs(struct Client*, struct Client*, int, char*[]);
@@ -29,9 +29,9 @@ diff -r 0324ec2cf12e include/handlers.h
  extern int ms_rping(struct Client*, struct Client*, int, char*[]);
  extern int ms_rpong(struct Client*, struct Client*, int, char*[]);
  extern int ms_server(struct Client*, struct Client*, int, char*[]);
-diff -r 0324ec2cf12e include/msg.h
---- a/include/msg.h	Mon Jul 01 21:26:33 2013 +0200
-+++ b/include/msg.h	Mon Jul 01 21:29:30 2013 +0200
+diff -r 03fe3c8ff52c include/msg.h
+--- a/include/msg.h	Wed Jun 20 20:20:25 2012 -0400
++++ b/include/msg.h	Thu Jul 04 17:09:01 2013 +0200
 @@ -363,6 +363,10 @@
  #define TOK_SETHOST		"SH"
  #define CMD_SETHOST		MSG_SETHOST, TOK_SETHOST
@@ -43,9 +43,9 @@ diff -r 0324ec2cf12e include/msg.h
  #define MSG_CAP			"CAP"
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
-diff -r 0324ec2cf12e ircd/Makefile.in
---- a/ircd/Makefile.in	Mon Jul 01 21:26:33 2013 +0200
-+++ b/ircd/Makefile.in	Mon Jul 01 21:29:30 2013 +0200
+diff -r 03fe3c8ff52c ircd/Makefile.in
+--- a/ircd/Makefile.in	Wed Jun 20 20:20:25 2012 -0400
++++ b/ircd/Makefile.in	Thu Jul 04 17:09:01 2013 +0200
 @@ -162,6 +162,7 @@
  	m_pseudo.c \
  	m_quit.c \
@@ -54,10 +54,10 @@ diff -r 0324ec2cf12e ircd/Makefile.in
  	m_reset.c \
  	m_restart.c \
  	m_rping.c \
-diff -r 0324ec2cf12e ircd/m_remotemode.c
+diff -r 03fe3c8ff52c ircd/m_remotemode.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_remotemode.c	Mon Jul 01 21:29:30 2013 +0200
-@@ -0,0 +1,362 @@
++++ b/ircd/m_remotemode.c	Thu Jul 04 17:09:01 2013 +0200
+@@ -0,0 +1,369 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -273,6 +273,13 @@ diff -r 0324ec2cf12e ircd/m_remotemode.c
 +            SetCommonChansOnly(acptr);
 +          else
 +            ClearCommonChansOnly(acptr);
++          break;
++        case 'Q':
++          if (what == MODE_ADD)
++            SetCommonChansOnlyRestricted(sptr);
++          else
++            ClearCommonChansOnlyRestricted(sptr);
++          break;
 +        case 'x':
 +          if (what == MODE_ADD)
 +            do_host_hiding = 1;
@@ -420,9 +427,9 @@ diff -r 0324ec2cf12e ircd/m_remotemode.c
 +
 +  return 0;
 +}
-diff -r 0324ec2cf12e ircd/parse.c
---- a/ircd/parse.c	Mon Jul 01 21:26:33 2013 +0200
-+++ b/ircd/parse.c	Mon Jul 01 21:29:30 2013 +0200
+diff -r 03fe3c8ff52c ircd/parse.c
+--- a/ircd/parse.c	Wed Jun 20 20:20:25 2012 -0400
++++ b/ircd/parse.c	Thu Jul 04 17:09:01 2013 +0200
 @@ -541,6 +541,13 @@
      { m_ignore, m_ignore, ms_end_of_burst_ack, m_ignore, m_ignore }
    },
