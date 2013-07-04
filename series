@@ -1,4 +1,5 @@
 infofix.patch
+hginfo.patch
 opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
