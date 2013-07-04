@@ -22,7 +22,7 @@
 
 diff -r 03fe3c8ff52c include/handlers.h
 --- a/include/handlers.h	Wed Jun 20 20:20:25 2012 -0400
-+++ b/include/handlers.h	Thu Jul 04 17:25:42 2013 +0200
++++ b/include/handlers.h	Thu Jul 04 17:38:28 2013 +0200
 @@ -224,6 +224,7 @@
  extern int ms_privmsg(struct Client*, struct Client*, int, char*[]);
  extern int ms_privs(struct Client*, struct Client*, int, char*[]);
@@ -33,7 +33,7 @@ diff -r 03fe3c8ff52c include/handlers.h
  extern int ms_server(struct Client*, struct Client*, int, char*[]);
 diff -r 03fe3c8ff52c include/msg.h
 --- a/include/msg.h	Wed Jun 20 20:20:25 2012 -0400
-+++ b/include/msg.h	Thu Jul 04 17:25:42 2013 +0200
++++ b/include/msg.h	Thu Jul 04 17:38:28 2013 +0200
 @@ -363,6 +363,10 @@
  #define TOK_SETHOST		"SH"
  #define CMD_SETHOST		MSG_SETHOST, TOK_SETHOST
@@ -47,7 +47,7 @@ diff -r 03fe3c8ff52c include/msg.h
  #define CMD_CAP			MSG_CAP, TOK_CAP
 diff -r 03fe3c8ff52c ircd/Makefile.in
 --- a/ircd/Makefile.in	Wed Jun 20 20:20:25 2012 -0400
-+++ b/ircd/Makefile.in	Thu Jul 04 17:25:42 2013 +0200
++++ b/ircd/Makefile.in	Thu Jul 04 17:38:28 2013 +0200
 @@ -162,6 +162,7 @@
  	m_pseudo.c \
  	m_quit.c \
@@ -58,8 +58,8 @@ diff -r 03fe3c8ff52c ircd/Makefile.in
  	m_rping.c \
 diff -r 03fe3c8ff52c ircd/m_remotemode.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_remotemode.c	Thu Jul 04 17:25:42 2013 +0200
-@@ -0,0 +1,375 @@
++++ b/ircd/m_remotemode.c	Thu Jul 04 17:38:28 2013 +0200
+@@ -0,0 +1,378 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -308,8 +308,11 @@ diff -r 03fe3c8ff52c ircd/m_remotemode.c
 +          break;
 +
 +        default:
-+          protocol_violation(sptr, "Received REMOTEMODE %c%c unknown user mode flag or disallowed to set remotely for user %C",
-+            what == MODE_ADD ? '+' : '-', *m, acptr);
++          /*
++           * unknown or disallowed mode for remote mode
++           * do not bother with an error reply or protocol violation
++           * the service should know valid modes for remote mode
++           */
 +          break;
 +      }
 +    }
@@ -437,7 +440,7 @@ diff -r 03fe3c8ff52c ircd/m_remotemode.c
 +}
 diff -r 03fe3c8ff52c ircd/parse.c
 --- a/ircd/parse.c	Wed Jun 20 20:20:25 2012 -0400
-+++ b/ircd/parse.c	Thu Jul 04 17:25:42 2013 +0200
++++ b/ircd/parse.c	Thu Jul 04 17:38:28 2013 +0200
 @@ -541,6 +541,13 @@
      { m_ignore, m_ignore, ms_end_of_burst_ack, m_ignore, m_ignore }
    },
