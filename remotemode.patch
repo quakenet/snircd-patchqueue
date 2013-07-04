@@ -5,8 +5,10 @@
 #
 # <source numeric server> RM <target numeric user> <mode changes and arguments> (note: no : prefixing last parameter)
 #
-# allow +-dwRnIxq, allow +i but not -i, allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
+# allow +-idwRnIxqQ
+# allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
 #
+# usermode i can only be unset if the user is +rx or +h - this prevents the user from becoming visiable with their realhost
 # usermode x can only be set, not unset (same as normal)
 # usermode h can only be unset, if the user is +rx (or +r and allowed to set +x) - this prevents exposing the realhost out of the blue
 #
