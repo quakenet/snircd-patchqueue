@@ -190,11 +190,15 @@ diff -r 705e3be1f134 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -97,16 +152,15 @@
+@@ -95,18 +150,17 @@
+ # username = "ident";       host = "host";              ip = "127.0.0.0/8";
+ # password = "password";   class = "classname";   maxlinks = 3;
  
- # Fall back entries (we let everyone in)
- Client { class = "Users"; ip = "*@*"; };
+-# Fall back entries (we let everyone in)
+-Client { class = "Users"; ip = "*@*"; };
 -Client { class = "Users"; host = "*@*"; };
++# Fall back entries (we let everyone in) - just IPv4 for now
++Client { class = "Users"; ip = "*@0.0.0.0/0"; };
  
  # Providers that we've decided to restrict due to abuse mainly.
 -Client { class = "Users"; maxlinks = 2; host = "*@*.t-dialin.net"; };
@@ -204,13 +208,13 @@ diff -r 705e3be1f134 doc/quakenet.conf
 -Client { class = "Users"; maxlinks = 1; host = "*@*.wanadoo.nl"; };
 -Client { class = "Users"; maxlinks = 2; host = "*@*.wanadoo.fr"; };
 -Client { class = "Users"; maxlinks = 1; host = "*@*.rima-tde.net"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.dip0.t-ipconnect.de"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.proxad.net"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.bezeqint.net"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.ono.com"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.wanadoo.nl"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.wanadoo.fr"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.rima-tde.net"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.dip0.t-ipconnect.de"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.proxad.net"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.bezeqint.net"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.ono.com"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.wanadoo.nl"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.wanadoo.fr"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.rima-tde.net"; };
  
  # -----------------------------------------------------------------------------
  # UWorld/Jupe (aka ulines)
