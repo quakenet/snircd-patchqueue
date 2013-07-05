@@ -1,10 +1,55 @@
 # HG changeset patch
-# Parent b24d1d4b3f338405919ac4bd93ffd793378282d8
+# Parent 705e3be1f1345ea73bc25af87053b37780e6c2fd
 
-diff -r b24d1d4b3f33 doc/quakenet.conf
---- a/doc/quakenet.conf	Tue Jul 02 23:01:39 2013 +0200
-+++ b/doc/quakenet.conf	Wed Jul 03 00:04:05 2013 +0200
-@@ -28,65 +28,93 @@
+diff -r 705e3be1f134 doc/quakenet.conf
+--- a/doc/quakenet.conf
++++ b/doc/quakenet.conf
+@@ -6,16 +6,40 @@
+ #  v.12 config file, last edited 08.12.2007/paul
+ # -----------------------------------------------------------------------------
+ 
++# -----------------------------------------------------------------------------
++# General
++# -----------------------------------------------------------------------------
++# name = "servername";
++# description = "server description"
++# numeric = 0-4095; must be unique on network
++#
++# IP of local interface to use for outgoing connections (optional)
++# vhost = "ipv4vhost";
++# vhost = "ipv6vhost";
++#
++# Local IP to use for DNS lookups (default let OS assign address)
++# dns vhost = "ipv4vhost";
++# dns vhost = "ipv6vhost";
++#
++# DNS server to use (default read from /etc/resolve.conf)
++# dns server = "ip1";
++# dns server = "ip2";
++#
+ General {
+   name = "@@@.@@@.quakenet.org";
+   description = "@@@";
+   numeric = @@@;
+-  vhost = "@@@";
+-  dns vhost  = "@@@";
+-  dns server = "@@@";
+-  dns server = "@@@";
++  #vhost = "@@@";
++  #dns vhost  = "@@@";
++  #dns server = "@@@";
++  #dns server = "@@@";
+ };
+ 
++# -----------------------------------------------------------------------------
++# Admin
++# -----------------------------------------------------------------------------
++# This sets information that can be retrieved with the /ADMIN command.
++# It should contain at least an admin Email contact address.
+ Admin {
+   Location = "@@@";
+   Location = "QuakeNet IRC server";
+@@ -28,65 +52,93 @@
  # name     = "<class>";      pingfreq = time;  connectfreq = time;
  # maxlinks = number 0 or 1;  sendq    = size;     usermode = "+i";
  #
@@ -135,7 +180,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -97,16 +125,15 @@
+@@ -97,16 +149,15 @@
  
  # Fall back entries (we let everyone in)
  Client { class = "Users"; ip = "*@*"; };
@@ -159,7 +204,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  
  # -----------------------------------------------------------------------------
  # UWorld/Jupe (aka ulines)
-@@ -116,13 +143,15 @@
+@@ -116,13 +167,15 @@
  UWorld {
    name = "CServe.quakenet.org";
    name = "operserv.quakenet.org";
@@ -181,7 +226,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  Jupe {
-@@ -157,38 +186,38 @@
+@@ -157,38 +210,38 @@
  #
  
  Connect {
@@ -241,7 +286,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  
-@@ -260,29 +289,34 @@
+@@ -260,29 +313,34 @@
  # -----------------------------------------------------------------------------
  # Port (aka plines)
  # -----------------------------------------------------------------------------
@@ -290,7 +335,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -292,66 +326,34 @@
+@@ -292,66 +350,34 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
