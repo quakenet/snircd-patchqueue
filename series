@@ -21,6 +21,7 @@ getconnectlikepost.patch
 remotestatsparam.patch
 quakenetconf.patch
 checkendof.patch
+checkaccount.patch
 blockitaliccodeinchanmodec.patch
 fixkickforzombie.patch
 enforcechanmodebignlocalonly.patch
