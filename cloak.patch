@@ -1,0 +1,569 @@
+# HG changeset patch
+# Parent 063bd2abe8cd3c0d44a254bf60628806a717a11c
+
+diff -r 063bd2abe8cd include/handlers.h
+--- a/include/handlers.h	Thu Jul 04 15:29:33 2013 +0200
++++ b/include/handlers.h	Fri Jul 05 18:09:12 2013 +0200
+@@ -244,6 +244,8 @@
+ extern int ms_whois(struct Client*, struct Client*, int, char*[]);
+ extern int ms_xquery(struct Client*, struct Client*, int, char*[]);
+ extern int ms_xreply(struct Client*, struct Client*, int, char*[]);
++extern int ms_addcloak(struct Client*, struct Client*, int, char*[]);
++extern int ms_clearcloak(struct Client*, struct Client*, int, char*[]);
+ 
+ #endif /* INCLUDED_handlers_h */
+ 
+diff -r 063bd2abe8cd include/msg.h
+--- a/include/msg.h	Thu Jul 04 15:29:33 2013 +0200
++++ b/include/msg.h	Fri Jul 05 18:09:12 2013 +0200
+@@ -379,6 +379,14 @@
+ #define TOK_XREPLY		"XR"
+ #define CMD_XREPLY		MSG_XREPLY, TOK_XREPLY
+ 
++#define MSG_ADDCLOAK		"ADDCLOAK"
++#define TOK_ADDCLOAK		"CA"
++#define CMD_ADDCLOAK		MSG_ADDCLOAK, TOK_ADDCLOAK
++
++#define MSG_CLEARCLOAK		"CLEARCLOAK"
++#define TOK_CLEARCLOAK		"CC"
++#define CMD_CLEARCLOAK		MSG_CLEARCLOAK, TOK_CLEARCLOAK
++
+ /*
+  * Constants
+  */
+diff -r 063bd2abe8cd include/s_user.h
+--- a/include/s_user.h	Thu Jul 04 15:29:33 2013 +0200
++++ b/include/s_user.h	Fri Jul 05 18:09:12 2013 +0200
+@@ -105,6 +105,11 @@
+ extern unsigned int umode_make_snomask(unsigned int oldmask, char *arg,
+                                        int what);
+ extern int send_supported(struct Client *cptr);
++extern int can_see_user(struct Client *sptr, struct Client *cloaked);
++extern int is_cloaked(struct Client *cloaked);
++extern void add_cloak_target(struct Client *cloaked, struct Client *target);
++extern void remove_cloak_target(struct Client *target);
++extern void clear_cloak(struct Client *cloaked);
+ 
+ #define NAMES_ALL 1 /**< List all users in channel */
+ #define NAMES_VIS 2 /**< List only visible users in non-secret channels */
+diff -r 063bd2abe8cd include/struct.h
+--- a/include/struct.h	Thu Jul 04 15:29:33 2013 +0200
++++ b/include/struct.h	Fri Jul 05 18:09:12 2013 +0200
+@@ -87,6 +87,8 @@
+   time_t	     acc_create;                /**< IRC account timestamp */
+   unsigned long       acc_id;                    /**< IRC account unique id */
+   char*              opername;                  /**< IRC Oper Account name */
++  unsigned long      cloak_count;               /**< How many other clients can see us (0 if not cloaked) */
++  struct Client*     cloak_extra;               /**< The cloaked user we can see */
+ };
+ 
+ #endif /* INCLUDED_struct_h */
+diff -r 063bd2abe8cd ircd/Makefile.in
+--- a/ircd/Makefile.in	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/Makefile.in	Fri Jul 05 18:09:12 2013 +0200
+@@ -114,12 +114,14 @@
+ 	list.c \
+ 	listener.c \
+ 	m_account.c \
++	m_addcloak.c \
+ 	m_admin.c \
+ 	m_asll.c \
+ 	m_away.c \
+ 	m_burst.c \
+ 	m_cap.c \
+ 	m_check.c \
++	m_clearcloak.c \
+ 	m_clearmode.c \
+ 	m_close.c \
+ 	m_connect.c \
+diff -r 063bd2abe8cd ircd/client.c
+--- a/ircd/client.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/client.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -287,3 +287,4 @@
+ 
+   return marker;
+ }
++
+diff -r 063bd2abe8cd ircd/m_addcloak.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ircd/m_addcloak.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -0,0 +1,137 @@
++/*
++ * IRC - Internet Relay Chat, ircd/m_addcloak.c
++ * Copyright (C) 1990 Jarkko Oikarinen and
++ *                    University of Oulu, Computing Center
++ *
++ * See file AUTHORS in IRC package for additional names of
++ * the programmers.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 1, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ *
++ * $Id: m_addcloak.c,v 1.25 2005/09/13 15:17:46 entrope Exp $
++ */
++
++/*
++ * m_functions execute protocol messages on this server:
++ *
++ *    cptr    is always NON-NULL, pointing to a *LOCAL* client
++ *            structure (with an open socket connected!). This
++ *            identifies the physical socket where the message
++ *            originated (or which caused the m_function to be
++ *            executed--some m_functions may call others...).
++ *
++ *    sptr    is the source of the message, defined by the
++ *            prefix part of the message if present. If not
++ *            or prefix not found, then sptr==cptr.
++ *
++ *            (!IsServer(cptr)) => (cptr == sptr), because
++ *            prefixes are taken *only* from servers...
++ *
++ *            (IsServer(cptr))
++ *                    (sptr == cptr) => the message didn't
++ *                    have the prefix.
++ *
++ *                    (sptr != cptr && IsServer(sptr) means
++ *                    the prefix specified servername. (?)
++ *
++ *                    (sptr != cptr && !IsServer(sptr) means
++ *                    that message originated from a remote
++ *                    user (not local).
++ *
++ *            combining
++ *
++ *            (!IsServer(sptr)) means that, sptr can safely
++ *            taken as defining the target structure of the
++ *            message in this server.
++ *
++ *    *Always* true (if 'parse' and others are working correct):
++ *
++ *    1)      sptr->from == cptr  (note: cptr->from == cptr)
++ *
++ *    2)      MyConnect(sptr) <=> sptr == cptr (e.g. sptr
++ *            *cannot* be a local connection, unless it's
++ *            actually cptr!). [MyConnect(x) should probably
++ *            be defined as (x == x->from) --msa ]
++ *
++ *    parc    number of variable parameter strings (if zero,
++ *            parv is allowed to be NULL)
++ *
++ *    parv    a NULL terminated list of parameter pointers,
++ *
++ *                    parv[0], sender (prefix string), if not present
++ *                            this points to an empty string.
++ *                    parv[1]...parv[parc-1]
++ *                            pointers to additional parameters
++ *                    parv[parc] == NULL, *always*
++ *
++ *            note:   it is guaranteed that parv[0]..parv[parc-1] are all
++ *                    non-NULL pointers.
++ */
++#include "config.h"
++
++#include "channel.h"
++#include "client.h"
++#include "hash.h"
++#include "ircd.h"
++#include "ircd_features.h"
++#include "ircd_log.h"
++#include "ircd_reply.h"
++#include "ircd_string.h"
++#include "list.h"
++#include "msg.h"
++#include "numeric.h"
++#include "numnicks.h"
++#include "s_user.h"
++#include "send.h"
++#include "struct.h"
++
++/* #include <assert.h> -- Now using assert in ircd_log.h */
++
++/*
++ * ms_addcloak - server message handler
++ *
++ *   parv[0] - sender prefix
++ *   parv[1] - user to addcloak
++ *
++ */
++int ms_addcloak(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  struct Client *acptr, *target;
++  
++  if (parc < 3 || EmptyString(parv[2])) {
++    /*
++     * should have been handled upstream, ignore it.
++     */
++    protocol_violation(sptr,"Too few arguments to addcloak");
++    return need_more_params(sptr,"ADDCLOAK");
++  }
++  if (!(acptr = FindUser(parv[1]))) {
++    send_reply(sptr, ERR_NOSUCHNICK, parv[1]);
++    return 0;
++  }
++  if (!(target = FindUser(parv[2]))) {
++    send_reply(sptr, ERR_NOSUCHNICK, parv[2]);
++    return 0;
++  }
++  if (cli_user(acptr)->channel) {
++    protocol_violation(sptr, "Tried to add cloak target for a user who is on 1 or more channels.");
++    return 0;
++  }
++
++  add_cloak_target(acptr, target);
++  sendcmdto_serv_butone(sptr, CMD_ADDCLOAK, acptr, "%s %s", cli_name(acptr), cli_name(target));
++
++  return 0;
++}
+diff -r 063bd2abe8cd ircd/m_clearcloak.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ircd/m_clearcloak.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -0,0 +1,140 @@
++/*
++ * IRC - Internet Relay Chat, ircd/m_clearcloak.c
++ * Copyright (C) 1990 Jarkko Oikarinen and
++ *                    University of Oulu, Computing Center
++ *
++ * See file AUTHORS in IRC package for additional names of
++ * the programmers.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 1, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ *
++ * $Id: m_clearcloak.c,v 1.25 2005/09/13 15:17:46 entrope Exp $
++ */
++
++/*
++ * m_functions execute protocol messages on this server:
++ *
++ *    cptr    is always NON-NULL, pointing to a *LOCAL* client
++ *            structure (with an open socket connected!). This
++ *            identifies the physical socket where the message
++ *            originated (or which caused the m_function to be
++ *            executed--some m_functions may call others...).
++ *
++ *    sptr    is the source of the message, defined by the
++ *            prefix part of the message if present. If not
++ *            or prefix not found, then sptr==cptr.
++ *
++ *            (!IsServer(cptr)) => (cptr == sptr), because
++ *            prefixes are taken *only* from servers...
++ *
++ *            (IsServer(cptr))
++ *                    (sptr == cptr) => the message didn't
++ *                    have the prefix.
++ *
++ *                    (sptr != cptr && IsServer(sptr) means
++ *                    the prefix specified servername. (?)
++ *
++ *                    (sptr != cptr && !IsServer(sptr) means
++ *                    that message originated from a remote
++ *                    user (not local).
++ *
++ *            combining
++ *
++ *            (!IsServer(sptr)) means that, sptr can safely
++ *            taken as defining the target structure of the
++ *            message in this server.
++ *
++ *    *Always* true (if 'parse' and others are working correct):
++ *
++ *    1)      sptr->from == cptr  (note: cptr->from == cptr)
++ *
++ *    2)      MyConnect(sptr) <=> sptr == cptr (e.g. sptr
++ *            *cannot* be a local connection, unless it's
++ *            actually cptr!). [MyConnect(x) should probably
++ *            be defined as (x == x->from) --msa ]
++ *
++ *    parc    number of variable parameter strings (if zero,
++ *            parv is allowed to be NULL)
++ *
++ *    parv    a NULL terminated list of parameter pointers,
++ *
++ *                    parv[0], sender (prefix string), if not present
++ *                            this points to an empty string.
++ *                    parv[1]...parv[parc-1]
++ *                            pointers to additional parameters
++ *                    parv[parc] == NULL, *always*
++ *
++ *            note:   it is guaranteed that parv[0]..parv[parc-1] are all
++ *                    non-NULL pointers.
++ */
++#include "config.h"
++
++#include "channel.h"
++#include "client.h"
++#include "hash.h"
++#include "ircd.h"
++#include "ircd_features.h"
++#include "ircd_log.h"
++#include "ircd_reply.h"
++#include "ircd_string.h"
++#include "list.h"
++#include "msg.h"
++#include "numeric.h"
++#include "numnicks.h"
++#include "s_user.h"
++#include "send.h"
++#include "struct.h"
++
++/* #include <assert.h> -- Now using assert in ircd_log.h */
++
++/*
++ * ms_clearcloak - server message handler
++ *
++ *   parv[0] - sender prefix
++ *   parv[1] - user to clearcloak
++ *
++ */
++int ms_clearcloak(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  struct Client *acptr;
++  
++  if (IsServer(sptr)) {
++    /*
++     * this will blow up if we get an clearcloak from a server
++     * we look for channel membership in sptr below. 
++     */
++    return protocol_violation(sptr,"Server attempting to clearcloak");
++  }
++  if (parc < 2 || EmptyString(parv[1])) {
++    /*
++     * should have been handled upstream, ignore it.
++     */
++    protocol_violation(sptr,"Too few arguments to clearcloak");
++    return need_more_params(sptr,"INVITE");
++  }
++  if (!(acptr = FindUser(parv[1]))) {
++    send_reply(sptr, ERR_NOSUCHNICK, parv[1]);
++    return 0;
++  }
++  if (cli_user(acptr)->channel) {
++    protocol_violation(sptr, "Tried to clear cloak targets for a user who is on 1 or more channels.");
++    return 0;
++  }
++
++  clear_cloak(acptr);
++  sendcmdto_serv_butone(sptr, CMD_CLEARCLOAK, acptr, "%s", cli_name(acptr));
++
++  return 0;
++}
+diff -r 063bd2abe8cd ircd/m_names.c
+--- a/ircd/m_names.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/m_names.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -157,6 +157,9 @@
+     if (IsZombie(member) && member->user != sptr)
+       continue;
+ 
++    if (!can_see_user(sptr, member->user))
++      continue;
++
+     if (IsDelayedJoin(member) && (member->user != sptr) && !(filter & NAMES_DEL))
+         continue;
+ 
+diff -r 063bd2abe8cd ircd/m_who.c
+--- a/ircd/m_who.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/m_who.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -384,6 +384,8 @@
+           if (!(IsUser(acptr) && Process(acptr)))
+             continue;           /* Now Process() is at the beginning, if we fail
+                                    we'll never have to show this acptr in this query */
++          if (!can_see_user(sptr, acptr))
++            continue;
+  	  if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr))
+ 	    continue;
+           if ((mask) &&
+diff -r 063bd2abe8cd ircd/m_whois.c
+--- a/ircd/m_whois.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/m_whois.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -153,6 +153,9 @@
+     for (chan = user->channel; chan; chan = chan->next_channel)
+     {
+        chptr = chan->channel;
++
++       if (!can_see_user(sptr, chan->user))
++         continue;
+        
+        if (!ShowChannel(sptr, chptr)
+            && !(IsOper(sptr) && IsLocalChannel(chptr->chname)))
+diff -r 063bd2abe8cd ircd/parse.c
+--- a/ircd/parse.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/parse.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -645,6 +645,20 @@
+     /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+     { m_ignore, m_ignore, ms_xreply, m_ignore, m_ignore }
+   },
++  {
++    MSG_ADDCLOAK,
++    TOK_ADDCLOAK,
++    0, MAXPARA, MFLG_SLOW, 0, NULL,
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
++    { m_ignore, m_ignore, ms_addcloak, ms_addcloak, m_ignore }
++  },
++  {
++    MSG_CLEARCLOAK,
++    TOK_CLEARCLOAK,
++    0, MAXPARA, MFLG_SLOW, 0, NULL,
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
++    { m_ignore, m_ignore, ms_clearcloak, ms_clearcloak, m_ignore }
++  },
+ #if WE_HAVE_A_REAL_CAPABILITY_NOW
+   {
+     MSG_CAP,
+diff -r 063bd2abe8cd ircd/s_misc.c
+--- a/ircd/s_misc.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/s_misc.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -235,6 +235,9 @@
+       Count_clientdisconnects(bcptr, UserStats);
+     else
+       Count_remoteclientquits(UserStats, bcptr);
++
++    remove_cloak_target(bcptr);
++    clear_cloak(bcptr);
+   }
+   else if (IsServer(bcptr))
+   {
+diff -r 063bd2abe8cd ircd/s_user.c
+--- a/ircd/s_user.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/s_user.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -2071,3 +2071,92 @@
+ 
+   return 0; /* convenience return, if it's ever needed */
+ }
++
++/*
++ * Checks if the target user is cloaked and should not be seen by the source.
++ */
++int can_see_user(struct Client *sptr, struct Client *cloaked)
++{
++  return (cloaked == sptr ||
++          !IsUser(sptr) ||
++          !IsUser(cloaked) ||
++          cli_user(cloaked)->cloak_count == 0 ||
++          cli_user(sptr)->cloak_extra == cloaked);
++}
++
++/*
++ * Checks if the user is cloaked.
++ */
++int is_cloaked(struct Client *cloaked)
++{
++  return (IsUser(cloaked) && cli_user(cloaked)->cloak_count > 0);
++}
++
++/*
++ * Adds sptr to the list of users who may see through
++ * the cloaked user's cloak.
++ */
++void add_cloak_target(struct Client *cloaked, struct Client *target)
++{
++  struct User *cloaked_user, *target_user;
++
++  cloaked_user = cli_user(cloaked);
++  assert(cloaked_user);
++
++  target_user = cli_user(target);
++  assert(target_user);
++
++  remove_cloak_target(target);
++
++  target_user->cloak_extra = cloaked;
++  cloaked_user->cloak_count++;
++}
++
++/*
++ * Updates the client so that they can no longer see past
++ * another user's cloak.
++ */
++void remove_cloak_target(struct Client *target)
++{
++  struct User *cloaked_user, *target_user;
++
++  target_user = cli_user(target);
++  assert(target_user);
++
++  if (target_user->cloak_extra) {
++    cloaked_user = cli_user(target_user->cloak_extra);
++    assert(cloaked_user);
++
++    cloaked_user->cloak_count--;
++    target_user->cloak_extra = NULL;
++  }
++}
++
++/*
++ * Clears the cloak for a user.
++ */
++void clear_cloak(struct Client *cloaked)
++{
++  struct Client *acptr;
++  struct User *cloaked_user, *target_user;
++
++  cloaked_user = cli_user(cloaked);
++  assert(cloaked_user);
++
++  if (cloaked_user->cloak_count == 0)
++    return;
++
++  for (acptr = cli_prev(&me); acptr; acptr = cli_prev(acptr))
++  {
++    target_user = cli_user(acptr);
++
++    if (!target_user)
++      continue;
++
++    if (target_user->cloak_extra == cloaked)
++      target_user->cloak_extra = NULL;
++  }
++
++  cloaked_user->cloak_count = 0;
++}
++
+diff -r 063bd2abe8cd ircd/send.c
+--- a/ircd/send.c	Thu Jul 04 15:29:33 2013 +0200
++++ b/ircd/send.c	Fri Jul 05 18:09:12 2013 +0200
+@@ -563,6 +563,7 @@
+ 	 member = member->next_member)
+       if (MyConnect(member->user)
+           && -1 < cli_fd(cli_from(member->user))
++          && can_see_user(member->user, from)
+           && member->user != one
+           && cli_sentalong(member->user) != sentalong_marker) {
+ 	cli_sentalong(member->user) = sentalong_marker;
+@@ -606,6 +607,7 @@
+     if (!MyConnect(member->user)
+         || member->user == one 
+         || IsZombie(member)
++        || !can_see_user(member->user, from)
+         || (skip & SKIP_DEAF && IsDeaf(member->user))
+         || (skip & SKIP_NONOPS && !IsChanOp(member))
+         || (skip & SKIP_NONVOICES && !IsChanOp(member) && !HasVoice(member)))
+@@ -698,6 +700,7 @@
+   for (member = to->members; member; member = member->next_member) {
+     /* skip one, zombies, and deaf users... */
+     if (IsZombie(member) ||
++        !can_see_user(member->user, from) ||
+         (skip & SKIP_DEAF && IsDeaf(member->user)) ||
+         (skip & SKIP_NONOPS && !IsChanOp(member)) ||
+         (skip & SKIP_NONVOICES && !IsChanOp(member) && !HasVoice(member)) ||
