@@ -49,17 +49,25 @@ diff -r 705e3be1f134 doc/quakenet.conf
  Admin {
    Location = "@@@";
    Location = "QuakeNet IRC server";
-@@ -28,65 +52,93 @@
- # name     = "<class>";      pingfreq = time;  connectfreq = time;
- # maxlinks = number 0 or 1;  sendq    = size;     usermode = "+i";
+@@ -25,68 +49,99 @@
+ # -----------------------------------------------------------------------------
+ # Classes (aka Ylines)
+ # -----------------------------------------------------------------------------
+-# name     = "<class>";      pingfreq = time;  connectfreq = time;
+-# maxlinks = number 0 or 1;  sendq    = size;     usermode = "+i";
++# name     = "<class>";  pingfreq = time;  connectfreq = time;
++# maxlinks = limit;      sendq    = size;     usermode = "+i";
  #
+-# Uplinks
 +# maxlinks
 +#  for a user class:
-+#    the number of connections allowed in the class
++#    the number of connections allowed to the server in the class
 +#  for a server class:
 +#    keep auto connecting until the server is connected to this many servers in the class
++#    only considers servers with autoconnect set to yes
++#    when set to 0 no auto connects are done
 +#
- # Uplinks
++# Leaf: uplink to hub server
  Class {
 - name = "Server";
 - pingfreq = 3 minutes;
@@ -69,11 +77,13 @@ diff -r 705e3be1f134 doc/quakenet.conf
 +  name = "Server";
 +  pingfreq = 3 minutes;
 +  connectfreq = 5 minutes;
++  # auto connect to uplink
 +  maxlinks = 1;
 +  sendq = 40000000;
  };
  
- # All the leaf servers you hub for.
+-# All the leaf servers you hub for.
++# Hub: all the leaf servers you hub for.
  Class {
 - name = "LeafServer";
 - pingfreq = 3 minutes;
@@ -99,7 +109,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
 +  sendq = 300000;
 +  # the number of users allowed on the server
 +  # this should not be greater than the number
-+  # of connections your server is compiled for  
++  # of connections the server is compiled for  
 +  maxlinks = 30000;
 +  usermode = "+iw";
  };
@@ -180,7 +190,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -97,16 +149,15 @@
+@@ -97,16 +152,15 @@
  
  # Fall back entries (we let everyone in)
  Client { class = "Users"; ip = "*@*"; };
@@ -204,7 +214,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
  
  # -----------------------------------------------------------------------------
  # UWorld/Jupe (aka ulines)
-@@ -116,13 +167,15 @@
+@@ -116,13 +170,15 @@
  UWorld {
    name = "CServe.quakenet.org";
    name = "operserv.quakenet.org";
@@ -226,7 +236,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
  };
  
  Jupe {
-@@ -157,38 +210,38 @@
+@@ -157,38 +213,38 @@
  #
  
  Connect {
@@ -286,7 +296,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
  };
  
  
-@@ -260,29 +313,34 @@
+@@ -260,29 +316,34 @@
  # -----------------------------------------------------------------------------
  # Port (aka plines)
  # -----------------------------------------------------------------------------
@@ -335,7 +345,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -292,66 +350,34 @@
+@@ -292,66 +353,34 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
