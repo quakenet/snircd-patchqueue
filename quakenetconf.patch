@@ -349,7 +349,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -292,66 +353,34 @@
+@@ -292,66 +353,39 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
@@ -358,34 +358,56 @@ diff -r 705e3be1f134 doc/quakenet.conf
 -  "LOG" = "SYSTEM" "LEVEL" "CRIT";
 -  "DOMAINNAME"="quakenet.org";
 -  "RELIABLE_CLOCK"="FALSE";
-+  "LOG" = "OPER" "FILE" "oper.log";
-+# "DOMAINNAME"="<obtained from /etc/resolv.conf by ./configure>";
-   "BUFFERPOOL"="96000000";
+-  "BUFFERPOOL"="96000000";
 -# "HAS_FERGUSON_FLUSHER"="FALSE";
 -# "CLIENT_FLOOD"="1024";
 -# "SERVER_PORT"="4400";
-   "NODEFAULTMOTD"="FALSE";
+-  "NODEFAULTMOTD"="FALSE";
 -# "MOTD_BANNER"="TRUE";
 -# "KILL_IPMISMATCH"="FALSE";
 -# "IDLE_FROM_MSG"="TRUE";
 -  "HUB"="FALSE";
 -# "WALLOPS_OPER_ONLY"="FALSE";
 -# "NODNS"="FALSE";
-+# "MOTD_BANNER"="one-line banner to be sent if NODEFAULTMOTD is TRUE";
-+# "HUB"="FALSE";
-   "RANDOM_SEED"="@@@@@@@@@@@@@@@@";
+-  "RANDOM_SEED"="@@@@@@@@@@@@@@@@";
 -# "DEFAULT_LIST_PARAM"="TRUE";
 -# "NICKNAMEHISTORYLENGTH"="800";
-+# "DEFAULT_LIST_PARAM"="";
-+  "NICKNAMEHISTORYLENGTH"="10000";
-   "NETWORK"="QuakeNet";
+-  "NETWORK"="QuakeNet";
 -  "HOST_HIDING"="TRUE";
++  "LOG" = "OPER" "FILE" "oper.log";
++# "DOMAINNAME" = "<obtained from /etc/resolv.conf by ./configure>";
++  # maximum amount of RAM the server will allocate for buffering Send Queues
++  "BUFFERPOOL" = "96000000";
++  "NODEFAULTMOTD" = "FALSE";
++# "MOTD_BANNER" = "one-line banner to be sent if NODEFAULTMOTD is TRUE";
++# "HUB" = "FALSE";
++  "RANDOM_SEED" = "@@@@@@@@@@@@@@@@";
++# "DEFAULT_LIST_PARAM" = "";
++  "NICKNAMEHISTORYLENGTH" = "10000";
++  "HIDDEN_HOST" = "users.quakenet.org";
++# "CONNEXIT_NOTICES" = "FALSE";
++  "MAXCHANNELSPERUSER" = "30";
++  "MAXBANS" = "50";
++  "MAXSILES" = "25";
++  "CONFIG_OPERCMDS" = "TRUE";
++# "HIS_STATS_u" = "FALSE";
++# "HIS_STATS_w" = "FALSE";
++  "HIS_SERVERNAME" = "*.quakenet.org";
++  "HIS_SERVERINFO" = "QuakeNet IRC Server";
++  "HIS_URLSERVERS" = "http://www.quakenet.org/servers";
++  "NETWORK" = "QuakeNet";
++  "URLREG" = "http://www.quakenet.org/getauthed";
++  "ANNOUNCE_INVITES" = "TRUE";
++  "LOCAL_CHANNELS" = "FALSE";
++  "TOPIC_BURST" = "TRUE";
++  "OPLEVELS" = "FALSE";
++  "ZANNELS" = "FALSE";
    "SETHOST" = "TRUE";
    "SETHOST_USER" = "TRUE";
    "SETHOST_AUTO" = "TRUE";
-   "HIDDEN_HOST"="users.quakenet.org";
+-  "HIDDEN_HOST"="users.quakenet.org";
 -  "HIDDEN_IP"="127.0.0.1";
-   "URLREG"="http://www.quakenet.org/getauthed";
+-  "URLREG"="http://www.quakenet.org/getauthed";
 -# "KILLCHASETIMELIMIT"="30";
 -  "MAXCHANNELSPERUSER"="20";
 -  "NICKLEN" = "15";
@@ -413,20 +435,14 @@ diff -r 705e3be1f134 doc/quakenet.conf
 -# "IPCHECK_CLONE_PERIOD" = "40";
 -# "IPCHECK_CLONE_DELAY" = "600";
 -# "CHANNELLEN" = "200";
-+  "MAXCHANNELSPERUSER"="30";
-+  "MAXBANS"="50";
-+  "MAXSILES"="25";
-   "CONFIG_OPERCMDS" = "TRUE";
-   "OPLEVELS" = "FALSE";
-   "ZANNELS" = "FALSE";
+-  "CONFIG_OPERCMDS" = "TRUE";
+-  "OPLEVELS" = "FALSE";
+-  "ZANNELS" = "FALSE";
 -# "LOCAL_CHANNELS" = "TRUE";
 -# "ANNOUNCE_INVITES" = "FALSE";
-+  "LOCAL_CHANNELS" = "FALSE";
-+  "TOPIC_BURST" = "TRUE";
-+  "ANNOUNCE_INVITES" = "TRUE";
-   "HIS_SERVERNAME" = "*.quakenet.org";
-   "HIS_SERVERINFO" = "QuakeNet IRC Server";
+-  "HIS_SERVERNAME" = "*.quakenet.org";
+-  "HIS_SERVERINFO" = "QuakeNet IRC Server";
 -  "HIS_URLSERVERS" = "http://www.quakenet.org/serverlist.php";
-+  "HIS_URLSERVERS" = "http://www.quakenet.org/servers";
++# "DISABLE_GLINES" = "FALSE";
  };
  
