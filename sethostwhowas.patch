@@ -1,0 +1,17 @@
+# HG changeset patch
+# Parent 4bf6abf8cafbeb0ca24e448cd95c38a9a1275155
+
+Make WHOWAS save the realhost too in case the user has a sethost.
+
+diff -r 4bf6abf8cafb ircd/whowas.c
+--- a/ircd/whowas.c
++++ b/ircd/whowas.c
+@@ -272,7 +272,7 @@
+   DupString(ww->name, cli_name(cptr));
+   DupString(ww->username, cli_user(cptr)->username);
+   DupString(ww->hostname, cli_user(cptr)->host);
+-  if (HasHiddenHost(cptr))
++  if (HasHiddenHost(cptr) || IsSetHost(cptr))
+     DupString(ww->realhost, cli_user(cptr)->realhost);
+   DupString(ww->servername, cli_name(cli_user(cptr)->server));
+   DupString(ww->realname, cli_info(cptr));

@@ -1,19 +1,19 @@
 # HG changeset patch
-# Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
+# Parent 98f03fd09b815db029e9b1fa9d850a896eb9d8e1
 Fix ban interaction issues with +x and +h.
 
 Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/876732831347
 
-diff -r e4f53aeb83c3 ircd/channel.c
---- a/ircd/channel.c	Sat Jun 29 16:18:12 2013 +0200
-+++ b/ircd/channel.c	Sun Jun 30 13:06:22 2013 +0200
-@@ -374,22 +374,28 @@
+diff -r 98f03fd09b81 ircd/channel.c
+--- a/ircd/channel.c
++++ b/ircd/channel.c
+@@ -374,22 +374,25 @@
    char        tmphost[HOSTLEN + 1];
    char        iphost[SOCKIPLEN + 1];
    char       *hostmask;
 -  char       *sr;
-+  char       *sr = NULL;
-+  char       *sa = NULL;
++  char       *sr = NULL; /* realhost */
++  char       *sa = NULL; /* account host */
    struct Ban *found;
  
    /* Build nick!user and alternate host names. */
@@ -24,28 +24,23 @@ diff -r e4f53aeb83c3 ircd/channel.c
 -    sr = NULL;
 -  else if (HasHiddenHost(cptr) || HasSetHost(cptr))
 +
-+  /* sr is real host if +h */
-+  if (HasSetHost(cptr))
++  /* user has a hiddenhost (+rx) or has a sethost (+h) - check realhost */
++  if (HasHiddenHost(cptr) || IsSetHost(cptr))
      sr = cli_user(cptr)->realhost;
 -  else
 -  {
--    ircd_snprintf(0, tmphost, HOSTLEN, "%s.%s",
--                  cli_user(cptr)->account, feature_str(FEAT_HIDDEN_HOST));
--    sr = tmphost;
 +
-+  /* if +x and not +h sa is real host, if -x or +h sa is the account host */
-+  if (IsAccount(cptr)) {
-+    if (HasHiddenHost(cptr) && !HasSetHost(cptr)) {
-+      sa = cli_user(cptr)->realhost;
-+    } else {
-+      ircd_snprintf(0, tmphost, HOSTLEN, "%s.%s",
-+                    cli_user(cptr)->account, feature_str(FEAT_HIDDEN_HOST));
-+      sa = tmphost;
-+    }
++  /* user has an account (+r),
++   *   but does not have a hiddenhost (-x) or has a sethost (+h) - check account host */
++  if (IsAccount(cptr) && (!IsHiddenHost(cptr) || IsSetHost(cptr))) {
+     ircd_snprintf(0, tmphost, HOSTLEN, "%s.%s",
+                   cli_user(cptr)->account, feature_str(FEAT_HIDDEN_HOST));
+-    sr = tmphost;
++    sa = tmphost;
    }
  
    /* Walk through ban list. */
-@@ -409,7 +415,8 @@
+@@ -409,7 +412,8 @@
      if (!((banlist->flags & BAN_IPMASK)
           && ipmask_check(&cli_ip(cptr), &banlist->address, banlist->addrbits))
          && match(hostmask, cli_user(cptr)->host)

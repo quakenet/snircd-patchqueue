@@ -1,3 +1,6 @@
+infofix.patch
+hginfo.patch
+delete_ircd_auth_files.patch
 opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
@@ -7,16 +10,18 @@ userhostipfix.patch
 broadcastmatchfix.patch
 statscshowfullinfo.patch
 statscshowautoconnect.patch
-infofix.patch
 disableglinesfeature.patch
 sethostinvalidatebans.patch
 sethostundo.patch
 sethostremotepassparam.patch
 sethostulined.patch
+sethostwhowas.patch
+sethostaccount.patch
 getconnectlikepost.patch
 remotestatsparam.patch
 quakenetconf.patch
 checkendof.patch
+checkaccount.patch
 blockitaliccodeinchanmodec.patch
 fixkickforzombie.patch
 enforcechanmodebignlocalonly.patch

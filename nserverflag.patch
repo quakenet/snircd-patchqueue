@@ -7,9 +7,9 @@ opernames or not.
 
 And backport n server flag propagation fix from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/711d770fb4dd
 
-diff -r d1398ba685a4 include/client.h
---- a/include/client.h	Wed Jul 03 17:52:18 2013 +0200
-+++ b/include/client.h	Wed Jul 03 18:01:08 2013 +0200
+diff -r 0ea88148fd57 include/client.h
+--- a/include/client.h
++++ b/include/client.h
 @@ -155,6 +155,7 @@
      FLAG_HUB,                       /**< server is a hub */
      FLAG_IPV6,                      /**< server understands P10 IPv6 addrs */
@@ -26,9 +26,9 @@ diff -r d1398ba685a4 include/client.h
  
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-diff -r d1398ba685a4 ircd/m_server.c
---- a/ircd/m_server.c	Wed Jul 03 17:52:18 2013 +0200
-+++ b/ircd/m_server.c	Wed Jul 03 18:01:08 2013 +0200
+diff -r 0ea88148fd57 ircd/m_server.c
+--- a/ircd/m_server.c
++++ b/ircd/m_server.c
 @@ -775,10 +775,11 @@
        continue;
      if (0 == match(cli_name(&me), cli_name(acptr)))
@@ -42,9 +42,9 @@ diff -r d1398ba685a4 ircd/m_server.c
                    cli_info(acptr));
    }
    return 0;
-diff -r d1398ba685a4 ircd/s_serv.c
---- a/ircd/s_serv.c	Wed Jul 03 17:52:18 2013 +0200
-+++ b/ircd/s_serv.c	Wed Jul 03 18:01:08 2013 +0200
+diff -r 0ea88148fd57 ircd/s_serv.c
+--- a/ircd/s_serv.c
++++ b/ircd/s_serv.c
 @@ -231,7 +231,7 @@
  		    cli_hopcount(acptr) + 1, cli_serv(acptr)->timestamp,
  		    protocol_str, Protocol(acptr), NumServCap(acptr),
@@ -54,3 +54,15 @@ diff -r d1398ba685a4 ircd/s_serv.c
      }
    }
  
+diff -r 0ea88148fd57 ircd/s_stats.c
+--- a/ircd/s_stats.c
++++ b/ircd/s_stats.c
+@@ -541,7 +541,7 @@
+                IsHub(acptr) ? 'H' : '-',
+                IsService(acptr) ? 'S' : '-',
+                IsIPv6(acptr) ? '6' : '-',
+-               IsSendOperName(acptr) ? 'n' : '-',
++               IsSendOperName(acptr) ? 'N' : '-',
+                cli_hopcount(acptr),
+                NumServ(acptr),
+                base64toint(cli_yxx(acptr)),

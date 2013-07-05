@@ -1,20 +1,73 @@
 # HG changeset patch
-# Parent b24d1d4b3f338405919ac4bd93ffd793378282d8
+# Parent 705e3be1f1345ea73bc25af87053b37780e6c2fd
 
-diff -r b24d1d4b3f33 doc/quakenet.conf
---- a/doc/quakenet.conf	Tue Jul 02 23:01:39 2013 +0200
-+++ b/doc/quakenet.conf	Wed Jul 03 00:04:05 2013 +0200
-@@ -28,65 +28,93 @@
- # name     = "<class>";      pingfreq = time;  connectfreq = time;
- # maxlinks = number 0 or 1;  sendq    = size;     usermode = "+i";
+diff -r 705e3be1f134 doc/quakenet.conf
+--- a/doc/quakenet.conf
++++ b/doc/quakenet.conf
+@@ -6,16 +6,40 @@
+ #  v.12 config file, last edited 08.12.2007/paul
+ # -----------------------------------------------------------------------------
+ 
++# -----------------------------------------------------------------------------
++# General
++# -----------------------------------------------------------------------------
++# name = "servername";
++# description = "server description"
++# numeric = 0-4095; must be unique on network
++#
++# IP of local interface to use for outgoing connections (optional)
++# vhost = "ipv4vhost";
++# vhost = "ipv6vhost";
++#
++# Local IP to use for DNS lookups (default let OS assign address)
++# dns vhost = "ipv4vhost";
++# dns vhost = "ipv6vhost";
++#
++# DNS server to use (default read from /etc/resolve.conf)
++# dns server = "ip1";
++# dns server = "ip2";
++#
+ General {
+   name = "@@@.@@@.quakenet.org";
+   description = "@@@";
+   numeric = @@@;
+-  vhost = "@@@";
+-  dns vhost  = "@@@";
+-  dns server = "@@@";
+-  dns server = "@@@";
++  #vhost = "@@@";
++  #dns vhost  = "@@@";
++  #dns server = "@@@";
++  #dns server = "@@@";
+ };
+ 
++# -----------------------------------------------------------------------------
++# Admin
++# -----------------------------------------------------------------------------
++# This sets information that can be retrieved with the /ADMIN command.
++# It should contain at least an admin Email contact address.
+ Admin {
+   Location = "@@@";
+   Location = "QuakeNet IRC server";
+@@ -25,68 +49,99 @@
+ # -----------------------------------------------------------------------------
+ # Classes (aka Ylines)
+ # -----------------------------------------------------------------------------
+-# name     = "<class>";      pingfreq = time;  connectfreq = time;
+-# maxlinks = number 0 or 1;  sendq    = size;     usermode = "+i";
++# name     = "<class>";  pingfreq = time;  connectfreq = time;
++# maxlinks = limit;      sendq    = size;     usermode = "+i";
  #
+-# Uplinks
 +# maxlinks
 +#  for a user class:
-+#    the number of connections allowed in the class
++#    the number of connections allowed to the server in the class
 +#  for a server class:
 +#    keep auto connecting until the server is connected to this many servers in the class
++#    only considers servers with autoconnect set to yes
++#    when set to 0 no auto connects are done
 +#
- # Uplinks
++# Leaf: uplink to hub server
  Class {
 - name = "Server";
 - pingfreq = 3 minutes;
@@ -24,11 +77,13 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
 +  name = "Server";
 +  pingfreq = 3 minutes;
 +  connectfreq = 5 minutes;
++  # auto connect to uplink
 +  maxlinks = 1;
 +  sendq = 40000000;
  };
  
- # All the leaf servers you hub for.
+-# All the leaf servers you hub for.
++# Hub: all the leaf servers you hub for.
  Class {
 - name = "LeafServer";
 - pingfreq = 3 minutes;
@@ -54,7 +109,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
 +  sendq = 300000;
 +  # the number of users allowed on the server
 +  # this should not be greater than the number
-+  # of connections your server is compiled for  
++  # of connections the server is compiled for  
 +  maxlinks = 30000;
 +  usermode = "+iw";
  };
@@ -135,11 +190,15 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -97,16 +125,15 @@
+@@ -95,18 +150,17 @@
+ # username = "ident";       host = "host";              ip = "127.0.0.0/8";
+ # password = "password";   class = "classname";   maxlinks = 3;
  
- # Fall back entries (we let everyone in)
- Client { class = "Users"; ip = "*@*"; };
+-# Fall back entries (we let everyone in)
+-Client { class = "Users"; ip = "*@*"; };
 -Client { class = "Users"; host = "*@*"; };
++# Fall back entries (we let everyone in) - just IPv4 for now
++Client { class = "Users"; ip = "*@0.0.0.0/0"; };
  
  # Providers that we've decided to restrict due to abuse mainly.
 -Client { class = "Users"; maxlinks = 2; host = "*@*.t-dialin.net"; };
@@ -149,17 +208,17 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
 -Client { class = "Users"; maxlinks = 1; host = "*@*.wanadoo.nl"; };
 -Client { class = "Users"; maxlinks = 2; host = "*@*.wanadoo.fr"; };
 -Client { class = "Users"; maxlinks = 1; host = "*@*.rima-tde.net"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.dip0.t-ipconnect.de"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.proxad.net"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.bezeqint.net"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.ono.com"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.wanadoo.nl"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.wanadoo.fr"; };
-+Client { class = "Users"; maxlinks = 3; host = "*@*.rima-tde.net"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.dip0.t-ipconnect.de"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.proxad.net"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.bezeqint.net"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.ono.com"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.wanadoo.nl"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.wanadoo.fr"; };
++Client { class = "Users"; maxlinks = 3; ip = "*@0.0.0.0/0"; host = "*@*.rima-tde.net"; };
  
  # -----------------------------------------------------------------------------
  # UWorld/Jupe (aka ulines)
-@@ -116,13 +143,15 @@
+@@ -116,13 +170,15 @@
  UWorld {
    name = "CServe.quakenet.org";
    name = "operserv.quakenet.org";
@@ -181,7 +240,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  Jupe {
-@@ -157,38 +186,38 @@
+@@ -157,38 +213,38 @@
  #
  
  Connect {
@@ -241,7 +300,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  
-@@ -260,29 +289,34 @@
+@@ -260,29 +316,34 @@
  # -----------------------------------------------------------------------------
  # Port (aka plines)
  # -----------------------------------------------------------------------------
@@ -290,7 +349,7 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -292,66 +326,34 @@
+@@ -292,66 +353,39 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
@@ -299,34 +358,56 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
 -  "LOG" = "SYSTEM" "LEVEL" "CRIT";
 -  "DOMAINNAME"="quakenet.org";
 -  "RELIABLE_CLOCK"="FALSE";
-+  "LOG" = "OPER" "FILE" "oper.log";
-+# "DOMAINNAME"="<obtained from /etc/resolv.conf by ./configure>";
-   "BUFFERPOOL"="96000000";
+-  "BUFFERPOOL"="96000000";
 -# "HAS_FERGUSON_FLUSHER"="FALSE";
 -# "CLIENT_FLOOD"="1024";
 -# "SERVER_PORT"="4400";
-   "NODEFAULTMOTD"="FALSE";
+-  "NODEFAULTMOTD"="FALSE";
 -# "MOTD_BANNER"="TRUE";
 -# "KILL_IPMISMATCH"="FALSE";
 -# "IDLE_FROM_MSG"="TRUE";
 -  "HUB"="FALSE";
 -# "WALLOPS_OPER_ONLY"="FALSE";
 -# "NODNS"="FALSE";
-+# "MOTD_BANNER"="one-line banner to be sent if NODEFAULTMOTD is TRUE";
-+# "HUB"="FALSE";
-   "RANDOM_SEED"="@@@@@@@@@@@@@@@@";
+-  "RANDOM_SEED"="@@@@@@@@@@@@@@@@";
 -# "DEFAULT_LIST_PARAM"="TRUE";
 -# "NICKNAMEHISTORYLENGTH"="800";
-+# "DEFAULT_LIST_PARAM"="";
-+  "NICKNAMEHISTORYLENGTH"="10000";
-   "NETWORK"="QuakeNet";
+-  "NETWORK"="QuakeNet";
 -  "HOST_HIDING"="TRUE";
++  "LOG" = "OPER" "FILE" "oper.log";
++# "DOMAINNAME" = "<obtained from /etc/resolv.conf by ./configure>";
++  # maximum amount of RAM the server will allocate for buffering Send Queues
++  "BUFFERPOOL" = "96000000";
++  "NODEFAULTMOTD" = "FALSE";
++# "MOTD_BANNER" = "one-line banner to be sent if NODEFAULTMOTD is TRUE";
++# "HUB" = "FALSE";
++  "RANDOM_SEED" = "@@@@@@@@@@@@@@@@";
++# "DEFAULT_LIST_PARAM" = "";
++  "NICKNAMEHISTORYLENGTH" = "10000";
++  "HIDDEN_HOST" = "users.quakenet.org";
++# "CONNEXIT_NOTICES" = "FALSE";
++  "MAXCHANNELSPERUSER" = "30";
++  "MAXBANS" = "50";
++  "MAXSILES" = "25";
++  "CONFIG_OPERCMDS" = "TRUE";
++# "HIS_STATS_u" = "FALSE";
++# "HIS_STATS_w" = "FALSE";
++  "HIS_SERVERNAME" = "*.quakenet.org";
++  "HIS_SERVERINFO" = "QuakeNet IRC Server";
++  "HIS_URLSERVERS" = "http://www.quakenet.org/servers";
++  "NETWORK" = "QuakeNet";
++  "URLREG" = "http://www.quakenet.org/getauthed";
++  "ANNOUNCE_INVITES" = "TRUE";
++  "LOCAL_CHANNELS" = "FALSE";
++  "TOPIC_BURST" = "TRUE";
++  "OPLEVELS" = "FALSE";
++  "ZANNELS" = "FALSE";
    "SETHOST" = "TRUE";
    "SETHOST_USER" = "TRUE";
    "SETHOST_AUTO" = "TRUE";
-   "HIDDEN_HOST"="users.quakenet.org";
+-  "HIDDEN_HOST"="users.quakenet.org";
 -  "HIDDEN_IP"="127.0.0.1";
-   "URLREG"="http://www.quakenet.org/getauthed";
+-  "URLREG"="http://www.quakenet.org/getauthed";
 -# "KILLCHASETIMELIMIT"="30";
 -  "MAXCHANNELSPERUSER"="20";
 -  "NICKLEN" = "15";
@@ -354,20 +435,14 @@ diff -r b24d1d4b3f33 doc/quakenet.conf
 -# "IPCHECK_CLONE_PERIOD" = "40";
 -# "IPCHECK_CLONE_DELAY" = "600";
 -# "CHANNELLEN" = "200";
-+  "MAXCHANNELSPERUSER"="30";
-+  "MAXBANS"="50";
-+  "MAXSILES"="25";
-   "CONFIG_OPERCMDS" = "TRUE";
-   "OPLEVELS" = "FALSE";
-   "ZANNELS" = "FALSE";
+-  "CONFIG_OPERCMDS" = "TRUE";
+-  "OPLEVELS" = "FALSE";
+-  "ZANNELS" = "FALSE";
 -# "LOCAL_CHANNELS" = "TRUE";
 -# "ANNOUNCE_INVITES" = "FALSE";
-+  "LOCAL_CHANNELS" = "FALSE";
-+  "TOPIC_BURST" = "TRUE";
-+  "ANNOUNCE_INVITES" = "TRUE";
-   "HIS_SERVERNAME" = "*.quakenet.org";
-   "HIS_SERVERINFO" = "QuakeNet IRC Server";
+-  "HIS_SERVERNAME" = "*.quakenet.org";
+-  "HIS_SERVERINFO" = "QuakeNet IRC Server";
 -  "HIS_URLSERVERS" = "http://www.quakenet.org/serverlist.php";
-+  "HIS_URLSERVERS" = "http://www.quakenet.org/servers";
++# "DISABLE_GLINES" = "FALSE";
  };
  
