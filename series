@@ -1,5 +1,6 @@
 infofix.patch
 hginfo.patch
+delete_ircd_auth_files.patch
 opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
