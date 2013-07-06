@@ -21,12 +21,14 @@ diff -r a1f95af374ea ircd/m_userhost.c
 diff -r a1f95af374ea ircd/m_userip.c
 --- a/ircd/m_userip.c
 +++ b/ircd/m_userip.c
-@@ -106,7 +106,7 @@
+@@ -106,7 +106,9 @@
  	       * of +x.  If an oper wants the real IP, he should go to
  	       * /whois to get it.
  	       */
 -	      (HasHiddenHost(cptr) || HasSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && !IsAnOper(sptr) ?
-+	      (HasHiddenHost(cptr) || IsSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && (sptr != cptr) ?
++	      ((HasHiddenHost(cptr) || IsSetHost(cptr) ||              /* hiddenhost or sethost */
++	        (feature_bool(FEAT_HIS_USERIP) && !IsAnOper(sptr))) && /* HIS_USERIP enabled and not an operator */
++	       (sptr != cptr)) ?
  	      feature_str(FEAT_HIDDEN_IP) :
  	      ircd_ntoa(&cli_ip(cptr)));
  }
