@@ -1,18 +1,22 @@
 # HG changeset patch
-# Parent c997ba8853f506638d8187be750233c240ed637f
+# Parent a5bc27deabfe767b2216325a6dca2c13cbbe5268
 
-diff -r c997ba8853f5 doc/readme.snircd
+diff -r a5bc27deabfe doc/readme.snircd
 --- a/doc/readme.snircd
 +++ b/doc/readme.snircd
-@@ -7,6 +7,7 @@
- from QuakeNet's Development Team webpage, http://development.quakenet.org.
+@@ -4,9 +4,10 @@
+ ircu. This version is based on version 2.10.12 released by Undernet's
+ Coder Committee. The original code can be obtained from their webpage,
+ http://coder-com.undernet.org and the latest release of Snircd can be obtained
+-from QuakeNet's Development Team webpage, http://development.quakenet.org.
++from QuakeNet's Development Team webpage, http://hg.quakenet.org.
  
  - version history ------------------------------------------------------------
 +v1.3.4,   HG,  unknown...
  v1.3.1,   HG,  bug fixes, warn user if input line is too long.
            WWW, 10/11/2007
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,46 +94,45 @@
+@@ -93,62 +94,72 @@
  
   * Oper mode +X
       Allows opers to:
@@ -22,18 +26,21 @@ diff -r c997ba8853f5 doc/readme.snircd
 -       - Join full channels
 -       - Override user mode +k
 +       - Join channels through any restrictive channel modes
-+         including channel bans (+b)
++         including channel bans
 +       - Speak on channels through restrictive modes (+nmrM)
-+         including channel bans (+b)
-+       - Override user mode +k on other opers (not services)
++         including channel bans
++       - Override user mode +k on other opers,
++         but not on +k service on a +s server.
  
   * Oper mode +k
-      Allows opers to set user mode +k, network service, which prohibits
-      kicks, deops and kills.
- 
+-     Allows opers to set user mode +k, network service, which prohibits
+-     kicks, deops and kills.
++     Allows opers to set user mode +k, network service,
++     which prohibits kicks, deops and kills.
++
 + * Oper mode +P
 +     Oper is paranoid.
-+
+ 
   * Oper mode +n
 -     Allows opers to hide the channels they are in.
 +     Allows opers to hide the channels they are in from ordinary users.
@@ -43,18 +50,19 @@ diff -r c997ba8853f5 doc/readme.snircd
 +     Allows opers to hide their idle time from ordinary users.
  
   * User mode +R
-      Allows users to only accept privmsg/notice/invite from authed users.
- 
+-     Allows users to only accept privmsg/notice/invite from authed users.
++     Allows users to only accept privmsg/notice/invite from users with an account set.
++
 + * User mode +q
 +     Allows users to only accept privmsg/notice/invite from users they share a channel with.
 +
 + * User mode +Q
 +     Prohibits users from sending privmsg/notice/invite to users they do not share a channel with.
-+
+ 
   * Channel mode +c
       Prohibits mIRC & ANSI colour codes as well as other control codes from
 -     being sent to a channel.
-+     being sent to a channel. Bold, reverse, underline, colors, italic.
++     being sent to a channel. Bold(2), Color(3), Reverse(22), Italic (29), Underline(31).
  
   * Channel mode +C
 -     Prohibits CTCPs from being sent to a channel.
@@ -78,80 +86,106 @@ diff -r c997ba8853f5 doc/readme.snircd
   * Channel mode +u
       Hides your quit and part messages from channels with +u set. If a user
       is in any +u channel, then their quit message is removed.
-@@ -146,9 +146,16 @@
+ 
+  * Channel mode +M
+      Disallows unauthed users to speak or change nick in a channel when they 
+-     are not voiced or opped in a channel
++     are not voiced or opped in a channel.
+ 
+  * Channel mode +T 
+-    Blocks multi-target messages to a channel
++    Blocks multi-target messages to a channel.
  
   * Command /check
-      Allows opers to see information about a channel, user or server.
+-     Allows opers to see information about a channel, user or server.
 -     Syntax: Check Channel: /check <#channel> [-i|-o|-u]
-+     Syntax: Check Channel: /check <#channel> [-i|-o|-u|-C]
++     Allows opers to see information about a channel, user, mask or server.
++     Syntax: Check Channel: /check <#channel> [-<flags>]
               Check Server:  /check <server>
 -             Check User:    /check <nick|hostmask|CIDR> [-c]
-+             Check User:    /check <nick|hostmask|CIDR> [-c|-i|-s]
++             Check User:    /check <nick!user@host> [-<flags>]
 +
-+     -i  Show IPs instead of host
-+     -o  Show only channel operators
-+     -u  Do not show channel members
-+     -C  Show clone count for channel members
-+     -c  Show channels the user is on
-+     -s  Show servernames instead of realnames
++     flags:
++     -c  Show channels the user is on (mask)
++     -i  Show IP instead of host (channel, mask)
++     -l  show oplevel (channel)
++     -o  Show only channel operators (channel)
++     -s  Show servername instead of realname (channel, mask)
++     -u  Do not show channel members (channel)
++     -C  Show clone count for channel members (channel)
++     -I  Include IP (channel)
  
       Performing a /check on a server returns its status:
         *  bursting
-@@ -158,147 +165,248 @@
+@@ -156,152 +167,264 @@
+        =  network service
+        +  network hub
  
-  * Sethost allows opers (and users w/ passwords) to set their hostname,
-    also known as spoofing. Sethost is configured from the config file via
+- * Sethost allows opers (and users w/ passwords) to set their hostname,
+-   also known as spoofing. Sethost is configured from the config file via
 -   S: lines and several F: lines. Sethost is done through the /sethost
 -   command or by setting user mode +h. Available Sethosts are visible by
 -   using the /stats s command.
 -   Syntax: Oper Sethost: /sethost <new ident> <new hostname>
 -                         /mode <nick> +h <new ident>@<new hostname>
-+   Spoof blocks and several features. Sethost is done through the /sethost
-+   command or by setting user mode +h. Only opers are allowed to remove their sethost.
-+   Available Sethosts are visible by using the /stats s|spoofhosts command.
-+   Syntax: Oper Sethost: /sethost <new user> <new hostname>
-+                         /mode <nick> +h <new user>@<new hostname>
-            User Sethost: /sethost <new hostname> <password>
-                          /mode <nick> +h <new hostname> <password>
+-           User Sethost: /sethost <new hostname> <password>
+-                         /mode <nick> +h <new hostname> <password>
++ * SETHOST: Sethost allows opers (and users w/ passwords) to set their hostname,
++            also known as spoofing. Sethost is configured from the config file via
++            Spoof blocks and several features. Sethost is done through the /sethost
++            command or by setting user mode +h. Only opers are allowed to remove their sethost.
++            Available Sethosts are visible by using the /stats s|spoofhosts command.
  
 - * Single letter nicks are protected for use by network services only.
++            Syntax:
++            Oper Sethost: /sethost <new user> <new hostname>
++                          /mode <nick> +h <new user>@<new hostname>
++            User Sethost: /sethost <new hostname> <password>
++                          /mode <nick> +h <new hostname> <password>
  
 - * Protection from net rider's joining +i/+k channels after a net.join.
-+ * GLINE: Ability to Gline a nick, new format now nick!ident@host.
++ * REMOTESETHOST: Allow a server with a Uworld block to remotely set a sethost on a user.
++                  P10 syntax "<source server numeric> SH <target user numeric> <spoof user> <spoof host>"
++                  The SH command travels from source server to the server of the target user,
++                  from there a normal user mode change is broadcasted.
  
 - * Topics can by sent during bursts to keep them synced throughout a network.
-+ * BADCHAN: Ability to use wildcards in BADCHANs (Glines on a channel) to deny access to channel names matching the badchan.
++ * GLINE: Ability to Gline a nick, new format now nick!user@host.
++          Changing nick and Gline matches the newnick!user@host,
++          the change is refused for erroneous nick error.
  
 - * Ability to Gline a nick, new format now nick!ident@host.
-+ * BADCHAN: When a badchan is placed, users on the channel(s) affected are kicked from the channel by their server.
++ * BADCHAN: Ability to use wildcards in BADCHANs (Glines on a channel)
++            to deny access to channel names matching the badchan.
++            When a badchan is placed, users on the channel(s) affected
++            are kicked from the channel by their server.
  
 - * /stats C & H show full details for Opers.
-+ * SETHOST: Allow a server with a Uworld block to remotely set a sethost on a user.
-+   P10 syntax "<source server numeric> SH <target user numeric> <spoof user> <spoof host>"
-+   The SH command travels from source server to the server of the target user, from there a normal user mode change is broadcasted.
- 
-- * Ability to restart the resolver via /rehash and /DNS r.
 + * USERHOST/USERIP: Show real host and IP to opers.
  
-- * Ability for services to send BURST outside of net.burst.
-+ * OPLEVELS: Oplevels 0-99 are only setable by a service, define MIXOPLEVEL 100.
+- * Ability to restart the resolver via /rehash and /DNS r.
++ * OPLEVELS: Oplevels below 100 (0-99) are only setable by a service (define MINOPLEVEL).
 +             Known issue: restriction applies to server modes too,
 +             causing a desynch in oplevels when modes are bounced (HACK3).
  
+- * Ability for services to send BURST outside of net.burst.
++ * MODE: Disallow ordinary users to see the banlist (/MODE #chan b)
++         when they are not on the channel.
+ 
 -- configuration file options ------------------------------------------------
-+ * MODE: Disallow ordinary users to see the banlist (/MODE #chan b) when they are not on the channel.
++ * SNOMASK: Default snomask for opers changed, removed SNO_HACK4.
  
 -S: Sethost Lines 
 - Syntax:  S:<spoof host>:<password>:<*.host.cc|a.b.c.*|CIDR>:<ident>
 - Example: S:moo.fish.moo:elitepassword:host.example.com:user
-+ * SNOMASK: Default snomask for opers changed, removed SNO_HACK4.
++ * OPER: Opers cannot excess flood
++         Opers rate limited to 1 command per 1 second (instead 1 command of per 2 seconds)
++         Opers always have a free target
  
 - This adds the sethost 'moo.fish.moo' that can be activated by a user by using
 - the password 'elitepassword' and will automatically be applied to anyone
 - connecting from 'host.example.com' with the ident 'user'.
-+ * OPER: Opers cannot excess flood
-+         Opers rate limited to 1 command per 1 second (instead 1 command of per 2 seconds)
-+         Opers always have a free target
++ * TOPICLEN: Define for TOPICLEN changed from 160 to 250.
  
 - More Examples:
 -   Oper sethost for 'moo.fish.moo'
@@ -160,11 +194,9 @@ diff -r c997ba8853f5 doc/readme.snircd
 -          S:moo.fish.moo:elitepassword::
 -   Oper sethost for 'moo.fish.moo' with auto on 'ident@*.example.com"
 -          S:moo.fish.moo::*.example.com:ident
-+ * TOPICLEN: Define for TOPICLEN changed from 160 to 250.
++ * FREETARGETS: Start free targets changed from 10 to 20.
  
 -F:SETHOST
-+ * FREETARGETS: Start free targets changed from 10 to 20.
-+
 + * BADUSER: Rules for a bad username relaxed.
 +
 + * JOIN: Changed error message when joining channels, numeric replies:
@@ -181,10 +213,15 @@ diff -r c997ba8853f5 doc/readme.snircd
 +            P10 syntax "<source server numeric> AC <target user numeric> <account> [<timestamp> [<account_id>]]
 +                       user mode +r <account>[:<timestamp>[:<account_id>]]
 +
++ * ACCOUNTLEN: ACCOUNTLEN increased from 12 to 15 (define ACCOUNTLEN).
++
 + * WHOIS: Changed numeric reply RPL_WHOISACCOUNT text from "is logged in as" to "is authed as".
 +
 + * HASH: Disallow ordinary users using /HASH.
 +
++ * SERVER: Added server flag n (send oper names), user mode +o has the opername (used to /OPER) as parameter.
++           A server linking with flag n is expected to send and parse opername as parameter to user mode +o.
++           Max length of an opername is 15 (define ACCOUNTLEN).
 +
 +- configuration options ------------------------------------------------
 +
@@ -256,14 +293,16 @@ diff -r c997ba8853f5 doc/readme.snircd
   * Type: boolean
   * Default: FALSE
  
-  This enables the /sethost command and user mode +h for opers activating Sethosts.
+- This enables the /sethost command and user mode +h for opers activating Sethosts.
++ This enables the /SETHOST command and user mode +h for opers activating Sethosts.
  
 -F:SETHOST_USER
 +SETHOST_USER
   * Type: boolean
   * Default: FALSE
  
-  This enabled the /sethost command and user mode +h for users activating Sethosts
+- This enabled the /sethost command and user mode +h for users activating Sethosts
++ This enabled the /SETHOST command and user mode +h for users activating Sethosts
   with passwords.
  
 -F:SETHOST_AUTO
@@ -406,8 +445,12 @@ diff -r c997ba8853f5 doc/readme.snircd
 + * Type: boolean
 + * Default: FALSE
 +
-+ Hide number of local servers linked in /LUSERS output from users.
++ Hide number of local servers linked in /LUSERS output from ordinary users.
 +
  - disclaimer ----------------------------------------------------------------
  
  This software is provided "as is" with absolutely no warranties, either express
+ or implied. It's use is done so totally at the user's own risk.
+ 
+------------------------- 10.11.2007 -----------------------------------------
++------------------------ 06.07.2013 -----------------------------------------
