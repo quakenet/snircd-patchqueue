@@ -1,0 +1,413 @@
+# HG changeset patch
+# Parent c997ba8853f506638d8187be750233c240ed637f
+
+diff -r c997ba8853f5 doc/readme.snircd
+--- a/doc/readme.snircd
++++ b/doc/readme.snircd
+@@ -7,6 +7,7 @@
+ from QuakeNet's Development Team webpage, http://development.quakenet.org.
+ 
+ - version history ------------------------------------------------------------
++v1.3.4,   HG,  unknown...
+ v1.3.1,   HG,  bug fixes, warn user if input line is too long.
+           WWW, 10/11/2007
+ v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
+@@ -93,46 +94,45 @@
+ 
+  * Oper mode +X
+      Allows opers to:
+-       - Join invite only (+i) channels
+-       - Join keyed (+k) channels
+-       - Join channels if banned
+-       - Join full channels
+-       - Override user mode +k
++       - Join channels through any restrictive channel modes
++         including channel bans (+b)
++       - Speak on channels through restrictive modes (+nmrM)
++         including channel bans (+b)
++       - Override user mode +k on other opers (not services)
+ 
+  * Oper mode +k
+      Allows opers to set user mode +k, network service, which prohibits
+      kicks, deops and kills.
+ 
++ * Oper mode +P
++     Oper is paranoid.
++
+  * Oper mode +n
+-     Allows opers to hide the channels they are in.
++     Allows opers to hide the channels they are in from ordinary users.
+ 
+  * Oper mode +I
+-     Allows opers to hide their idle time.
++     Allows opers to hide their idle time from ordinary users.
+ 
+  * User mode +R
+      Allows users to only accept privmsg/notice/invite from authed users.
+ 
++ * User mode +q
++     Allows users to only accept privmsg/notice/invite from users they share a channel with.
++
++ * User mode +Q
++     Prohibits users from sending privmsg/notice/invite to users they do not share a channel with.
++
+  * Channel mode +c
+      Prohibits mIRC & ANSI colour codes as well as other control codes from
+-     being sent to a channel.
++     being sent to a channel. Bold, reverse, underline, colors, italic.
+ 
+  * Channel mode +C
+-     Prohibits CTCPs from being sent to a channel.
++     Prohibits CTCPs from being sent to a channel,
++     with the exception of CTCP ACTION.
+ 
+  * Channel mode +N
+      Prohibits channel notices from being sent to a channel.
+ 
+- * Channel mode +D and +d
+-     'Delayed join' mode, when set on a channel joins and parts for that
+-     channel are squelched. A user will be 'invisible' in the channel
+-     from other users until they speak, are opped/voiced or change the
+-     topic. When the +D mode is cleared, 'invisible' users will not be
+-     revealed, instead the +d mode will automatically be set by the ircd
+-     if invisible users remain in the channel. +d will be automatically
+-     removed when the last 'invisible' user either becomes visible or
+-     leaves the channel. It is possible to see the 'invisible' users
+-     on a channel by doing /NAMES -d.
+-
+  * Channel mode +u
+      Hides your quit and part messages from channels with +u set. If a user
+      is in any +u channel, then their quit message is removed.
+@@ -146,9 +146,16 @@
+ 
+  * Command /check
+      Allows opers to see information about a channel, user or server.
+-     Syntax: Check Channel: /check <#channel> [-i|-o|-u]
++     Syntax: Check Channel: /check <#channel> [-i|-o|-u|-C]
+              Check Server:  /check <server>
+-             Check User:    /check <nick|hostmask|CIDR> [-c]
++             Check User:    /check <nick|hostmask|CIDR> [-c|-i|-s]
++
++     -i  Show IPs instead of host
++     -o  Show only channel operators
++     -u  Do not show channel members
++     -C  Show clone count for channel members
++     -c  Show channels the user is on
++     -s  Show servernames instead of realnames
+ 
+      Performing a /check on a server returns its status:
+        *  bursting
+@@ -158,147 +165,248 @@
+ 
+  * Sethost allows opers (and users w/ passwords) to set their hostname,
+    also known as spoofing. Sethost is configured from the config file via
+-   S: lines and several F: lines. Sethost is done through the /sethost
+-   command or by setting user mode +h. Available Sethosts are visible by
+-   using the /stats s command.
+-   Syntax: Oper Sethost: /sethost <new ident> <new hostname>
+-                         /mode <nick> +h <new ident>@<new hostname>
++   Spoof blocks and several features. Sethost is done through the /sethost
++   command or by setting user mode +h. Only opers are allowed to remove their sethost.
++   Available Sethosts are visible by using the /stats s|spoofhosts command.
++   Syntax: Oper Sethost: /sethost <new user> <new hostname>
++                         /mode <nick> +h <new user>@<new hostname>
+            User Sethost: /sethost <new hostname> <password>
+                          /mode <nick> +h <new hostname> <password>
+ 
+- * Single letter nicks are protected for use by network services only.
+ 
+- * Protection from net rider's joining +i/+k channels after a net.join.
++ * GLINE: Ability to Gline a nick, new format now nick!ident@host.
+ 
+- * Topics can by sent during bursts to keep them synced throughout a network.
++ * BADCHAN: Ability to use wildcards in BADCHANs (Glines on a channel) to deny access to channel names matching the badchan.
+ 
+- * Ability to Gline a nick, new format now nick!ident@host.
++ * BADCHAN: When a badchan is placed, users on the channel(s) affected are kicked from the channel by their server.
+ 
+- * /stats C & H show full details for Opers.
++ * SETHOST: Allow a server with a Uworld block to remotely set a sethost on a user.
++   P10 syntax "<source server numeric> SH <target user numeric> <spoof user> <spoof host>"
++   The SH command travels from source server to the server of the target user, from there a normal user mode change is broadcasted.
+ 
+- * Ability to restart the resolver via /rehash and /DNS r.
++ * USERHOST/USERIP: Show real host and IP to opers.
+ 
+- * Ability for services to send BURST outside of net.burst.
++ * OPLEVELS: Oplevels 0-99 are only setable by a service, define MIXOPLEVEL 100.
++             Known issue: restriction applies to server modes too,
++             causing a desynch in oplevels when modes are bounced (HACK3).
+ 
+-- configuration file options ------------------------------------------------
++ * MODE: Disallow ordinary users to see the banlist (/MODE #chan b) when they are not on the channel.
+ 
+-S: Sethost Lines 
+- Syntax:  S:<spoof host>:<password>:<*.host.cc|a.b.c.*|CIDR>:<ident>
+- Example: S:moo.fish.moo:elitepassword:host.example.com:user
++ * SNOMASK: Default snomask for opers changed, removed SNO_HACK4.
+ 
+- This adds the sethost 'moo.fish.moo' that can be activated by a user by using
+- the password 'elitepassword' and will automatically be applied to anyone
+- connecting from 'host.example.com' with the ident 'user'.
++ * OPER: Opers cannot excess flood
++         Opers rate limited to 1 command per 1 second (instead 1 command of per 2 seconds)
++         Opers always have a free target
+ 
+- More Examples:
+-   Oper sethost for 'moo.fish.moo'
+-          S:moo.fish.moo:::
+-   User & Oper sethost for 'moo.fish.moo'
+-          S:moo.fish.moo:elitepassword::
+-   Oper sethost for 'moo.fish.moo' with auto on 'ident@*.example.com"
+-          S:moo.fish.moo::*.example.com:ident
++ * TOPICLEN: Define for TOPICLEN changed from 160 to 250.
+ 
+-F:SETHOST
++ * FREETARGETS: Start free targets changed from 10 to 20.
++
++ * BADUSER: Rules for a bad username relaxed.
++
++ * JOIN: Changed error message when joining channels, numeric replies:
++         471 ERR_CHANNELISFULL  "Cannot join channel, channel is full (+l)"
++         473 ERR_INVITEONLYCHAN "Cannot join channel, you must be invited (+i)"
++         474 ERR_BANNEDFROMCHAN "Cannot join channel, you are banned (+b)"
++         475 ERR_BADCHANNELKEY  "Cannot join channel, you need the correct key (+k)"
++         477 ERR_NEEDREGGEDNICK "Cannot join channel (+r): 
++                                 this channel requires authentication --
++                                 For details of how to obtain an account visit <url>"
++         479 ERR_BADCHANNAME    "Cannot join channel (G-lined: <reason>)"
++
++ * ACCOUNT: Parameter account ID added to ACCOUNT command and user mode +r param
++            P10 syntax "<source server numeric> AC <target user numeric> <account> [<timestamp> [<account_id>]]
++                       user mode +r <account>[:<timestamp>[:<account_id>]]
++
++ * WHOIS: Changed numeric reply RPL_WHOISACCOUNT text from "is logged in as" to "is authed as".
++
++ * HASH: Disallow ordinary users using /HASH.
++
++
++- configuration options ------------------------------------------------
++
++Privileges for opers:
++
++ * chanserv = yes;
++   Default: yes
++   Allow oper to set user mode +k
++
++ * xtra_oper = yes;
++   Default: yes
++   Allow oper to set user mode +X
++
++ * noidle = yes;
++   Default: yes
++   Allow oper to set user mode +n
++
++ * freeform = yes;
++   Default: yes
++   Allow oper to use set spoof host without requiring a matching Spoof block
++
++ * paranoid = yes;
++   Default: yes
++   Allow oper to set user mode +P
++
++ * check = yes;
++   Default: yes
++   Allow oper to use /CHECK
++
++
++Spoof block
++
++ * Syntax
++   Spoofhost "spoofhost" {
++     username = "user";
++     host = "host";
++     password = "password";
++   };
++
++ * Example
++   Spoofhost "cows.go.moo" {
++     username = "john";
++     host = "1.2.3.4";
++     password = "JH63Acd3e";
++   };
++
++  This adds the sethost 'cows.go.moo' that can be activated by a user by using
++  the password 'JH63Acd3e' and will automatically be applied to anyone
++  connecting from '1.2.3.4' with the username (ident) 'john'.
++
++ * Oper sethost for 'cows.go.moo'
++   Spoofhost "cows.go.moo" {
++   };
++
++ * User & Oper sethost for 'moo.fish.moo'
++   Spoofhost "cows.go.moo" {
++     password = "JH63Acd3e";
++   };
++
++ * Oper sethost for 'moo.fish.moo' with auto on 'ident@*.example.com"
++   Spoofhost "cows.go.moo" {
++     username = "john";
++     host = "*.example.com";
++   };
++
++Feature settings
++
++SETHOST
+  * Type: boolean
+  * Default: FALSE
+ 
+  This enables the /sethost command and user mode +h for opers activating Sethosts.
+ 
+-F:SETHOST_USER
++SETHOST_USER
+  * Type: boolean
+  * Default: FALSE
+ 
+  This enabled the /sethost command and user mode +h for users activating Sethosts
+  with passwords.
+ 
+-F:SETHOST_AUTO
++SETHOST_AUTO
+  * Type: boolean
+  * Default: FALSE
+ 
+- This enables the automatic application of Sethosts on matching idents and hosts.
++ This enables the automatic application of Sethosts on matching user@host.
+ 
+-F:SETHOST_FREEFORM
++SETHOST_FREEFORM
+  * Type: boolean
+  * Default: FALSE
+ 
+- This enables opers to set new hostnames that do not have a corresponding S: line
++ This enables opers to set new hostnames that do not have a corresponding Spoof block
+  in the configuration file, as long as the hostname supplied is reasonably valid.
+  The usage if this is logged via SNOTICE.
+ 
+-F:HIS_STATS_s
++HIS_STATS_s
+  * Type: boolean
+  * Default: TRUE
+ 
+  As per QuakeNet Security, this removes the /stats s from users.
+ 
+-F:TOPIC_BURST
+- * Type: boolean
+- * Default: FALSE
+-
+- This selects whether topics are *sent* to other servers during a burst.
+- Note that receiving topics from servers is always enabled.
+-
+-F:HIS_GLINE
++HIS_GLINE
+  * Type: boolean
+  * Default: TRUE
+ 
+  As per QuakeNet Security, this removes the reason for GLINE from quit messages.
+ 
+-F:SOCKSENDBUF
+- * Type: integer
+- * Default: 61440
+-
+- Sets the socket buffer for sending. Advanced feature, do not change unless you
+- known what you are doing.
+-
+-F:SOCKRECVBUF
+- * Type: integer
+- * Default: 61440
+-
+- Sets the socket buffer for recieving. Advanced feature, do not change unless you
+- known what you are doing.
+-
+-F:USER_HIDECHANS
++USER_HIDECHANS
+  * Type: boolean
+  * Default: FALSE
+ 
+  This allows normal users to set the +n usermode (hide channels from whois/who),
+  this is only recommended in special circumstances.
+ 
+-F:HIS_USERGLINE
++USER_HIDEIDLETIME
++ * Type: boolean
++ * Default: FALSE
++
++ This allows normal users to set the +I usermode (hide idle time whois),
++ this is only recommended in special circumstances.
++
++HIS_USERGLINE
+  * Type: boolean
+  * Default: TRUE
+ 
+  This enables / disables the ability for users to use the /GLINE command for
+- listing active glines. It's turned on by default, which is the opposite
+- behaviour of vanilla ircu.
++ listing glines. Default value has been changed from FALSE TO TRUE.
+ 
+-F:AUTOINVISIBLE
++AUTOINVISIBLE
+  * Type: boolean
+  * Default: TRUE
+ 
+  As per QuakeNet Security, this option sets user mode +i on all connecting clients
+- automatically.
++ automatically and disallows users to set user mode -i.
+ 
+-F:HIS_USERIP
++HIS_USERIP
+  * Type: boolean
+  * Default: TRUE
+ 
+- As per QuakeNet Security, add the ability to disable the /USERIP command for users.
++ As per QuakeNet Security, add the ability to hide the IP in /USERIP and /WHO
++ from users. The IP set in feature HIDDEN_IP is shown instead.
++ Also disallow users from matching IP using /WHO <mask> i.
+ 
+-F:AUTOCHANMODES
++AUTOCHANMODES
+  * Type: boolean
+  * Default: TRUE
+ 
+  Enable or disable auto (default) channel modes for new channels.
+ 
+-F:AUTOCHANMODES_LIST
++AUTOCHANMODES_LIST
+  * Type: string
+  * Default: "ntCN"
+ 
+  AUTOCHANMODES_LIST should contain the default channelmodes (e.g. "ntCN") which will 
+  be set by default on new channels.
+ 
++EXTENDED_CHECKCMD
++ * Type: boolean
++ * Default: FALSE
++
++ Adds more info to the output of the /CHECK command.
++
++HIS_STATS_w
++ * Type: boolean
++ * Default: TRUE
++
++ Changed default value from FALSE to TRUE.
++
++HIS_STATS_u
++ * Type: boolean
++ * Default: TRUE
++
++ Changed default value from FALSE to TRUE.
++
++NICKLEN
++ * Type: integer
++ * Default: 15
++
++ Changed default value from 12 to 15.
++
++HIS_LUSERS_ME
++ * Type: boolean
++ * Default: FALSE
++
++ Hide number of local servers linked in /LUSERS output from users.
++
+ - disclaimer ----------------------------------------------------------------
+ 
+ This software is provided "as is" with absolutely no warranties, either express
