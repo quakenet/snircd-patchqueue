@@ -349,7 +349,7 @@ diff -r f80ccb6361f8 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -292,66 +353,42 @@
+@@ -292,66 +353,40 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
@@ -393,8 +393,6 @@ diff -r f80ccb6361f8 doc/quakenet.conf
 +  "MAXBANS" = "50";
 +  "MAXSILES" = "25";
 +  "CONFIG_OPERCMDS" = "TRUE";
-+# "HIS_STATS_u" = "FALSE";
-+# "HIS_STATS_w" = "FALSE";
 +  "HIS_SERVERNAME" = "*.quakenet.org";
 +  "HIS_SERVERINFO" = "QuakeNet IRC Server";
 +  "HIS_URLSERVERS" = "http://www.quakenet.org/servers";
