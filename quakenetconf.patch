@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent 705e3be1f1345ea73bc25af87053b37780e6c2fd
+# Parent f80ccb6361f8b956e7bdf19e8213049a6238f108
 
-diff -r 705e3be1f134 doc/quakenet.conf
+diff -r f80ccb6361f8 doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
 @@ -6,16 +6,40 @@
@@ -349,7 +349,7 @@ diff -r 705e3be1f134 doc/quakenet.conf
  };
  
  # -----------------------------------------------------------------------------
-@@ -292,66 +353,39 @@
+@@ -292,66 +353,42 @@
  
  features {
    "LOG" = "SYSTEM" "FILE" "ircd.log";
@@ -374,7 +374,10 @@ diff -r 705e3be1f134 doc/quakenet.conf
 -# "NICKNAMEHISTORYLENGTH"="800";
 -  "NETWORK"="QuakeNet";
 -  "HOST_HIDING"="TRUE";
++  "LOG" = "IAUTH" "FILE" "iauth.log";
++  "LOG" = "NETWORK" "FILE" "network.log";
 +  "LOG" = "OPER" "FILE" "oper.log";
++  "LOG" = "JUPE" "FILE" "jupe.log"; 
 +# "DOMAINNAME" = "<obtained from /etc/resolv.conf by ./configure>";
 +  # maximum amount of RAM the server will allocate for buffering Send Queues
 +  "BUFFERPOOL" = "96000000";
