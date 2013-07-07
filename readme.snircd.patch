@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent a5bc27deabfe767b2216325a6dca2c13cbbe5268
+# Parent 1846eb33c5da99c2819d912f91c8019b3b04580d
 
-diff -r a5bc27deabfe doc/readme.snircd
+diff -r 1846eb33c5da doc/readme.snircd
 --- a/doc/readme.snircd
 +++ b/doc/readme.snircd
 @@ -4,9 +4,10 @@
@@ -16,7 +16,7 @@ diff -r a5bc27deabfe doc/readme.snircd
  v1.3.1,   HG,  bug fixes, warn user if input line is too long.
            WWW, 10/11/2007
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,62 +94,72 @@
+@@ -93,215 +94,348 @@
  
   * Oper mode +X
       Allows opers to:
@@ -29,13 +29,14 @@ diff -r a5bc27deabfe doc/readme.snircd
 +         including channel bans
 +       - Speak on channels through restrictive modes (+nmrM)
 +         including channel bans
-+       - Override user mode +k on other opers,
++       - Override usermode +k on other opers,
 +         but not on +k service on a +s server.
++       - Override usermodes +R and +q
  
   * Oper mode +k
 -     Allows opers to set user mode +k, network service, which prohibits
 -     kicks, deops and kills.
-+     Allows opers to set user mode +k, network service,
++     Allows opers to set usermode +k, network service,
 +     which prohibits kicks, deops and kills.
 +
 + * Oper mode +P
@@ -51,13 +52,13 @@ diff -r a5bc27deabfe doc/readme.snircd
  
   * User mode +R
 -     Allows users to only accept privmsg/notice/invite from authed users.
-+     Allows users to only accept privmsg/notice/invite from users with an account set.
++     Allows users to only accept PRIVMSG/NOTICE/INVITE from users with an account set.
 +
 + * User mode +q
-+     Allows users to only accept privmsg/notice/invite from users they share a channel with.
++     Allows users to only accept PRIVMSG/NOTICE/INVITE from users they share a channel with.
 +
 + * User mode +Q
-+     Prohibits users from sending privmsg/notice/invite to users they do not share a channel with.
++     Prohibits users from sending PRIVMSG/NOTICE/INVITE to users they do not share a channel with.
  
   * Channel mode +c
       Prohibits mIRC & ANSI colour codes as well as other control codes from
@@ -88,23 +89,27 @@ diff -r a5bc27deabfe doc/readme.snircd
       is in any +u channel, then their quit message is removed.
  
   * Channel mode +M
-      Disallows unauthed users to speak or change nick in a channel when they 
+-     Disallows unauthed users to speak or change nick in a channel when they 
 -     are not voiced or opped in a channel
++     Disallows users without an account set to speak or change nick in a channel when they 
 +     are not voiced or opped in a channel.
  
   * Channel mode +T 
 -    Blocks multi-target messages to a channel
 +    Blocks multi-target messages to a channel.
  
-  * Command /check
+- * Command /check
 -     Allows opers to see information about a channel, user or server.
 -     Syntax: Check Channel: /check <#channel> [-i|-o|-u]
-+     Allows opers to see information about a channel, user, mask or server.
-+     Syntax: Check Channel: /check <#channel> [-<flags>]
-              Check Server:  /check <server>
+-             Check Server:  /check <server>
 -             Check User:    /check <nick|hostmask|CIDR> [-c]
-+             Check User:    /check <nick!user@host> [-<flags>]
-+
++ * Command /CHECK
++     Allows opers to see information about a channel, user, mask or server.
++     Syntax: Check Channel: /CHECK <#channel> [-<flags>]
++             Check Server:  /CHECK <server>
++             Check User:    /CHECK <nick!user@host> [-<flags>]
+ 
+-     Performing a /check on a server returns its status:
 +     flags:
 +     -c  Show channels the user is on (mask)
 +     -i  Show IP instead of host (channel, mask)
@@ -114,10 +119,10 @@ diff -r a5bc27deabfe doc/readme.snircd
 +     -u  Do not show channel members (channel)
 +     -C  Show clone count for channel members (channel)
 +     -I  Include IP (channel)
- 
-      Performing a /check on a server returns its status:
++
++     Performing a /CHECK on a server returns its status:
         *  bursting
-@@ -156,152 +167,264 @@
+        !  awaiting burst acknowledgement
         =  network service
         +  network hub
  
@@ -132,22 +137,24 @@ diff -r a5bc27deabfe doc/readme.snircd
 -                         /mode <nick> +h <new hostname> <password>
 + * SETHOST: Sethost allows opers (and users w/ passwords) to set their hostname,
 +            also known as spoofing. Sethost is configured from the config file via
-+            Spoof blocks and several features. Sethost is done through the /sethost
-+            command or by setting user mode +h. Only opers are allowed to remove their sethost.
-+            Available Sethosts are visible by using the /stats s|spoofhosts command.
++            Spoof blocks and several features. Sethost is done through the /SETHOST
++            command or by setting usermode +h. Only opers are allowed to remove their sethost.
++            Available Sethosts are visible by using the /STATS s|spoofhosts command.
  
 - * Single letter nicks are protected for use by network services only.
 +            Syntax:
-+            Oper Sethost: /sethost <new user> <new hostname>
-+                          /mode <nick> +h <new user>@<new hostname>
-+            User Sethost: /sethost <new hostname> <password>
-+                          /mode <nick> +h <new hostname> <password>
++            Oper Sethost:   /SETHOST <new user> <new hostname>
++                            /MODE <nick> +h <new user>@<new hostname>
++            User Sethost:   /SETHOST <new hostname> <password>
++                            /MODE <nick> +h <new hostname> <password>
++            Remove Sethost: /SETHOST undo
++                            /MODE <nick> -h
  
 - * Protection from net rider's joining +i/+k channels after a net.join.
 + * REMOTESETHOST: Allow a server with a Uworld block to remotely set a sethost on a user.
 +                  P10 syntax "<source server numeric> SH <target user numeric> <spoof user> <spoof host>"
 +                  The SH command travels from source server to the server of the target user,
-+                  from there a normal user mode change is broadcasted.
++                  from there a normal usermode change is broadcasted.
  
 - * Topics can by sent during bursts to keep them synced throughout a network.
 + * GLINE: Ability to Gline a nick, new format now nick!user@host.
@@ -209,19 +216,27 @@ diff -r a5bc27deabfe doc/readme.snircd
 +                                 For details of how to obtain an account visit <url>"
 +         479 ERR_BADCHANNAME    "Cannot join channel (G-lined: <reason>)"
 +
-+ * ACCOUNT: Parameter account ID added to ACCOUNT command and user mode +r param
-+            P10 syntax "<source server numeric> AC <target user numeric> <account> [<timestamp> [<account_id>]]
-+                       user mode +r <account>[:<timestamp>[:<account_id>]]
++ * ACCOUNT: Parameter account ID added to ACCOUNT command and usermode +r param.
++            Account timestamp and id are allowed to be set, even when the user has an account set already,
++            provided the account set on the user and the account in the AC message are the same,
++            and no account timestamp and id are set. The timestamp can be used to identify the session,
++            and ID can be used to identify the account. Accounts expire and account names
++            are reused, account IDs are not and can be used to unique identify a user.
++            P10 syntax "<source server numeric> AC <target user numeric> <account> [<timestamp> [<ID>]]
++                       "+r <account>[:<timestamp>[:<ID>]]" in N (NICK) message introducing the user
 +
 + * ACCOUNTLEN: ACCOUNTLEN increased from 12 to 15 (define ACCOUNTLEN).
 +
-+ * WHOIS: Changed numeric reply RPL_WHOISACCOUNT text from "is logged in as" to "is authed as".
++ * WHOIS: Changed numeric reply 330 RPL_WHOISACCOUNT text from "is logged in as" to "is authed as".
 +
 + * HASH: Disallow ordinary users using /HASH.
 +
-+ * SERVER: Added server flag n (send oper names), user mode +o has the opername (used to /OPER) as parameter.
-+           A server linking with flag n is expected to send and parse opername as parameter to user mode +o.
++ * SERVER: Added server flag n (send oper names), usermode +o has the opername (used to /OPER) as parameter.
++           A server linking with flag n is expected to send and parse opername as parameter to usermode +o.
 +           Max length of an opername is 15 (define ACCOUNTLEN).
++           A "-" char (define NOPERNAMECHARACTER) is used as opername when a server does not send them.
++           A service can use this char as opername as well, since opernames for a service have little meaning.
++           Added numeric reply 343 RPL_WHOISOPERNAME "<nick> :is opered as", shown to opers in /WHOIS.
 +
 +- configuration options ------------------------------------------------
 +
@@ -229,15 +244,15 @@ diff -r a5bc27deabfe doc/readme.snircd
 +
 + * chanserv = yes;
 +   Default: yes
-+   Allow oper to set user mode +k
++   Allow oper to set usermode +k
 +
 + * xtra_oper = yes;
 +   Default: yes
-+   Allow oper to set user mode +X
++   Allow oper to set usermode +X
 +
 + * noidle = yes;
 +   Default: yes
-+   Allow oper to set user mode +n
++   Allow oper to set usermode +n
 +
 + * freeform = yes;
 +   Default: yes
@@ -245,7 +260,7 @@ diff -r a5bc27deabfe doc/readme.snircd
 +
 + * paranoid = yes;
 +   Default: yes
-+   Allow oper to set user mode +P
++   Allow oper to set usermode +P
 +
 + * check = yes;
 +   Default: yes
@@ -270,7 +285,7 @@ diff -r a5bc27deabfe doc/readme.snircd
 +
 +  This adds the sethost 'cows.go.moo' that can be activated by a user by using
 +  the password 'JH63Acd3e' and will automatically be applied to anyone
-+  connecting from '1.2.3.4' with the username (ident) 'john'.
++  connecting from '1.2.3.4' with the username 'john'.
 +
 + * Oper sethost for 'cows.go.moo'
 +   Spoofhost "cows.go.moo" {
@@ -281,7 +296,7 @@ diff -r a5bc27deabfe doc/readme.snircd
 +     password = "JH63Acd3e";
 +   };
 +
-+ * Oper sethost for 'moo.fish.moo' with auto on 'ident@*.example.com"
++ * Oper sethost for 'moo.fish.moo' with auto on 'john@*.example.com"
 +   Spoofhost "cows.go.moo" {
 +     username = "john";
 +     host = "*.example.com";
@@ -294,7 +309,7 @@ diff -r a5bc27deabfe doc/readme.snircd
   * Default: FALSE
  
 - This enables the /sethost command and user mode +h for opers activating Sethosts.
-+ This enables the /SETHOST command and user mode +h for opers activating Sethosts.
++ This enables the /SETHOST command and usermode +h for opers activating Sethosts.
  
 -F:SETHOST_USER
 +SETHOST_USER
@@ -302,7 +317,7 @@ diff -r a5bc27deabfe doc/readme.snircd
   * Default: FALSE
  
 - This enabled the /sethost command and user mode +h for users activating Sethosts
-+ This enabled the /SETHOST command and user mode +h for users activating Sethosts
++ This enabled the /SETHOST command and usermode +h for users activating Sethosts
   with passwords.
  
 -F:SETHOST_AUTO
@@ -321,14 +336,16 @@ diff -r a5bc27deabfe doc/readme.snircd
 - This enables opers to set new hostnames that do not have a corresponding S: line
 + This enables opers to set new hostnames that do not have a corresponding Spoof block
   in the configuration file, as long as the hostname supplied is reasonably valid.
-  The usage if this is logged via SNOTICE.
+- The usage if this is logged via SNOTICE.
++ The usage of this is logged via SNOTICE on OLDSNO and through LOG facility.
  
 -F:HIS_STATS_s
 +HIS_STATS_s
   * Type: boolean
   * Default: TRUE
  
-  As per QuakeNet Security, this removes the /stats s from users.
+- As per QuakeNet Security, this removes the /stats s from users.
++ As per QuakeNet Security, this removes the /STATS s from users.
  
 -F:TOPIC_BURST
 - * Type: boolean
@@ -363,7 +380,8 @@ diff -r a5bc27deabfe doc/readme.snircd
   * Type: boolean
   * Default: FALSE
  
-  This allows normal users to set the +n usermode (hide channels from whois/who),
+- This allows normal users to set the +n usermode (hide channels from whois/who),
++ This allows normal users to set the +n usermode (hide channels from WHOIS/WHO),
   this is only recommended in special circumstances.
  
 -F:HIS_USERGLINE
@@ -388,9 +406,10 @@ diff -r a5bc27deabfe doc/readme.snircd
   * Type: boolean
   * Default: TRUE
  
-  As per QuakeNet Security, this option sets user mode +i on all connecting clients
+- As per QuakeNet Security, this option sets user mode +i on all connecting clients
 - automatically.
-+ automatically and disallows users to set user mode -i.
++ As per QuakeNet Security, this option sets usermode +i on all connecting clients
++ automatically and disallows users to set usermode -i.
  
 -F:HIS_USERIP
 +HIS_USERIP
