@@ -41,7 +41,7 @@ commonchansumode.patch
 commonchansrestrictedumode.patch
 whobufferfix.patch
 who-accountid.patch
-upstreamiauthfixes.patch
+iauthupstreamfixes.patch
 xquery.patch
 ipv6banfix.patch
 remotemode.patch
