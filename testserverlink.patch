@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent f20279c25d5a74d4b9b86e773f2e17cc70453d51
+# Parent fd1589069ce99cd33a3219ba0fa3bcd195be81da
 
 Handle an incoming test server link.
 
@@ -19,7 +19,7 @@ minimize messing with mr_server function and
 to check things in logical order for a test server link
 which is different from logic in mr_server.
 
-diff -r f20279c25d5a ircd/m_server.c
+diff -r fd1589069ce9 ircd/m_server.c
 --- a/ircd/m_server.c
 +++ b/ircd/m_server.c
 @@ -494,6 +494,79 @@
@@ -86,14 +86,14 @@ diff -r f20279c25d5a ircd/m_server.c
 +
 +  /* tell opers */
 +  sendwallto_group_butone(&me, WALL_WALLOPS, 0,
-+                          "Server test link from %s succes (crule: %s, juped: %s)",
++                          "Server test link from %s success (crule: %s, juped: %s)",
 +                          host,
 +                          (crule != 0) ? "disallowed" : "allowed",
 +                          jupe ? "yes" : "no");
 +
 +  /* tell other end and close connection */
 +  return exit_client_msg(cptr, sptr, &me,
-+                         "Server test link %s succes (crule: %s, juped: %s)",
++                         "Server test link %s success (crule: %s, juped: %s)",
 +                         host,
 +                         (crule != 0) ? "disallowed" : "allowed",
 +                         jupe ? "yes" : "no");
