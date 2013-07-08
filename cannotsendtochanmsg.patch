@@ -1,11 +1,11 @@
 # HG changeset patch
-# Parent 79e9915407a447c1ec6353273152ee9a2a9b1d3e
+# Parent 4a695f1147ba71734f92b9eddb4bc55c76d75bf2
 
 Make numeric reply 404 ERR_CANNOTSENDTOCHAN more verbose and include the mode that blocked the message.
 
-diff -r 79e9915407a4 include/channel.h
---- a/include/channel.h	Mon Jul 08 22:52:14 2013 +0200
-+++ b/include/channel.h	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba include/channel.h
+--- a/include/channel.h
++++ b/include/channel.h
 @@ -392,8 +392,9 @@
  
  extern const char* find_no_nickchange_channel(struct Client* cptr);
@@ -18,9 +18,9 @@ diff -r 79e9915407a4 include/channel.h
  
  extern void remove_user_from_channel(struct Client *sptr, struct Channel *chptr);
  extern void remove_user_from_all_channels(struct Client* cptr);
-diff -r 79e9915407a4 ircd/channel.c
---- a/ircd/channel.c	Mon Jul 08 22:52:14 2013 +0200
-+++ b/ircd/channel.c	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba ircd/channel.c
+--- a/ircd/channel.c
++++ b/ircd/channel.c
 @@ -661,7 +661,65 @@
    return 0;
  }
@@ -69,7 +69,7 @@ diff -r 79e9915407a4 ircd/channel.c
 +      msg = "(+N): Notice not allowed";
 +      break;
 +    case MODE_NOMULTITARGET:
-+      msg = "(+T): Multitarget message not allowed";
++      msg = "(+T): Multi-target message not allowed";
 +      break;
 +    case MODE_MODERATENOREG:
 +      msg = "(+M): You must be authed -- visit ";
@@ -93,7 +93,7 @@ diff -r 79e9915407a4 ircd/channel.c
   * 			joined channel.
   *
 - * @returns True if the client can speak on the channel.
-+ * @returns True if the client can not speak on the channel.
++ * @returns True if the client cannot speak on the channel.
   */
 -int member_can_send_to_channel(struct Membership* member, int reveal)
 +unsigned int member_cannot_send_to_channel(struct Membership* member, int reveal)
@@ -152,7 +152,7 @@ diff -r 79e9915407a4 ircd/channel.c
  }
  
 -/** Check if a client can send to a channel.
-+/** Check if a client can not send to a channel.
++/** Check if a client cannot send to a channel.
   *
 - * Has the added check over member_can_send_to_channel() of servers can
 + * Has the added check over member_cant_send_to_channel() of servers can
@@ -210,9 +210,9 @@ diff -r 79e9915407a4 ircd/channel.c
  }
  
  /** Returns the name of a channel that prevents the user from changing nick.
-diff -r 79e9915407a4 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Mon Jul 08 22:52:14 2013 +0200
-+++ b/ircd/ircd_relay.c	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c
++++ b/ircd/ircd_relay.c
 @@ -88,6 +88,7 @@
  {
    struct Channel* chptr;
@@ -285,9 +285,9 @@ diff -r 79e9915407a4 ircd/ircd_relay.c
      sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
  			     SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
    }
-diff -r 79e9915407a4 ircd/m_part.c
---- a/ircd/m_part.c	Mon Jul 08 22:52:14 2013 +0200
-+++ b/ircd/m_part.c	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba ircd/m_part.c
+--- a/ircd/m_part.c
++++ b/ircd/m_part.c
 @@ -140,7 +140,7 @@
  
      assert(!IsZombie(member)); /* Local users should never zombie */
@@ -297,9 +297,9 @@ diff -r 79e9915407a4 ircd/m_part.c
      {
        flags |= CHFL_BANNED;
        /* Remote clients don't want to see a comment either. */
-diff -r 79e9915407a4 ircd/m_quit.c
---- a/ircd/m_quit.c	Mon Jul 08 22:52:14 2013 +0200
-+++ b/ircd/m_quit.c	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba ircd/m_quit.c
+--- a/ircd/m_quit.c
++++ b/ircd/m_quit.c
 @@ -109,7 +109,7 @@
      struct Membership* chan;
      /* (slug for +u) removed !IsDelayedJoin(chan) as splidge said to */
@@ -309,9 +309,9 @@ diff -r 79e9915407a4 ircd/m_quit.c
             || (chan->channel->mode.mode & MODE_NOQUITPARTS)))
            return exit_client(cptr, sptr, sptr, "Signed off");
      }
-diff -r 79e9915407a4 ircd/m_topic.c
---- a/ircd/m_topic.c	Mon Jul 08 22:52:14 2013 +0200
-+++ b/ircd/m_topic.c	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba ircd/m_topic.c
+--- a/ircd/m_topic.c
++++ b/ircd/m_topic.c
 @@ -98,6 +98,7 @@
  {
    struct Channel *chptr;
@@ -331,9 +331,9 @@ diff -r 79e9915407a4 ircd/m_topic.c
      else
        do_settopic(sptr,cptr,chptr,topic,0);
    }
-diff -r 79e9915407a4 ircd/m_wallchops.c
---- a/ircd/m_wallchops.c	Mon Jul 08 22:52:14 2013 +0200
-+++ b/ircd/m_wallchops.c	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c
++++ b/ircd/m_wallchops.c
 @@ -104,6 +104,7 @@
    struct Channel *chptr;
    struct Membership* member;
@@ -369,9 +369,9 @@ diff -r 79e9915407a4 ircd/m_wallchops.c
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
  			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
  			       "%H :%s", chptr, parv[parc - 1]);
-diff -r 79e9915407a4 ircd/m_wallvoices.c
---- a/ircd/m_wallvoices.c	Mon Jul 08 22:52:14 2013 +0200
-+++ b/ircd/m_wallvoices.c	Mon Jul 08 22:52:49 2013 +0200
+diff -r 4a695f1147ba ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c
++++ b/ircd/m_wallvoices.c
 @@ -103,6 +103,7 @@
    struct Channel *chptr;
    struct Membership* member;
