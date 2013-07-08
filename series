@@ -30,6 +30,7 @@ enforcechanmodebignlocalonly.patch
 delayedjoinfixwallchopsvoicestopic.patch
 banfix.patch
 revealdelayedjoinuserumodextraoper.patch
+cannotsendtochanmsg.patch
 externalmodefix.patch
 badchanlocalkick.patch
 cprivmsgerracconly.patch
