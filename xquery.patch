@@ -2,12 +2,43 @@ Contains the xquery patches from upstream.
 
 ircu subversion IDs:
 
-1925, 1926
+1925, 1926, 1934
 
-diff -r 84777dbfb7fe ChangeLog
---- a/ChangeLog	Sun Jun 30 16:48:35 2013 +0200
-+++ b/ChangeLog	Sun Jun 30 17:08:56 2013 +0200
-@@ -1,3 +1,40 @@
+diff -r 781f63c528f8 ChangeLog
+--- a/ChangeLog	Mon Jul 08 18:43:45 2013 +0200
++++ b/ChangeLog	Mon Jul 08 18:51:40 2013 +0200
+@@ -1,3 +1,71 @@
++2010-01-04  Kevin L. Mitchell  <klmitch@mit.edu>
++
++	* ircd/m_xquery.c (ms_xquery): Resolving my patches with
++	Entrope's--log extension queries sent to us
++
++	* ircd/m_xreply.c (ms_xreply): Resolving my patches with
++	Entrope's--swap order of findNUser() and FindNServer()
++
++	* ircd/Makefile.in (IRCD_SRC): Resolving my patches with
++	Entrope's--swap order of m_xquery.c and m_xreply.c to maintain
++	alphabetic ordering
++
++2010-01-03  Kevin L. Mitchell  <klmitch@mit.edu>
++
++	* ircd/m_xreply.c (ms_xreply): swap order of numeric resolution so
++	we can deal with XR directed to users
++
++	* configure: auto-rebuilt with Autoconf 2.63 (was 2.59)
++
++	* ircd/m_xquery.c: need ircd_reply.h; fix a couple of
++	capitalization errors; log XQUERY directed to "me"
++
++	* ircd/m_xreply.c: need ircd_reply.h and numnicks.h (how'd I miss
++	the latter??); fix a couple of capitalization errors
++
++	* ircd/Makefile.in (IRCD_SRC): it'd be nice if we actually tried
++	to compile the two new commands...
++
++	* ircd/s_auth.c: "serv" is passed to find_match_server(), which
++	does a collapse on the pattern, so it can't be const
++
 +2010-01-03  Michael Poole <mdpoole@troilus.org>
 +
 +	* ircd/Makefile.in (IRCD_SRC): Add m_xquery.c and m_xreply.c to
@@ -48,9 +79,9 @@ diff -r 84777dbfb7fe ChangeLog
  2010-01-01  Michael Poole <mdpoole@troilus.org>
  
  	* ircd/s_auth.c (iauth_do_spawn): Add debug output to diagnose
-diff -r 84777dbfb7fe doc/readme.iauth
---- a/doc/readme.iauth	Sun Jun 30 16:48:35 2013 +0200
-+++ b/doc/readme.iauth	Sun Jun 30 17:08:56 2013 +0200
+diff -r 781f63c528f8 doc/readme.iauth
+--- a/doc/readme.iauth	Mon Jul 08 18:43:45 2013 +0200
++++ b/doc/readme.iauth	Mon Jul 08 18:51:40 2013 +0200
 @@ -114,8 +114,8 @@
    message may be sent during those states (restrictions only make
    sense when Next State is -).  The Next State field indicates which
@@ -120,9 +151,9 @@ diff -r 84777dbfb7fe doc/readme.iauth
 +  sent to <servername>.
 +Compatibility: This is an Undernet extension and ircd does not support
 +  this message.
-diff -r 84777dbfb7fe include/handlers.h
---- a/include/handlers.h	Sun Jun 30 16:48:35 2013 +0200
-+++ b/include/handlers.h	Sun Jun 30 17:08:56 2013 +0200
+diff -r 781f63c528f8 include/handlers.h
+--- a/include/handlers.h	Mon Jul 08 18:43:45 2013 +0200
++++ b/include/handlers.h	Mon Jul 08 18:51:40 2013 +0200
 @@ -184,6 +184,7 @@
  extern int mo_version(struct Client*, struct Client*, int, char*[]);
  extern int mo_wallops(struct Client*, struct Client*, int, char*[]);
@@ -131,7 +162,7 @@ diff -r 84777dbfb7fe include/handlers.h
  extern int mr_error(struct Client*, struct Client*, int, char*[]);
  extern int mr_error(struct Client*, struct Client*, int, char*[]);
  extern int mr_pong(struct Client*, struct Client*, int, char*[]);
-@@ -241,6 +242,8 @@
+@@ -240,6 +241,8 @@
  extern int ms_wallusers(struct Client*, struct Client*, int, char*[]);
  extern int ms_wallvoices(struct Client*, struct Client*, int, char*[]);
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
@@ -140,10 +171,10 @@ diff -r 84777dbfb7fe include/handlers.h
  
  #endif /* INCLUDED_handlers_h */
  
-diff -r 84777dbfb7fe include/msg.h
---- a/include/msg.h	Sun Jun 30 16:48:35 2013 +0200
-+++ b/include/msg.h	Sun Jun 30 17:08:56 2013 +0200
-@@ -371,6 +371,14 @@
+diff -r 781f63c528f8 include/msg.h
+--- a/include/msg.h	Mon Jul 08 18:43:45 2013 +0200
++++ b/include/msg.h	Mon Jul 08 18:51:40 2013 +0200
+@@ -367,6 +367,14 @@
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
  
@@ -158,9 +189,9 @@ diff -r 84777dbfb7fe include/msg.h
  /*
   * Constants
   */
-diff -r 84777dbfb7fe include/s_auth.h
---- a/include/s_auth.h	Sun Jun 30 16:48:35 2013 +0200
-+++ b/include/s_auth.h	Sun Jun 30 17:08:56 2013 +0200
+diff -r 781f63c528f8 include/s_auth.h
+--- a/include/s_auth.h	Mon Jul 08 18:43:45 2013 +0200
++++ b/include/s_auth.h	Mon Jul 08 18:51:40 2013 +0200
 @@ -45,6 +45,7 @@
  
  extern int auth_spawn(int argc, char *argv[]);
@@ -169,22 +200,22 @@ diff -r 84777dbfb7fe include/s_auth.h
  extern void auth_mark_closing(void);
  extern void auth_close_unused(void);
  extern void report_iauth_conf(struct Client *cptr, const struct StatDesc *sd, char *param);
-diff -r 84777dbfb7fe ircd/Makefile.in
---- a/ircd/Makefile.in	Sun Jun 30 16:48:35 2013 +0200
-+++ b/ircd/Makefile.in	Sun Jun 30 17:08:56 2013 +0200
-@@ -189,6 +189,8 @@
+diff -r 781f63c528f8 ircd/Makefile.in
+--- a/ircd/Makefile.in	Mon Jul 08 18:43:45 2013 +0200
++++ b/ircd/Makefile.in	Mon Jul 08 18:51:40 2013 +0200
+@@ -188,6 +188,8 @@
  	m_who.c \
  	m_whois.c \
  	m_whowas.c \
-+	m_xreply.c \
 +	m_xquery.c \
++	m_xreply.c \
  	match.c \
  	memdebug.c \
  	motd.c \
-diff -r 84777dbfb7fe ircd/m_xquery.c
+diff -r 781f63c528f8 ircd/m_xquery.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_xquery.c	Sun Jun 30 17:08:56 2013 +0200
-@@ -0,0 +1,148 @@
++++ b/ircd/m_xquery.c	Mon Jul 08 18:51:40 2013 +0200
+@@ -0,0 +1,152 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_xquery.c
 + * Copyright (C) 2010 Kevin L. Mitchell <klmitch@mit.edu>
@@ -326,16 +357,20 @@ diff -r 84777dbfb7fe ircd/m_xquery.c
 +    return send_reply(sptr, SND_EXPLICIT | ERR_NOSUCHSERVER,
 +		      "* :Server has disconnected");
 +
-+  /* If it's to us, do nothing; otherwise, forward the query */
++  /* Forward the query to its destination */
 +  if (!IsMe(acptr))
 +    sendcmdto_one(sptr, CMD_XQUERY, acptr, "%C %s :%s", acptr, parv[2],
 +		  parv[3]);
++  else /* if it's to us, log it */
++    log_write(LS_SYSTEM, L_NOTICE, 0, "Received extension query from "
++	      "%#C to %#C routing %s; message: %s", sptr, acptr,
++	      parv[2], parv[3]);
 +
 +  return 0;
 +}
-diff -r 84777dbfb7fe ircd/m_xreply.c
+diff -r 781f63c528f8 ircd/m_xreply.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_xreply.c	Sun Jun 30 17:08:56 2013 +0200
++++ b/ircd/m_xreply.c	Mon Jul 08 18:51:40 2013 +0200
 @@ -0,0 +1,141 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_xreply.c
@@ -453,7 +488,7 @@ diff -r 84777dbfb7fe ircd/m_xreply.c
 +  reply = parv[3];
 +
 +  /* Look up the target */
-+  if (!(acptr = FindNServer(parv[1])) && !(acptr = findNUser(parv[1])))
++  if (!(acptr = findNUser(parv[1])) && !(acptr = FindNServer(parv[1])))
 +    return send_reply(sptr, SND_EXPLICIT | ERR_NOSUCHSERVER,
 +		      "* :Server has disconnected");
 +
@@ -478,10 +513,10 @@ diff -r 84777dbfb7fe ircd/m_xreply.c
 +
 +  return 0;
 +}
-diff -r 84777dbfb7fe ircd/parse.c
---- a/ircd/parse.c	Sun Jun 30 16:48:35 2013 +0200
-+++ b/ircd/parse.c	Sun Jun 30 17:08:56 2013 +0200
-@@ -631,6 +631,20 @@
+diff -r 781f63c528f8 ircd/parse.c
+--- a/ircd/parse.c	Mon Jul 08 18:43:45 2013 +0200
++++ b/ircd/parse.c	Mon Jul 08 18:51:40 2013 +0200
+@@ -624,6 +624,20 @@
      /* UNREG, CLIENT, SERVER, OPER, SERVICE */
      { m_unregistered, m_sethost, ms_sethost, m_sethost, m_ignore }
    },
@@ -502,9 +537,9 @@ diff -r 84777dbfb7fe ircd/parse.c
  #if WE_HAVE_A_REAL_CAPABILITY_NOW
    {
      MSG_CAP,
-diff -r 84777dbfb7fe ircd/s_auth.c
---- a/ircd/s_auth.c	Sun Jun 30 16:48:35 2013 +0200
-+++ b/ircd/s_auth.c	Sun Jun 30 17:08:56 2013 +0200
+diff -r 781f63c528f8 ircd/s_auth.c
+--- a/ircd/s_auth.c	Mon Jul 08 18:43:45 2013 +0200
++++ b/ircd/s_auth.c	Mon Jul 08 18:51:40 2013 +0200
 @@ -52,6 +52,7 @@
  #include "list.h"
  #include "msg.h"	/* for MAXPARA */
@@ -531,7 +566,7 @@ diff -r 84777dbfb7fe ircd/s_auth.c
  /** Mark that a user has started capabilities negotiation.
   * This blocks authorization until auth_cap_done() is called.
   * @param[in] auth Authorization request for client.
-@@ -1982,6 +1994,55 @@
+@@ -1983,6 +1995,55 @@
    return 0;
  }
  
@@ -545,7 +580,7 @@ diff -r 84777dbfb7fe ircd/s_auth.c
 +static int iauth_cmd_xquery(struct IAuth *iauth, struct Client *cli,
 +			    int parc, char **params)
 +{
-+  const char *serv;
++  char *serv;
 +  const char *routing;
 +  const char *query;
 +  struct Client *acptr;
@@ -587,7 +622,7 @@ diff -r 84777dbfb7fe ircd/s_auth.c
  /** Parse a \a message from \a iauth.
   * @param[in] iauth Active IAuth session.
   * @param[in] message Message to be parsed.
-@@ -2006,6 +2067,7 @@
+@@ -2007,6 +2068,7 @@
    case 'A': handler = iauth_cmd_config; has_cli = 0; break;
    case 's': handler = iauth_cmd_newstats; has_cli = 0; break;
    case 'S': handler = iauth_cmd_stats; has_cli = 0; break;
