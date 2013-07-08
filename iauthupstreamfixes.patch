@@ -4,10 +4,30 @@ ircu subversion IDs:
 
 1797, 1843, 1911, 1914, 1924
 
-diff -r a6396c9523de ChangeLog
---- a/ChangeLog	Sat Jun 29 19:31:18 2013 +0200
-+++ b/ChangeLog	Sun Jun 30 16:48:35 2013 +0200
-@@ -1,3 +1,46 @@
+ircu git IDs:
+
+29a8ddb8ef24a23c7aa8d31b90474a6ec536e4cc, 8a0fce5ce44018405ec3aab7115f7b7028c90329, 3cfdd224928b767bf33e7de2507b6cad3bcfe3ba
+
+diff -r 0bdd5b4b388b ChangeLog
+--- a/ChangeLog	Mon Jul 08 19:47:15 2013 +0200
++++ b/ChangeLog	Mon Jul 08 19:49:02 2013 +0200
+@@ -1,3 +1,62 @@
++2011-01-19  Michael Poole <mdpoole@troilus.org>
++
++	* doc/readme.iauth: Document the new 'd' IAuth command.
++
++	* ircd/s_auth.c (AuthRequestFlag): Add "soft done" flag.
++	(auth_ping_timeout): Do not impose Authorization Timeout on
++	clients with the "soft done" flag set.
++	(iauth_cmd_soft_done): New IAuth command handler.
++	(iauth_parse): Call it.
++
++2011-01-19  Michael Poole <mdpoole@troilus.org>
++
++	* ircd/s_auth.c (start_auth): Call start_dns_query() and
++	start_auth_query() after start_iauth_query() rather than
++	before.
++
 +2010-01-01  Michael Poole <mdpoole@troilus.org>
 +
 +	* ircd/s_auth.c (iauth_do_spawn): Add debug output to diagnose
@@ -54,10 +74,40 @@ diff -r a6396c9523de ChangeLog
  2007-03-09  Michael Poole <mdpoole@troilus.org>
  
  	* include/patchlevel.h (PATCHLEVEL): Bump for u2.10.12.10 release.
-diff -r a6396c9523de ircd/s_auth.c
---- a/ircd/s_auth.c	Sat Jun 29 19:31:18 2013 +0200
-+++ b/ircd/s_auth.c	Sun Jun 30 16:48:35 2013 +0200
-@@ -435,6 +435,26 @@
+diff -r 0bdd5b4b388b doc/readme.iauth
+--- a/doc/readme.iauth	Mon Jul 08 19:47:15 2013 +0200
++++ b/doc/readme.iauth	Mon Jul 08 19:49:02 2013 +0200
+@@ -408,6 +408,18 @@
+ Comments: Indicates that the specified client should be disconnected
+   for the reason given.  Operators should be notified.
+ 
++d - "Soft" Done Checking
++Syntax: d <id> <remoteip> <remoteport>
++Example: d 5 192.168.1.10 23367
++States: REGISTER, HURRY
++Next State: -
++Comments: Indicates that the iauth instance has no objection to letting
++  the specified client onto the network, but that some further work is
++  in process.  In particular, an account stamp and/or connection class
++  might be available later.
++Compatibility: This is an Undernet extension and ircd does not support
++  this message.
++
+ D - Done Checking
+ Syntax: D <id> <remoteip> <remoteport> [class]
+ Example: D 5 192.168.1.10 23367
+diff -r 0bdd5b4b388b ircd/s_auth.c
+--- a/ircd/s_auth.c	Mon Jul 08 19:47:15 2013 +0200
++++ b/ircd/s_auth.c	Mon Jul 08 19:49:02 2013 +0200
+@@ -83,6 +83,7 @@
+     AR_IAUTH_HURRY,     /**< we told iauth to hurry up */
+     AR_IAUTH_USERNAME,  /**< iauth sent a username (preferred or forced) */
+     AR_IAUTH_FUSERNAME, /**< iauth sent a forced username */
++    AR_IAUTH_SOFT_DONE, /**< iauth has no objection to client */
+     AR_PASSWORD_CHECKED, /**< client password already checked */
+     AR_NUM_FLAGS
+ };
+@@ -435,6 +436,26 @@
    return 1; /* it's a valid hostname */
  }
  
@@ -84,7 +134,7 @@ diff -r a6396c9523de ircd/s_auth.c
  /** Assign a client to a connection class.
   * @param[in] cptr Client to assign to a class.
   * @return Zero if client is kept, CPTR_KILLED if rejected.
-@@ -447,6 +467,10 @@
+@@ -447,6 +468,10 @@
    ircd_strncpy(cli_user(cptr)->host, cli_sockhost(cptr), HOSTLEN);
    ircd_strncpy(cli_user(cptr)->realhost, cli_sockhost(cptr), HOSTLEN);
  
@@ -95,12 +145,14 @@ diff -r a6396c9523de ircd/s_auth.c
    switch (conf_check_client(cptr))
    {
    case ACR_OK:
-@@ -740,11 +764,11 @@
+@@ -740,11 +765,12 @@
  
    /* Check for iauth timeout. */
    if (FlagHas(&auth->flags, AR_IAUTH_PENDING)) {
 -    sendto_iauth(cptr, "T");
-     if (IAuthHas(iauth, IAUTH_REQUIRED)) {
+-    if (IAuthHas(iauth, IAUTH_REQUIRED)) {
++    if (IAuthHas(iauth, IAUTH_REQUIRED)
++        && !FlagHas(&auth->flags, AR_IAUTH_SOFT_DONE)) {
        sendheader(cptr, REPORT_FAIL_IAUTH);
        return exit_client_msg(cptr, cptr, &me, "Authorization Timeout");
      }
@@ -108,7 +160,33 @@ diff -r a6396c9523de ircd/s_auth.c
      FlagClr(&auth->flags, AR_IAUTH_PENDING);
      return check_auth_finished(auth);
    }
-@@ -1138,13 +1162,17 @@
+@@ -969,12 +995,6 @@
+   }
+   auth->port = remote.port;
+ 
+-  /* Try to start DNS lookup. */
+-  start_dns_query(auth);
+-
+-  /* Try to start ident lookup. */
+-  start_auth_query(auth);
+-
+   /* Set required client inputs for users. */
+   if (IsUserPort(client)) {
+     cli_user(client) = make_user(client);
+@@ -986,6 +1006,12 @@
+     start_iauth_query(auth);
+   }
+ 
++  /* Try to start DNS lookup. */
++  start_dns_query(auth);
++
++  /* Try to start ident lookup. */
++  start_auth_query(auth);
++
+   /* Add client to GlobalClientList. */
+   add_client_to_list(client);
+ 
+@@ -1138,13 +1164,17 @@
  
    /* Attempt to allocate a pair of sockets. */
    res = os_socketpair(s_io);
@@ -128,7 +206,7 @@ diff -r a6396c9523de ircd/s_auth.c
      close(s_io[1]);
      close(s_io[0]);
      return res;
-@@ -1155,6 +1183,7 @@
+@@ -1155,6 +1185,7 @@
                     SS_CONNECTED, SOCK_EVENT_READABLE, s_io[0]);
    if (!res) {
      res = errno;
@@ -136,7 +214,7 @@ diff -r a6396c9523de ircd/s_auth.c
      close(s_io[1]);
      close(s_io[0]);
      return res;
-@@ -1164,6 +1193,7 @@
+@@ -1164,6 +1195,7 @@
    res = os_socketpair(s_err);
    if (res) {
      res = errno;
@@ -144,7 +222,7 @@ diff -r a6396c9523de ircd/s_auth.c
      socket_del(i_socket(iauth));
      close(s_io[1]);
      close(s_io[0]);
-@@ -1174,6 +1204,7 @@
+@@ -1174,6 +1206,7 @@
    res = os_set_nonblocking(s_err[0]);
    if (!res) {
      res = errno;
@@ -152,7 +230,7 @@ diff -r a6396c9523de ircd/s_auth.c
      close(s_err[1]);
      close(s_err[0]);
      socket_del(i_socket(iauth));
-@@ -1187,6 +1218,7 @@
+@@ -1187,6 +1220,7 @@
                     SS_CONNECTED, SOCK_EVENT_READABLE, s_err[0]);
    if (!res) {
      res = errno;
@@ -160,7 +238,7 @@ diff -r a6396c9523de ircd/s_auth.c
      close(s_err[1]);
      close(s_err[0]);
      socket_del(i_socket(iauth));
-@@ -1200,6 +1232,7 @@
+@@ -1200,6 +1234,7 @@
    if (cpid < 0) {
      /* Error forking the child, still in parent. */
      res = errno;
@@ -168,7 +246,7 @@ diff -r a6396c9523de ircd/s_auth.c
      socket_del(i_stderr(iauth));
      close(s_err[1]);
      close(s_err[0]);
-@@ -1259,17 +1292,15 @@
+@@ -1259,17 +1294,15 @@
          same = 0;
      }
      /* Check that we have no more pre-existing arguments. */
@@ -190,7 +268,7 @@ diff -r a6396c9523de ircd/s_auth.c
    }
  
    /* Need to initialize a new connection. */
-@@ -1299,18 +1330,22 @@
+@@ -1299,18 +1332,22 @@
   */
  static void iauth_disconnect(struct IAuth *iauth)
  {
@@ -220,7 +298,7 @@ diff -r a6396c9523de ircd/s_auth.c
  }
  
  /** Close all %IAuth connections marked as closing. */
-@@ -1706,6 +1741,14 @@
+@@ -1706,6 +1743,14 @@
    }
    /* Set hostname from params. */
    ircd_strncpy(cli_sockhost(cli), params[0], HOSTLEN);
@@ -235,7 +313,7 @@ diff -r a6396c9523de ircd/s_auth.c
    return 1;
  }
  
-@@ -1767,7 +1810,7 @@
+@@ -1767,7 +1812,7 @@
  
    /* Make sure the configuration class is valid. */
    class = find_class(class_name);
@@ -244,7 +322,7 @@ diff -r a6396c9523de ircd/s_auth.c
      return NULL;
  
    /* Look for an existing ConfItem for the class. */
-@@ -1784,6 +1827,13 @@
+@@ -1784,6 +1829,13 @@
                             ConClass(class));
        return NULL;
      }
@@ -258,7 +336,28 @@ diff -r a6396c9523de ircd/s_auth.c
      aconf->conn_class = class;
      aconf->next = aconf_list;
      aconf_list = aconf;
-@@ -1797,7 +1847,7 @@
+@@ -1792,12 +1844,28 @@
+   return aconf;
+ }
+ 
++/** Tentatively accept a client in IAuth.
++ * @param[in] iauth Active IAuth session.
++ * @param[in] cli Client referenced by command.
++ * @param[in] parc Number of parameters.
++ * @param[in] params Optional class name for client.
++ * @return Negative (CPTR_KILLED) if the connection is refused, one otherwise.
++ */
++static int iauth_cmd_soft_done(struct IAuth *iauth, struct Client *cli,
++			       int parc, char **params)
++{
++  /* Clear iauth pending flag. */
++  assert(cli_auth(cli) != NULL);
++  FlagSet(&cli_auth(cli)->flags, AR_IAUTH_SOFT_DONE);
++  return 1;
++}
++
+ /** Accept a client in IAuth.
+  * @param[in] iauth Active IAuth session.
   * @param[in] cli Client referenced by command.
   * @param[in] parc Number of parameters.
   * @param[in] params Optional class name for client.
@@ -267,7 +366,7 @@ diff -r a6396c9523de ircd/s_auth.c
   */
  static int iauth_cmd_done_client(struct IAuth *iauth, struct Client *cli,
  				 int parc, char **params)
-@@ -1813,9 +1863,24 @@
+@@ -1813,9 +1881,24 @@
      struct ConfItem *aconf;
  
      aconf = auth_find_class_conf(params[0]);
@@ -295,7 +394,7 @@ diff -r a6396c9523de ircd/s_auth.c
        sendto_opmask_butone_ratelimited(NULL, SNO_AUTH, &warn_time,
                                         "iauth tried to use undefined class [%s]",
                                         params[0]);
-@@ -1829,7 +1894,8 @@
+@@ -1829,7 +1912,8 @@
   * @param[in] cli Client referenced by command.
   * @param[in] parc Number of parameters.
   * @param[in] params Account name and optional class name for client.
@@ -305,7 +404,15 @@ diff -r a6396c9523de ircd/s_auth.c
   */
  static int iauth_cmd_done_account(struct IAuth *iauth, struct Client *cli,
  				  int parc, char **params)
-@@ -2014,7 +2080,7 @@
+@@ -1948,6 +2032,7 @@
+   case 'I': handler = iauth_cmd_ip_address; has_cli = 1; break;
+   case 'M': handler = iauth_cmd_usermode; has_cli = 1; break;
+   case 'C': handler = iauth_cmd_challenge; has_cli = 1; break;
++  case 'd': handler = iauth_cmd_soft_done; has_cli = 1; break;
+   case 'D': handler = iauth_cmd_done_client; has_cli = 1; break;
+   case 'R': handler = iauth_cmd_done_account; has_cli = 1; break;
+   case 'k': /* The 'k' command indicates the user should be booted
+@@ -2015,7 +2100,7 @@
  	/* Report mismatch to iauth. */
  	sendto_iauth(cli, "E Mismatch :[%s] != [%s]", params[1],
  		     ircd_ntoa(&cli_ip(cli)));
@@ -314,7 +421,7 @@ diff -r a6396c9523de ircd/s_auth.c
  	/* Handler indicated a possible state change. */
  	check_auth_finished(auth);
      }
-@@ -2150,14 +2216,17 @@
+@@ -2151,14 +2236,17 @@
    assert(0 != iauth);
  
    switch (ev_type(ev)) {
@@ -334,9 +441,9 @@ diff -r a6396c9523de ircd/s_auth.c
      break;
    default:
      assert(0 && "Unrecognized event type");
-diff -r a6396c9523de ircd/s_user.c
---- a/ircd/s_user.c	Sat Jun 29 19:31:18 2013 +0200
-+++ b/ircd/s_user.c	Sun Jun 30 16:48:35 2013 +0200
+diff -r 0bdd5b4b388b ircd/s_user.c
+--- a/ircd/s_user.c	Mon Jul 08 19:47:15 2013 +0200
++++ b/ircd/s_user.c	Mon Jul 08 19:49:02 2013 +0200
 @@ -466,6 +466,12 @@
      ++UserStats.inv_clients;
    if (IsOper(sptr))
@@ -350,9 +457,9 @@ diff -r a6396c9523de ircd/s_user.c
  
    tmpstr = umode_str(sptr, 0);
    int ipv6andopername[] = {FLAG_IPV6,FLAG_OPERNAME};
-diff -r a6396c9523de tools/iauth-test
---- a/tools/iauth-test	Sat Jun 29 19:31:18 2013 +0200
-+++ b/tools/iauth-test	Sun Jun 30 16:48:35 2013 +0200
+diff -r 0bdd5b4b388b tools/iauth-test
+--- a/tools/iauth-test	Mon Jul 08 19:47:15 2013 +0200
++++ b/tools/iauth-test	Mon Jul 08 19:49:02 2013 +0200
 @@ -26,6 +26,8 @@
  # SIGRTMIN + 2 -> Set policy options ('O').
  # SIGRTMIN + 3 -> Simulate config change ('a', 'A').
