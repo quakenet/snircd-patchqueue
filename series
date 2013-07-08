@@ -2,6 +2,7 @@ infofix.patch
 hginfo.patch
 readme.snircd.patch
 delete_ircd_auth_files.patch
+testserverlink.patch
 opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
