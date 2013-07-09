@@ -3,7 +3,6 @@ hginfo.patch
 compilewarnings.patch
 readme.snircd.patch
 delete_ircd_auth_files.patch
-testserverlink.patch
 opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
@@ -46,7 +45,9 @@ iauthupstreamfixes.patch
 xquery.patch
 ipv6banfix.patch
 remotemode.patch
-cloak.patch
 webirc.patch
 iauthspoof.patch
 iauthcrashfix.patch
+testserverlink.patch
+testserverlink2.patch
+cloak.patch
