@@ -1,3 +1,7 @@
+# HG changeset patch
+# Parent b098094b60b6b5fe5a0f26b1e68e2fa9ab6a4ccc
+# Date 1373382603 -7200
+
 Contains some upstream IAuth fixes:
 
 ircu subversion IDs:
@@ -6,12 +10,20 @@ ircu subversion IDs:
 
 ircu git IDs:
 
-29a8ddb8ef24a23c7aa8d31b90474a6ec536e4cc, 8a0fce5ce44018405ec3aab7115f7b7028c90329, 3cfdd224928b767bf33e7de2507b6cad3bcfe3ba
+29a8ddb8ef24a23c7aa8d31b90474a6ec536e4cc
+8a0fce5ce44018405ec3aab7115f7b7028c90329
+3cfdd224928b767bf33e7de2507b6cad3bcfe3ba
+b6f0b0f286a14781eb07d8aa08c9e500eefb8082
 
-diff -r 0bdd5b4b388b ChangeLog
---- a/ChangeLog	Mon Jul 08 19:47:15 2013 +0200
-+++ b/ChangeLog	Mon Jul 08 19:49:02 2013 +0200
-@@ -1,3 +1,62 @@
+diff -r b098094b60b6 ChangeLog
+--- a/ChangeLog	Tue Jul 09 16:41:38 2013 +0200
++++ b/ChangeLog	Tue Jul 09 16:42:17 2013 +0200
+@@ -1,3 +1,67 @@
++2011-05-15  Michael Poole  <mdpoole@troilus.org>
++
++	* ircd/s_auth.c (iauth_cmd_done_account): Do not copy the
++	account's creation timestamp into the account name.
++
 +2011-01-19  Michael Poole <mdpoole@troilus.org>
 +
 +	* doc/readme.iauth: Document the new 'd' IAuth command.
@@ -74,9 +86,9 @@ diff -r 0bdd5b4b388b ChangeLog
  2007-03-09  Michael Poole <mdpoole@troilus.org>
  
  	* include/patchlevel.h (PATCHLEVEL): Bump for u2.10.12.10 release.
-diff -r 0bdd5b4b388b doc/readme.iauth
---- a/doc/readme.iauth	Mon Jul 08 19:47:15 2013 +0200
-+++ b/doc/readme.iauth	Mon Jul 08 19:49:02 2013 +0200
+diff -r b098094b60b6 doc/readme.iauth
+--- a/doc/readme.iauth	Tue Jul 09 16:41:38 2013 +0200
++++ b/doc/readme.iauth	Tue Jul 09 16:42:17 2013 +0200
 @@ -408,6 +408,18 @@
  Comments: Indicates that the specified client should be disconnected
    for the reason given.  Operators should be notified.
@@ -96,9 +108,9 @@ diff -r 0bdd5b4b388b doc/readme.iauth
  D - Done Checking
  Syntax: D <id> <remoteip> <remoteport> [class]
  Example: D 5 192.168.1.10 23367
-diff -r 0bdd5b4b388b ircd/s_auth.c
---- a/ircd/s_auth.c	Mon Jul 08 19:47:15 2013 +0200
-+++ b/ircd/s_auth.c	Mon Jul 08 19:49:02 2013 +0200
+diff -r b098094b60b6 ircd/s_auth.c
+--- a/ircd/s_auth.c	Tue Jul 09 16:41:38 2013 +0200
++++ b/ircd/s_auth.c	Tue Jul 09 16:42:17 2013 +0200
 @@ -83,6 +83,7 @@
      AR_IAUTH_HURRY,     /**< we told iauth to hurry up */
      AR_IAUTH_USERNAME,  /**< iauth sent a username (preferred or forced) */
@@ -404,7 +416,15 @@ diff -r 0bdd5b4b388b ircd/s_auth.c
   */
  static int iauth_cmd_done_account(struct IAuth *iauth, struct Client *cli,
  				  int parc, char **params)
-@@ -1948,6 +2032,7 @@
+@@ -1854,6 +1938,7 @@
+     cli_user(cli)->acc_create = strtoul(params[0] + len + 1, &end, 10);
+     if (*end == ':')
+       cli_user(cli)->acc_id = strtoul(end + 1, NULL, 10);
++    params[0][len] = '\0';
+   }
+ 
+   /* Copy account name to User structure. */
+@@ -1947,6 +2032,7 @@
    case 'I': handler = iauth_cmd_ip_address; has_cli = 1; break;
    case 'M': handler = iauth_cmd_usermode; has_cli = 1; break;
    case 'C': handler = iauth_cmd_challenge; has_cli = 1; break;
@@ -412,7 +432,7 @@ diff -r 0bdd5b4b388b ircd/s_auth.c
    case 'D': handler = iauth_cmd_done_client; has_cli = 1; break;
    case 'R': handler = iauth_cmd_done_account; has_cli = 1; break;
    case 'k': /* The 'k' command indicates the user should be booted
-@@ -2015,7 +2100,7 @@
+@@ -2014,7 +2100,7 @@
  	/* Report mismatch to iauth. */
  	sendto_iauth(cli, "E Mismatch :[%s] != [%s]", params[1],
  		     ircd_ntoa(&cli_ip(cli)));
@@ -421,7 +441,7 @@ diff -r 0bdd5b4b388b ircd/s_auth.c
  	/* Handler indicated a possible state change. */
  	check_auth_finished(auth);
      }
-@@ -2151,14 +2236,17 @@
+@@ -2150,14 +2236,17 @@
    assert(0 != iauth);
  
    switch (ev_type(ev)) {
@@ -441,25 +461,9 @@ diff -r 0bdd5b4b388b ircd/s_auth.c
      break;
    default:
      assert(0 && "Unrecognized event type");
-diff -r 0bdd5b4b388b ircd/s_user.c
---- a/ircd/s_user.c	Mon Jul 08 19:47:15 2013 +0200
-+++ b/ircd/s_user.c	Mon Jul 08 19:49:02 2013 +0200
-@@ -466,6 +466,12 @@
-     ++UserStats.inv_clients;
-   if (IsOper(sptr))
-     ++UserStats.opers;
-+  /* If they get both +x and an account during registration, hide
-+   * their hostmask here.  Calling hide_hostmask() from IAuth's
-+   * account assignment causes a numeric reply during registration.
-+   */
-+  if (HasHiddenHost(sptr))
-+    hide_hostmask(sptr, FLAG_HIDDENHOST);
- 
-   tmpstr = umode_str(sptr, 0);
-   int ipv6andopername[] = {FLAG_IPV6,FLAG_OPERNAME};
-diff -r 0bdd5b4b388b tools/iauth-test
---- a/tools/iauth-test	Mon Jul 08 19:47:15 2013 +0200
-+++ b/tools/iauth-test	Mon Jul 08 19:49:02 2013 +0200
+diff -r b098094b60b6 tools/iauth-test
+--- a/tools/iauth-test	Tue Jul 09 16:41:38 2013 +0200
++++ b/tools/iauth-test	Tue Jul 09 16:42:17 2013 +0200
 @@ -26,6 +26,8 @@
  # SIGRTMIN + 2 -> Set policy options ('O').
  # SIGRTMIN + 3 -> Simulate config change ('a', 'A').

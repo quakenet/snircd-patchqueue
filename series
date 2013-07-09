@@ -7,7 +7,6 @@ opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
 whohisipfix.patch
-iauthaccountfix.patch
 userhostipfix.patch
 broadcastmatchfix.patch
 statscshowfullinfo.patch
