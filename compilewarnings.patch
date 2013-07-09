@@ -1,0 +1,258 @@
+# HG changeset patch
+# Parent bb5955d8f128cc9758676f2322d58ea7db9bac22
+
+Fix compile warnings, 2 snircd, rest ircu.
+
+channel.c: In function ‘SetAutoChanModes’:
+channel.c:1344:17: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]
+was missing unsigned
+
+crule.c: In function ‘crule_parsearglist’:
+crule.c:740:15: warning: the address of ‘currarg’ will always evaluate as ‘true’ [-Waddress]
+use same check as elsewhere in that function
+
+ircd_res.c: In function ‘proc_answer’:
+ircd_res.c:636:7: warning: variable ‘query_class’ set but not used [-Wunused-but-set-variable]
+variable query_class gone in ircu
+
+m_nick.c: In function ‘m_nick’:
+m_nick.c:203:19: warning: the address of ‘nick’ will always evaluate as ‘true’ [-Waddress]
+m_nick.c:150:15: warning: variable ‘client_name’ set but not used [-Wunused-but-set-variable]
+m_nick.c: In function ‘ms_nick’:
+m_nick.c:357:18: warning: the address of ‘nick’ will always evaluate as ‘true’ [-Waddress]
+variable client_name gone in ircu
+fix by calling SeekClient instead of FindClient, as nick is already checked to be non NULL
+
+m_pass.c: In function ‘mr_pass’:
+m_pass.c:119:8: warning: the address of ‘password’ will always evaluate as ‘true’ [-Waddress]
+
+m_ping.c: In function ‘mo_ping’:
+m_ping.c:181:23: warning: variable ‘origin’ set but not used [-Wunused-but-set-variable]
+fixed in ircu
+
+m_whois.c: In function ‘do_wilds’:
+m_whois.c:246:15: warning: variable ‘name’ set but not used [-Wunused-but-set-variable]
+variable name gone in ircu
+
+parse.c: In function ‘parse_client’:
+parse.c:837:7: warning: variable ‘noprefix’ set but not used [-Wunused-but-set-variable]
+variable noprefix gone in ircu
+
+s_conf.c: In function ‘killcomment’:
+s_conf.c:99:14: warning: variable ‘tm’ set but not used [-Wunused-but-set-variable]
+variable tm gone in ircu
+
+s_stats.c: In function ‘stats_configured_links’:
+s_stats.c:93:16: warning: variable ‘pass’ set but not used [-Wunused-but-set-variable]
+variable pass gone in ircu
+
+./ircd_parser.y: In function ‘yyparse’:
+./ircd_parser.y:1199:9: warning: pointer targets in passing argument 3 of ‘ipmask_parse’ differ in signedness [-Wpointer-sign]
+../include/ircd_string.h:34:12: note: expected ‘unsigned char *’ but argument is of type ‘char *’
+was missing unsigned and not initialized at 0
+
+
+diff -r bb5955d8f128 ircd/channel.c
+--- a/ircd/channel.c
++++ b/ircd/channel.c
+@@ -1310,7 +1310,7 @@
+ 
+ int SetAutoChanModes(struct Channel *chptr)
+ {
+-  static int chan_flags[] = {
++  static unsigned int chan_flags[] = {
+     MODE_PRIVATE,       'p',
+     MODE_SECRET,        's',
+     MODE_MODERATED,     'm',
+diff -r bb5955d8f128 ircd/crule.c
+--- a/ircd/crule.c
++++ b/ircd/crule.c
+@@ -737,7 +737,7 @@
+ #if !defined(CR_DEBUG) && !defined(CR_CHKCONF)
+         collapse(currarg);
+ #endif
+-        if (!BadPtr(currarg))
++        if (currarg[0] != '\0')
+         {
+           DupString(argelemp, currarg);
+           argrootp->arg[argrootp->numargs++] = (void *)argelemp;
+diff -r bb5955d8f128 ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y
++++ b/ircd/ircd_parser.y
+@@ -1183,7 +1183,7 @@
+ spoofitems '}' ';'
+ {
+   struct irc_in_addr ip;
+-  char bits;
++  unsigned char bits = 0;
+   int valid = 0;
+ 
+   if (spoof->username == NULL && spoof->realhost) {
+diff -r bb5955d8f128 ircd/ircd_res.c
+--- a/ircd/ircd_res.c
++++ b/ircd/ircd_res.c
+@@ -633,7 +633,6 @@
+ {
+   char hostbuf[HOSTLEN + 100]; /* working buffer */
+   unsigned char *current;      /* current position in buf */
+-  int query_class;             /* answer class */
+   int type;                    /* answer type */
+   int n;                       /* temp count */
+   int rd_length;
+@@ -687,9 +686,7 @@
+     type = irc_ns_get16(current);
+     current += TYPE_SIZE;
+ 
+-    query_class = irc_ns_get16(current);
+     current += CLASS_SIZE;
+-
+     current += TTL_SIZE;
+ 
+     rd_length = irc_ns_get16(current);
+diff -r bb5955d8f128 ircd/m_nick.c
+--- a/ircd/m_nick.c
++++ b/ircd/m_nick.c
+@@ -147,7 +147,6 @@
+   char           nick[NICKLEN + 2];
+   char*          arg;
+   char*          s;
+-  const char*    client_name;
+ 
+   assert(0 != cptr);
+   assert(cptr == sptr);
+@@ -155,11 +154,6 @@
+   if (IsServerPort(cptr))
+     return exit_client(cptr, cptr, &me, "Use a different port");
+ 
+-  /*
+-   * parv[0] will be empty for clients connecting for the first time
+-   */
+-  client_name = (*(cli_name(sptr))) ? cli_name(sptr) : "*";
+-
+   if (parc < 2) {
+     send_reply(sptr, ERR_NONICKNAMEGIVEN);
+     return 0;
+@@ -200,7 +194,10 @@
+     return 0;                        /* NICK message ignored */
+   }
+ 
+-  if (!(acptr = FindClient(nick))) {
++  /* do_nick_name already checked nick not NULL
++   *   so SeekClient instead of FindClient
++   */
++  if (!(acptr = SeekClient(nick))) {
+     /*
+      * No collisions, all clear...
+      */
+@@ -354,7 +351,10 @@
+     return 0;
+   }
+   /* Check against nick name collisions. */
+-  if ((acptr = FindClient(nick)) == NULL)
++  /* do_nick_name already checked nick not NULL
++   *   so SeekClient instead of FindClient
++   */
++  if ((acptr = SeekClient(nick)) == NULL)
+     /* No collisions, all clear... */
+     return set_nick_name(cptr, sptr, nick, parc, parv);
+ 
+diff -r bb5955d8f128 ircd/m_pass.c
+--- a/ircd/m_pass.c
++++ b/ircd/m_pass.c
+@@ -116,7 +116,7 @@
+     --len;
+   password[len] = '\0';
+ 
+-  if (EmptyString(password))
++  if (!password[0])
+     return need_more_params(cptr, "PASS");
+ 
+   ircd_strncpy(cli_passwd(cptr), password, PASSWDLEN);
+diff -r bb5955d8f128 ircd/m_ping.c
+--- a/ircd/m_ping.c
++++ b/ircd/m_ping.c
+@@ -199,7 +199,6 @@
+      * NOTE: clients rely on this to return the origin string.
+      * it's pointless to send more than 64 bytes back tho'
+      */
+-    char* origin = parv[1];
+     
+     /* Is this supposed to be here? */
+     acptr = FindClient(origin);
+diff -r bb5955d8f128 ircd/m_whois.c
+--- a/ircd/m_whois.c
++++ b/ircd/m_whois.c
+@@ -243,7 +243,6 @@
+ {
+   struct Client *acptr; /* Current client we're considering */
+   struct User *user; 	/* the user portion of the client */
+-  const char *name; 	/* the name of this client */
+   struct Membership* chan; 
+   int invis; 		/* does +i apply? */
+   int member;		/* Is this user on any channels? */
+@@ -281,7 +280,6 @@
+      *   the target user(s) are on;
+      */
+     user = cli_user(acptr);
+-    name = (!*(cli_name(acptr))) ? "?" : cli_name(acptr);
+     assert(user);
+ 
+     invis = (acptr != sptr) && IsInvisible(acptr);
+diff -r bb5955d8f128 ircd/parse.c
+--- a/ircd/parse.c
++++ b/ircd/parse.c
+@@ -834,7 +834,6 @@
+   char*           s;
+   int             i;
+   int             paramcount;
+-  int             noprefix = 0;
+   struct Message* mptr;
+   MessageHandler  handler = 0;
+ 
+@@ -852,8 +851,6 @@
+     while (*ch == ' ')
+       ch++;                     /* Advance to command */
+   }
+-  else
+-    noprefix = 1;
+   if (*ch == '\0')
+   {
+     ServerStats->is_empt++;
+diff -r bb5955d8f128 ircd/s_conf.c
+--- a/ircd/s_conf.c
++++ b/ircd/s_conf.c
+@@ -96,7 +96,6 @@
+   FBFILE*     file = 0;
+   char        line[80];
+   struct stat sb;
+-  struct tm*  tm;
+ 
+   if (NULL == (file = fbopen(filename, "r"))) {
+     send_reply(sptr, ERR_NOMOTD);
+@@ -105,7 +104,6 @@
+     return;
+   }
+   fbstat(&sb, file);
+-  tm = localtime((time_t*) &sb.st_mtime);        /* NetBSD needs cast */
+   while (fbgets(line, sizeof(line) - 1, file)) {
+     char* end = line + strlen(line);
+     while (end > line) {
+diff -r bb5955d8f128 ircd/s_stats.c
+--- a/ircd/s_stats.c
++++ b/ircd/s_stats.c
+@@ -90,14 +90,13 @@
+   struct ConfItem *tmp;
+   unsigned short int port;
+   int maximum;
+-  char *host, *pass, *name, *username, *hub_limit;
++  char *host, *name, *username, *hub_limit;
+ 
+   for (tmp = GlobalConfList; tmp; tmp = tmp->next)
+   {
+     if ((tmp->status & sd->sd_funcdata))
+     {
+       host = BadPtr(tmp->host) ? null : tmp->host;
+-      pass = BadPtr(tmp->passwd) ? null : tmp->passwd;
+       name = BadPtr(tmp->name) ? null : tmp->name;
+       username = BadPtr(tmp->username) ? null : tmp->username;
+       hub_limit = BadPtr(tmp->hub_limit) ? null : tmp->hub_limit;
