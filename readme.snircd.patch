@@ -16,7 +16,7 @@ diff -r d87a1b0ec69d doc/readme.snircd
  v1.3.1,   HG,  bug fixes, warn user if input line is too long.
            WWW, 10/11/2007
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,215 +94,348 @@
+@@ -93,215 +94,351 @@
  
   * Oper mode +X
       Allows opers to:
@@ -160,6 +160,9 @@ diff -r d87a1b0ec69d doc/readme.snircd
 + * GLINE: Ability to Gline a nick, new format now nick!user@host.
 +          Changing nick and Gline matches the newnick!user@host,
 +          the change is refused for erroneous nick error.
++          Remotely set local glines are flagged as global,
++          used by services to sync glines with no lastmod to servers,
++          as these glines are not part of the netburst.
  
 - * Ability to Gline a nick, new format now nick!ident@host.
 + * BADCHAN: Ability to use wildcards in BADCHANs (Glines on a channel)
