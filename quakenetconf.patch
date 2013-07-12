@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent f80ccb6361f8b956e7bdf19e8213049a6238f108
+# Parent 8d8f2ceb1a2c295104a1c02a9a1748fc7bf2cdd6
 
-diff -r f80ccb6361f8 doc/quakenet.conf
+diff -r 8d8f2ceb1a2c doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
 @@ -6,16 +6,40 @@
@@ -369,7 +369,7 @@ diff -r f80ccb6361f8 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
  #Pseudo "CHANSERV" {
-@@ -258,100 +313,79 @@
+@@ -258,100 +313,80 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -519,6 +519,7 @@ diff -r f80ccb6361f8 doc/quakenet.conf
 -  "HIS_SERVERNAME" = "*.quakenet.org";
 -  "HIS_SERVERINFO" = "QuakeNet IRC Server";
 -  "HIS_URLSERVERS" = "http://www.quakenet.org/serverlist.php";
++  "HIS_USERIP" = "FALSE";
 +# "DISABLE_GLINES" = "FALSE";
  };
  
