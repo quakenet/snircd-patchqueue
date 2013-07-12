@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent 1846eb33c5da99c2819d912f91c8019b3b04580d
+# Parent d87a1b0ec69d6f23c866bca49691f2bc4b069dd7
 
-diff -r 1846eb33c5da doc/readme.snircd
+diff -r d87a1b0ec69d doc/readme.snircd
 --- a/doc/readme.snircd
 +++ b/doc/readme.snircd
 @@ -4,9 +4,10 @@
@@ -291,12 +291,12 @@ diff -r 1846eb33c5da doc/readme.snircd
 +   Spoofhost "cows.go.moo" {
 +   };
 +
-+ * User & Oper sethost for 'moo.fish.moo'
++ * User & Oper sethost for 'cows.go.moo'
 +   Spoofhost "cows.go.moo" {
 +     password = "JH63Acd3e";
 +   };
 +
-+ * Oper sethost for 'moo.fish.moo' with auto on 'john@*.example.com"
++ * Oper sethost for 'cows.go.moo' with auto on 'john@*.example.com"
 +   Spoofhost "cows.go.moo" {
 +     username = "john";
 +     host = "*.example.com";
