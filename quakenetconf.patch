@@ -257,7 +257,7 @@ diff -r 8d8f2ceb1a2c doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # host     = "user@host";      reason = "The reason the user will see";
  # realname = "realnametoban";    file = "path/to/file/with/reason/to/show";
-@@ -145,7 +200,7 @@
+@@ -145,56 +200,56 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -266,9 +266,14 @@ diff -r 8d8f2ceb1a2c doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name        = "servername";    host = "hostnameORip";    vhost = "localIP";
  # password    = "passwd";        port = portno;            class = "classname"; 
-@@ -157,44 +212,44 @@
- #
+-# maxhops     = 2;               hub  = "*.eu.undernet.org"; 
++# maxhops     = 2;               hub  = "*.quakenet.org"; 
+ # autoconnect = no; (default = yes!)
  
+ # Our primary uplink.
+ #
+ #
+-
  Connect {
 - name = "hub.@@@.quakenet.org";
 - host = "@@@.@@@.@@@.@@@";
@@ -288,6 +293,7 @@ diff -r 8d8f2ceb1a2c doc/quakenet.conf
  
  # Our secondary uplink.
  #
++#
  Connect {
 - name = "hub.@@@.quakenet.org";
 - host = "@@@.@@@.@@@.@@@";
