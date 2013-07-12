@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent c173e0ebf46692420e24845cc9851c03793f524f
+# Parent 2c04fd2c2f4cd8ce8659fcc63e6663db670d1ea4
 
 Show host and pass for Connect blocks to a service.
 
-diff -r c173e0ebf466 ircd/s_err.c
+diff -r 2c04fd2c2f4c ircd/s_err.c
 --- a/ircd/s_err.c
 +++ b/ircd/s_err.c
 @@ -458,7 +458,7 @@
@@ -11,19 +11,19 @@ diff -r c173e0ebf466 ircd/s_err.c
    { RPL_STATSCOMMANDS, "%s %u %u", "212" },
  /* 213 */
 -  { RPL_STATSCLINE, "C %s * %d %d %s %s", "213" },
-+  { RPL_STATSCLINE, "C %s %s %d %s %d %s %s", "213" },
++  { RPL_STATSCLINE, "C %s %s %s %d %s %d %s %s", "213" },
  /* 214 */
    { 0 },
  /* 215 */
-diff -r c173e0ebf466 ircd/s_stats.c
+diff -r 2c04fd2c2f4c ircd/s_stats.c
 --- a/ircd/s_stats.c
 +++ b/ircd/s_stats.c
-@@ -90,13 +90,34 @@
+@@ -90,23 +90,49 @@
    struct ConfItem *tmp;
    unsigned short int port;
    int maximum;
 -  char *host, *name, *username, *hub_limit;
-+  char *host, *pass, *name, *username, *hub_limit;
++  char *host, *pass, *name, *username, *hub_limit, *origin;
 +  int unmask = 0;
 +
 +  /*
@@ -54,12 +54,16 @@ diff -r c173e0ebf466 ircd/s_stats.c
        name = BadPtr(tmp->name) ? null : tmp->name;
        username = BadPtr(tmp->username) ? null : tmp->username;
        hub_limit = BadPtr(tmp->hub_limit) ? null : tmp->hub_limit;
-@@ -106,7 +127,10 @@
+       maximum = tmp->maximum;
+       port = tmp->address.port;
++      origin = BadPtr(tmp->origin_name) ? null : tmp->origin_name;
+ 
        if (tmp->status & CONF_UWORLD)
  	send_reply(sptr, RPL_STATSULINE, host);
        else if (tmp->status & CONF_SERVER)
 -	send_reply(sptr, RPL_STATSCLINE, name, port, maximum, hub_limit, get_conf_class(tmp));
 +	send_reply(sptr, RPL_STATSCLINE, name,
++	           unmask ? origin : "*",
 +	           unmask ? host : "*", port,
 +	           unmask ? pass : "*", maximum,
 +	           hub_limit, get_conf_class(tmp));
