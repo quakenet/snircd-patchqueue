@@ -1,14 +1,14 @@
 # HG changeset patch
-# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+# Parent 059a1d81b9fb4fb9ca5069ebe7677a3e7f07e0fc
 
 Info fix from snircd 1.4.0.
 
 http://hg.quakenet.org/snircd/rev/5f40b7be63b9
 http://hg.quakenet.org/snircd/rev/c8b7fb9e8fa8
 
-diff -r 0d60587c3068 include/version.h
---- a/include/version.h	Sun Jun 30 17:45:29 2013 +0200
-+++ b/include/version.h	Tue Jul 02 20:32:10 2013 +0200
+diff -r 059a1d81b9fb include/version.h
+--- a/include/version.h
++++ b/include/version.h
 @@ -9,6 +9,7 @@
  extern const char *version;
  extern const char *creation;
@@ -17,9 +17,9 @@ diff -r 0d60587c3068 include/version.h
  extern const char *generation;
  
  #endif /* INCLUDED_version_h */
-diff -r 0d60587c3068 ircd/m_info.c
---- a/ircd/m_info.c	Sun Jun 30 17:45:29 2013 +0200
-+++ b/ircd/m_info.c	Tue Jul 02 20:32:10 2013 +0200
+diff -r 059a1d81b9fb ircd/m_info.c
+--- a/ircd/m_info.c
++++ b/ircd/m_info.c
 @@ -105,17 +105,15 @@
   */
  int m_info(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
@@ -90,7 +90,7 @@ diff -r 0d60587c3068 ircd/m_info.c
        HUNTED_ISME)
 +    return 0;
 +
-+  if (!IsOper(sptr))
++  if (parv[1] == NULL)
    {
 -    while (text[212])
 -    {
@@ -125,9 +125,9 @@ diff -r 0d60587c3068 ircd/m_info.c
    return 0;
  }
  
-diff -r 0d60587c3068 ircd/version.c.SH
---- a/ircd/version.c.SH	Sun Jun 30 17:45:29 2013 +0200
-+++ b/ircd/version.c.SH	Tue Jul 02 20:32:10 2013 +0200
+diff -r 059a1d81b9fb ircd/version.c.SH
+--- a/ircd/version.c.SH
++++ b/ircd/version.c.SH
 @@ -79,7 +79,10 @@
      "Thanks goes to all other people who contributed to any version.",
      "A full listing of all coders can be found in doc/Authors in the",
