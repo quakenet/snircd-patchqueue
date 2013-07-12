@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 0d60587c3068d25c107ee81893791469b2623f0c
+# Parent c825da4e7165562d8f3ae2dc31247eca2bc09a2d
 
 Backport feature DISABLE_GLINES from ircu, failsafe.
 
@@ -10,9 +10,9 @@ http://hg.quakenet.org/snircd/diff/ca5d46b8b58c/ircd/ircd_features.c
 http://hg.quakenet.org/snircd/diff/c72fde627760/ircd/s_conf.c
 http://hg.quakenet.org/snircd/diff/ca5d46b8b58c/ircd/gline.c#l1.127
 
-diff -r 0d60587c3068 include/ircd_features.h
---- a/include/ircd_features.h	Sun Jun 30 17:45:29 2013 +0200
-+++ b/include/ircd_features.h	Mon Jul 01 21:09:18 2013 +0200
+diff -r c825da4e7165 include/ircd_features.h
+--- a/include/ircd_features.h
++++ b/include/ircd_features.h
 @@ -62,6 +62,7 @@
    FEAT_ZANNELS,
    FEAT_LOCAL_CHANNELS,
@@ -21,9 +21,9 @@ diff -r 0d60587c3068 include/ircd_features.h
    FEAT_AUTOCHANMODES,
    FEAT_AUTOCHANMODES_LIST,
  
-diff -r 0d60587c3068 ircd/gline.c
---- a/ircd/gline.c	Sun Jun 30 17:45:29 2013 +0200
-+++ b/ircd/gline.c	Mon Jul 01 21:09:18 2013 +0200
+diff -r c825da4e7165 ircd/gline.c
+--- a/ircd/gline.c
++++ b/ircd/gline.c
 @@ -215,6 +215,9 @@
    struct Client *acptr;
    int fd, retval = 0, tval;
@@ -34,9 +34,19 @@ diff -r 0d60587c3068 ircd/gline.c
    if (!GlineIsActive(gline)) /* no action taken on inactive glines */
      return 0;
  
-diff -r 0d60587c3068 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Sun Jun 30 17:45:29 2013 +0200
-+++ b/ircd/ircd_features.c	Mon Jul 01 21:09:18 2013 +0200
+@@ -1016,6 +1019,9 @@
+   struct Gline *gline;
+   struct Gline *sgline;
+ 
++  if (feature_bool(FEAT_DISABLE_GLINES))
++    return 0; /* G-lines are disabled */
++
+   for (gline = GlobalGlineList; gline; gline = sgline) {
+     sgline = gline->gl_next;
+ 
+diff -r c825da4e7165 ircd/ircd_features.c
+--- a/ircd/ircd_features.c
++++ b/ircd/ircd_features.c
 @@ -315,6 +315,7 @@
    F_B(ZANNELS, 0, 1, 0),
    F_B(LOCAL_CHANNELS, 0, 1, 0),
@@ -45,10 +55,10 @@ diff -r 0d60587c3068 ircd/ircd_features.c
    F_B(AUTOCHANMODES, 0, 1, 0),
    F_S(AUTOCHANMODES_LIST, FEAT_CASE | FEAT_NULL, "ntCN", 0),
  
-diff -r 0d60587c3068 ircd/s_conf.c
---- a/ircd/s_conf.c	Sun Jun 30 17:45:29 2013 +0200
-+++ b/ircd/s_conf.c	Mon Jul 01 21:09:18 2013 +0200
-@@ -1095,7 +1095,7 @@
+diff -r c825da4e7165 ircd/s_conf.c
+--- a/ircd/s_conf.c
++++ b/ircd/s_conf.c
+@@ -1093,7 +1093,7 @@
     * cause the server to split from the net.
     * -skater_x
     */
