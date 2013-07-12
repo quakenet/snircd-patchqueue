@@ -21,7 +21,7 @@ diff -r bdc117647bfc include/channel.h
 diff -r bdc117647bfc ircd/channel.c
 --- a/ircd/channel.c
 +++ b/ircd/channel.c
-@@ -661,7 +661,65 @@
+@@ -661,7 +661,66 @@
    return 0;
  }
  
@@ -41,6 +41,7 @@ diff -r bdc117647bfc ircd/channel.c
 +
 +  assert(NULL != cptr);
 +  assert(NULL != chptr);
++  assert(NULL != mode);
 +
 +  /* msg */
 +  switch (mode) {
@@ -88,7 +89,7 @@ diff -r bdc117647bfc ircd/channel.c
   *
   * A user can speak on a channel iff:
   * <ol>
-@@ -679,9 +737,9 @@
+@@ -679,9 +738,9 @@
   * @param reveal	If true, the user will be "revealed" on a delayed
   * 			joined channel.
   *
@@ -100,7 +101,7 @@ diff -r bdc117647bfc ircd/channel.c
  {
    assert(0 != member);
  
-@@ -693,61 +751,61 @@
+@@ -693,61 +752,61 @@
    {
      if (IsDelayedJoin(member) && reveal)
        RevealDelayedJoin(member);
@@ -176,7 +177,7 @@ diff -r bdc117647bfc ircd/channel.c
  {
    struct Membership *member;
    assert(0 != cptr); 
-@@ -755,7 +813,7 @@
+@@ -755,7 +814,7 @@
     * Servers can always speak on channels.
     */
    if (IsServer(cptr))
@@ -185,7 +186,7 @@ diff -r bdc117647bfc ircd/channel.c
  
    member = find_channel_member(cptr, chptr);
  
-@@ -766,14 +824,18 @@
+@@ -766,14 +825,18 @@
    if (!member) {
      /* user with usermode +X can always speak on the channel - snircd */
      if (IsXtraOp(cptr))
