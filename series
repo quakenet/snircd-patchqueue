@@ -13,6 +13,7 @@ broadcastmatchfix.patch
 statscshowfullinfo.patch
 statscshowautoconnect.patch
 disableglinesfeature.patch
+glinedestroy.patch
 sethostinvalidatebans.patch
 sethostundo.patch
 sethostremotepassparam.patch
