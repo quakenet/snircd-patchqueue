@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent 8d8f2ceb1a2c295104a1c02a9a1748fc7bf2cdd6
+# Parent cc1fa36e10b6e9886051fe3ad4a60b650c06dc5c
 
-diff -r 8d8f2ceb1a2c doc/quakenet.conf
+diff -r cc1fa36e10b6 doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
 @@ -6,16 +6,40 @@
@@ -378,7 +378,14 @@ diff -r 8d8f2ceb1a2c doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
  #Pseudo "CHANSERV" {
-@@ -258,100 +316,80 @@
+@@ -253,105 +311,85 @@
+ #};
+ Pseudo "AUTH" {
+   name = "Q";
+-  prepend = "AUTH ";
+-  nick = "q@cserve.quakenet.org";
++  prepend = "IRCDAUTH ";
++  nick = "Q@CServe.quakenet.org";
  };
  
  # -----------------------------------------------------------------------------
