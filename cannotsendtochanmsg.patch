@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent c2594c071efc674e83e6c40c18eeea9c31753fff
+# Parent 2d1e87f36ae5ff2e63108a62e3ed0e3825e17906
 
 Make numeric reply 404 ERR_CANNOTSENDTOCHAN more verbose and include the mode that blocked the message.
 
-diff -r c2594c071efc include/channel.h
+diff -r 2d1e87f36ae5 include/channel.h
 --- a/include/channel.h
 +++ b/include/channel.h
 @@ -392,8 +392,9 @@
@@ -13,12 +13,12 @@ diff -r c2594c071efc include/channel.h
 -extern int member_can_send_to_channel(struct Membership* member, int reveal);
 -extern int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal);
 +extern int cannot_send_to_channel(struct Client* cptr, struct Channel* chptr, unsigned int mode);
-+extern unsigned int member_can_send_to_channel(struct Membership* member, int reveal, int reply);
-+extern unsigned int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal, int reply);
++extern int member_can_send_to_channel(struct Membership* member, int reveal, int reply);
++extern int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal, int reply);
  
  extern void remove_user_from_channel(struct Client *sptr, struct Channel *chptr);
  extern void remove_user_from_all_channels(struct Client* cptr);
-diff -r c2594c071efc ircd/channel.c
+diff -r 2d1e87f36ae5 ircd/channel.c
 --- a/ircd/channel.c
 +++ b/ircd/channel.c
 @@ -661,6 +661,65 @@
@@ -96,7 +96,7 @@ diff -r c2594c071efc ircd/channel.c
   * @returns True if the client can speak on the channel.
   */
 -int member_can_send_to_channel(struct Membership* member, int reveal)
-+unsigned int member_can_send_to_channel(struct Membership* member, int reveal, int reply)
++int member_can_send_to_channel(struct Membership* member, int reveal, int reply)
  {
 +  unsigned int mode = 0;
 +
@@ -181,7 +181,7 @@ diff -r c2594c071efc ircd/channel.c
   * @see member_can_send_to_channel()
   */
 -int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal)
-+unsigned int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal, int reply)
++int client_can_send_to_channel(struct Client *cptr, struct Channel *chptr, int reveal, int reply)
  {
    struct Membership *member;
 +  unsigned int mode = 0;
@@ -223,7 +223,7 @@ diff -r c2594c071efc ircd/channel.c
  }
  
  /** Returns the name of a channel that prevents the user from changing nick.
-diff -r c2594c071efc ircd/ircd_relay.c
+diff -r 2d1e87f36ae5 ircd/ircd_relay.c
 --- a/ircd/ircd_relay.c
 +++ b/ircd/ircd_relay.c
 @@ -88,6 +88,7 @@
@@ -297,7 +297,7 @@ diff -r c2594c071efc ircd/ircd_relay.c
      sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
  			     SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
    }
-diff -r c2594c071efc ircd/m_part.c
+diff -r 2d1e87f36ae5 ircd/m_part.c
 --- a/ircd/m_part.c
 +++ b/ircd/m_part.c
 @@ -140,7 +140,7 @@
@@ -309,7 +309,7 @@ diff -r c2594c071efc ircd/m_part.c
      {
        flags |= CHFL_BANNED;
        /* Remote clients don't want to see a comment either. */
-diff -r c2594c071efc ircd/m_quit.c
+diff -r 2d1e87f36ae5 ircd/m_quit.c
 --- a/ircd/m_quit.c
 +++ b/ircd/m_quit.c
 @@ -109,7 +109,7 @@
@@ -321,7 +321,7 @@ diff -r c2594c071efc ircd/m_quit.c
             || (chan->channel->mode.mode & MODE_NOQUITPARTS)))
            return exit_client(cptr, sptr, sptr, "Signed off");
      }
-diff -r c2594c071efc ircd/m_topic.c
+diff -r 2d1e87f36ae5 ircd/m_topic.c
 --- a/ircd/m_topic.c
 +++ b/ircd/m_topic.c
 @@ -135,8 +135,8 @@
@@ -335,7 +335,7 @@ diff -r c2594c071efc ircd/m_topic.c
      else
        do_settopic(sptr,cptr,chptr,topic,0);
    }
-diff -r c2594c071efc ircd/m_wallchops.c
+diff -r 2d1e87f36ae5 ircd/m_wallchops.c
 --- a/ircd/m_wallchops.c
 +++ b/ircd/m_wallchops.c
 @@ -116,38 +116,39 @@
@@ -416,7 +416,7 @@ diff -r c2594c071efc ircd/m_wallchops.c
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
  			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
  			       "%H :%s", chptr, parv[parc - 1]);
-diff -r c2594c071efc ircd/m_wallvoices.c
+diff -r 2d1e87f36ae5 ircd/m_wallvoices.c
 --- a/ircd/m_wallvoices.c
 +++ b/ircd/m_wallvoices.c
 @@ -115,38 +115,39 @@
