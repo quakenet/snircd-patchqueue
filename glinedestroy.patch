@@ -5,8 +5,19 @@ Add % prefix for gline allowing a global gline to be destroyed (removed from mem
 instead of being kept in memory in a deactivated state until it expires.
 
 This prefix should only be used when there are no servers split that have the gline,
-because during a netmerge, if the other end had this gline,
+because during a netmerge, if the other end has this gline,
 it will be reintroduced to our side of the network.
+
+Syntax:
+
+P10 (Uworld gline, no lastmod)
+"<source numeric> GL * %-<mask>"
+
+P10 (normal gline, lastmod)
+"<source numeric> GL * %-<mask> <expire> <lastmod> :<reason>"
+
+Oper
+"GLINE %-<mask> * <expire> :<reason>"
 
 diff -r a73f7af44a75 include/gline.h
 --- a/include/gline.h
