@@ -1,3 +1,4 @@
+patchlevel.patch
 infofix.patch
 hginfo.patch
 compilewarnings.patch
