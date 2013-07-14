@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 48df96f1746f46336bc0acfa4cf141bdf0980dbc
+# Parent 90bc9968ee6aa3b50b233aecf7ae36b42ad4fa25
 
-diff -r 48df96f1746f include/handlers.h
---- a/include/handlers.h	Sun Jul 14 11:28:19 2013 +0200
-+++ b/include/handlers.h	Sun Jul 14 11:28:55 2013 +0200
+diff -r 90bc9968ee6a include/handlers.h
+--- a/include/handlers.h	Sun Jul 14 11:30:24 2013 +0200
++++ b/include/handlers.h	Sun Jul 14 11:32:10 2013 +0200
 @@ -146,6 +146,7 @@
  extern int m_unregistered(struct Client*, struct Client*, int, char*[]);
  extern int m_unsupported(struct Client*, struct Client*, int, char*[]);
@@ -12,9 +12,9 @@ diff -r 48df96f1746f include/handlers.h
  extern int m_userhost(struct Client*, struct Client*, int, char*[]);
  extern int m_userip(struct Client*, struct Client*, int, char*[]);
  extern int m_version(struct Client*, struct Client*, int, char*[]);
-diff -r 48df96f1746f include/msg.h
---- a/include/msg.h	Sun Jul 14 11:28:19 2013 +0200
-+++ b/include/msg.h	Sun Jul 14 11:28:55 2013 +0200
+diff -r 90bc9968ee6a include/msg.h
+--- a/include/msg.h	Sun Jul 14 11:30:24 2013 +0200
++++ b/include/msg.h	Sun Jul 14 11:32:10 2013 +0200
 @@ -68,6 +68,11 @@
  #define TOK_USER                "USER"
  #define CMD_USER		MSG_USER, TOK_USER
@@ -27,9 +27,9 @@ diff -r 48df96f1746f include/msg.h
  #define MSG_NICK                "NICK"          /* NICK */
  #define TOK_NICK                "N"
  #define CMD_NICK		MSG_NICK, TOK_NICK
-diff -r 48df96f1746f include/s_auth.h
---- a/include/s_auth.h	Sun Jul 14 11:28:19 2013 +0200
-+++ b/include/s_auth.h	Sun Jul 14 11:28:55 2013 +0200
+diff -r 90bc9968ee6a include/s_auth.h
+--- a/include/s_auth.h	Sun Jul 14 11:30:24 2013 +0200
++++ b/include/s_auth.h	Sun Jul 14 11:32:10 2013 +0200
 @@ -32,9 +32,11 @@
  struct Client;
  struct AuthRequest;
@@ -42,9 +42,9 @@ diff -r 48df96f1746f include/s_auth.h
  extern int auth_set_pong(struct AuthRequest *auth, unsigned int cookie);
  extern int auth_set_user(struct AuthRequest *auth, const char *username, const char *hostname, const char *servername, const char *userinfo);
  extern int auth_set_nick(struct AuthRequest *auth, const char *nickname);
-diff -r 48df96f1746f ircd/Makefile.in
---- a/ircd/Makefile.in	Sun Jul 14 11:28:19 2013 +0200
-+++ b/ircd/Makefile.in	Sun Jul 14 11:28:55 2013 +0200
+diff -r 90bc9968ee6a ircd/Makefile.in
+--- a/ircd/Makefile.in	Sun Jul 14 11:30:24 2013 +0200
++++ b/ircd/Makefile.in	Sun Jul 14 11:32:10 2013 +0200
 @@ -188,6 +188,7 @@
  	m_wallops.c \
  	m_wallusers.c \
@@ -53,10 +53,10 @@ diff -r 48df96f1746f ircd/Makefile.in
  	m_who.c \
  	m_whois.c \
  	m_whowas.c \
-diff -r 48df96f1746f ircd/m_webirc.c
+diff -r 90bc9968ee6a ircd/m_webirc.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_webirc.c	Sun Jul 14 11:28:55 2013 +0200
-@@ -0,0 +1,123 @@
++++ b/ircd/m_webirc.c	Sun Jul 14 11:32:10 2013 +0200
+@@ -0,0 +1,125 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_webirc.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -153,6 +153,8 @@ diff -r 48df96f1746f ircd/m_webirc.c
 +#include "numeric.h"
 +#include "numnicks.h"
 +#include "s_user.h"
++#include "s_auth.h"
++#include "s_misc.h"
 +#include "send.h"
 +#include "struct.h"
 +
@@ -180,9 +182,9 @@ diff -r 48df96f1746f ircd/m_webirc.c
 +
 +  return auth_set_webirc(cli_auth(cptr), parv[1], parv[2], parv[3], &ip);
 +}
-diff -r 48df96f1746f ircd/parse.c
---- a/ircd/parse.c	Sun Jul 14 11:28:19 2013 +0200
-+++ b/ircd/parse.c	Sun Jul 14 11:28:55 2013 +0200
+diff -r 90bc9968ee6a ircd/parse.c
+--- a/ircd/parse.c	Sun Jul 14 11:30:24 2013 +0200
++++ b/ircd/parse.c	Sun Jul 14 11:32:10 2013 +0200
 @@ -282,6 +282,13 @@
      { m_user, m_registered, m_ignore, m_registered, m_ignore }
    },
@@ -197,9 +199,9 @@ diff -r 48df96f1746f ircd/parse.c
      MSG_AWAY,
      TOK_AWAY,
      0, MAXPARA, MFLG_SLOW, 0, NULL,
-diff -r 48df96f1746f ircd/s_auth.c
---- a/ircd/s_auth.c	Sun Jul 14 11:28:19 2013 +0200
-+++ b/ircd/s_auth.c	Sun Jul 14 11:28:55 2013 +0200
+diff -r 90bc9968ee6a ircd/s_auth.c
+--- a/ircd/s_auth.c	Sun Jul 14 11:30:24 2013 +0200
++++ b/ircd/s_auth.c	Sun Jul 14 11:32:10 2013 +0200
 @@ -1041,6 +1041,23 @@
    return check_auth_finished(auth);
  }
