@@ -1,20 +1,21 @@
 # HG changeset patch
-# Parent 059a1d81b9fb4fb9ca5069ebe7677a3e7f07e0fc
+# Parent c241774dec3286e7d620a5e5ea7355461c39b9af
 
-Hide IRC Operators nick in the channel banlist for bans set using /OPMODE 
+Hide IRC Operators nick in the channel banlist for bans set using /OPMODE
 
 Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/9a188302ba56
 
---- a/ircd/channel.c	Fri Aug 08 19:48:00 2008 +0100
-+++ b/ircd/channel.c	Fri Aug 08 19:48:43 2008 +0100
-@@ -2948,7 +2948,16 @@
+diff -r c241774dec32 ircd/channel.c
+--- a/ircd/channel.c
++++ b/ircd/channel.c
+@@ -2937,7 +2937,16 @@
    newban->flags = ((state->dir == MODE_ADD) ? BAN_ADD : BAN_DEL)
        | (*flag_p == MODE_BAN ? 0 : BAN_EXCEPTION);
    set_ban_mask(newban, collapse(pretty_mask(t_str)));
 -  ircd_strncpy(newban->who, IsUser(state->sptr) ? cli_name(state->sptr) : "*", NICKLEN);
 +
 +  /* source not a user OR feat HIS_MODEWHO enabled and ban set with /OPMODE
-+    so hide the source in banlist - wiebe */
++    so hide the source in banlist - snircd */
 +  if (!IsUser(state->sptr) || 
 +    (feature_bool(FEAT_HIS_MODEWHO) && state->mbuf != NULL && (state->mbuf->mb_dest & MODEBUF_DEST_OPMODE))) {
 +    ircd_strncpy(newban->who, "*", NICKLEN);
