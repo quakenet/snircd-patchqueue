@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 8ee351a353c86b4fe1bc2f2a286ae02ae859278e
+# Parent ae04170a0876693a8f6a14f016ac8b4357d13355
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
 #
@@ -20,7 +20,7 @@
 #
 # part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
 
-diff -r 8ee351a353c8 include/handlers.h
+diff -r ae04170a0876 include/handlers.h
 --- a/include/handlers.h
 +++ b/include/handlers.h
 @@ -224,6 +224,7 @@
@@ -31,7 +31,7 @@ diff -r 8ee351a353c8 include/handlers.h
  extern int ms_rping(struct Client*, struct Client*, int, char*[]);
  extern int ms_rpong(struct Client*, struct Client*, int, char*[]);
  extern int ms_server(struct Client*, struct Client*, int, char*[]);
-diff -r 8ee351a353c8 include/msg.h
+diff -r ae04170a0876 include/msg.h
 --- a/include/msg.h
 +++ b/include/msg.h
 @@ -363,6 +363,10 @@
@@ -45,7 +45,7 @@ diff -r 8ee351a353c8 include/msg.h
  #define MSG_CAP			"CAP"
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
-diff -r 8ee351a353c8 ircd/Makefile.in
+diff -r ae04170a0876 ircd/Makefile.in
 --- a/ircd/Makefile.in
 +++ b/ircd/Makefile.in
 @@ -162,6 +162,7 @@
@@ -56,7 +56,7 @@ diff -r 8ee351a353c8 ircd/Makefile.in
  	m_reset.c \
  	m_restart.c \
  	m_rping.c \
-diff -r 8ee351a353c8 ircd/m_remotemode.c
+diff -r ae04170a0876 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
 @@ -0,0 +1,378 @@
@@ -438,7 +438,7 @@ diff -r 8ee351a353c8 ircd/m_remotemode.c
 +
 +  return 0;
 +}
-diff -r 8ee351a353c8 ircd/parse.c
+diff -r ae04170a0876 ircd/parse.c
 --- a/ircd/parse.c
 +++ b/ircd/parse.c
 @@ -541,6 +541,13 @@
@@ -455,3 +455,25 @@ diff -r 8ee351a353c8 ircd/parse.c
      MSG_HASH,
      TOK_HASH,
      0, MAXPARA, MFLG_SLOW, 0, NULL,
+diff -r ae04170a0876 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -1227,6 +1227,10 @@
+  *                        only permitting legitimate default user modes.
+  * @return Zero.
+  */
++/* When adding or changing modes, do not forget REMOTEMODE,
++ * it has its own mode handling function in m_remotemode.c
++ * for the time being - snircd
++ */
+ int set_user_mode(struct Client *cptr, struct Client *sptr, int parc, 
+ 		char *parv[], int allow_modes)
+ {
+@@ -1281,6 +1285,7 @@
+   /*
+    * parse mode change string(s)
+    */
++  /* remotemode has its own mode handling function in m_remotemode.c - snircd */
+   for (p = &parv[2]; *p && p<&parv[parc]; p++) {       /* p is changed in loop too */
+     for (m = *p; *m; m++) {
+       switch (*m) {
