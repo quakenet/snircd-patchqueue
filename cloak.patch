@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 265e110fa86cbf11d69965272dcca6a5593c5914
+# Parent 0f900921b53c834c87ffa20bb3f91aa644f3c318
 
-diff -r 265e110fa86c include/client.h
---- a/include/client.h	Sun Jul 14 10:43:28 2013 +0200
-+++ b/include/client.h	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c include/client.h
+--- a/include/client.h	Sun Jul 14 11:23:57 2013 +0200
++++ b/include/client.h	Sun Jul 14 11:27:33 2013 +0200
 @@ -189,6 +189,8 @@
  					 privmsgs/notices to users they're not
  					 sharing any channels with (with +k
@@ -31,9 +31,9 @@ diff -r 265e110fa86c include/client.h
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
  #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
-diff -r 265e110fa86c include/handlers.h
---- a/include/handlers.h	Sun Jul 14 10:43:28 2013 +0200
-+++ b/include/handlers.h	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c include/handlers.h
+--- a/include/handlers.h	Sun Jul 14 11:23:57 2013 +0200
++++ b/include/handlers.h	Sun Jul 14 11:27:33 2013 +0200
 @@ -244,6 +244,8 @@
  extern int ms_whois(struct Client*, struct Client*, int, char*[]);
  extern int ms_xquery(struct Client*, struct Client*, int, char*[]);
@@ -43,9 +43,9 @@ diff -r 265e110fa86c include/handlers.h
  
  #endif /* INCLUDED_handlers_h */
  
-diff -r 265e110fa86c include/msg.h
---- a/include/msg.h	Sun Jul 14 10:43:28 2013 +0200
-+++ b/include/msg.h	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c include/msg.h
+--- a/include/msg.h	Sun Jul 14 11:23:57 2013 +0200
++++ b/include/msg.h	Sun Jul 14 11:27:33 2013 +0200
 @@ -379,6 +379,14 @@
  #define TOK_XREPLY		"XR"
  #define CMD_XREPLY		MSG_XREPLY, TOK_XREPLY
@@ -61,9 +61,9 @@ diff -r 265e110fa86c include/msg.h
  /*
   * Constants
   */
-diff -r 265e110fa86c include/s_user.h
---- a/include/s_user.h	Sun Jul 14 10:43:28 2013 +0200
-+++ b/include/s_user.h	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c include/s_user.h
+--- a/include/s_user.h	Sun Jul 14 11:23:57 2013 +0200
++++ b/include/s_user.h	Sun Jul 14 11:27:33 2013 +0200
 @@ -105,6 +105,10 @@
  extern unsigned int umode_make_snomask(unsigned int oldmask, char *arg,
                                         int what);
@@ -71,13 +71,13 @@ diff -r 265e110fa86c include/s_user.h
 +extern int can_see_user(struct Client *sptr, struct Client *cloaked);
 +extern void add_cloak_target(struct Client *cloaked, struct Client *target);
 +extern void remove_cloak_target(struct Client *target);
-+extern void clear_cloak(struct Client *cloaked);
++extern void clear_cloak_targets(struct Client *cloaked);
  
  #define NAMES_ALL 1 /**< List all users in channel */
  #define NAMES_VIS 2 /**< List only visible users in non-secret channels */
-diff -r 265e110fa86c include/struct.h
---- a/include/struct.h	Sun Jul 14 10:43:28 2013 +0200
-+++ b/include/struct.h	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c include/struct.h
+--- a/include/struct.h	Sun Jul 14 11:23:57 2013 +0200
++++ b/include/struct.h	Sun Jul 14 11:27:33 2013 +0200
 @@ -87,6 +87,8 @@
    time_t	     acc_create;                /**< IRC account timestamp */
    unsigned long       acc_id;                    /**< IRC account unique id */
@@ -87,9 +87,9 @@ diff -r 265e110fa86c include/struct.h
  };
  
  #endif /* INCLUDED_struct_h */
-diff -r 265e110fa86c ircd/Makefile.in
---- a/ircd/Makefile.in	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/Makefile.in	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/Makefile.in
+--- a/ircd/Makefile.in	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/Makefile.in	Sun Jul 14 11:27:33 2013 +0200
 @@ -114,12 +114,14 @@
  	list.c \
  	listener.c \
@@ -105,17 +105,17 @@ diff -r 265e110fa86c ircd/Makefile.in
  	m_clearmode.c \
  	m_close.c \
  	m_connect.c \
-diff -r 265e110fa86c ircd/client.c
---- a/ircd/client.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/client.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/client.c
+--- a/ircd/client.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/client.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -287,3 +287,4 @@
  
    return marker;
  }
 +
-diff -r 265e110fa86c ircd/m_addcloak.c
+diff -r 0f900921b53c ircd/m_addcloak.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_addcloak.c	Sun Jul 14 10:45:07 2013 +0200
++++ b/ircd/m_addcloak.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -0,0 +1,133 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_addcloak.c
@@ -227,7 +227,7 @@ diff -r 265e110fa86c ircd/m_addcloak.c
 + */
 +int ms_addcloak(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
 +{
-+  struct Client *acptr, *target;
++  struct Client *target;
 +  
 +  if (parc < 2 || EmptyString(parv[1])) {
 +    /*
@@ -250,9 +250,9 @@ diff -r 265e110fa86c ircd/m_addcloak.c
 +
 +  return 0;
 +}
-diff -r 265e110fa86c ircd/m_clearcloak.c
+diff -r 0f900921b53c ircd/m_clearcloak.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_clearcloak.c	Sun Jul 14 10:45:07 2013 +0200
++++ b/ircd/m_clearcloak.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -0,0 +1,123 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_clearcloak.c
@@ -377,9 +377,9 @@ diff -r 265e110fa86c ircd/m_clearcloak.c
 +
 +  return 0;
 +}
-diff -r 265e110fa86c ircd/m_names.c
---- a/ircd/m_names.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/m_names.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/m_names.c
+--- a/ircd/m_names.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/m_names.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -157,6 +157,9 @@
      if (IsZombie(member) && member->user != sptr)
        continue;
@@ -390,10 +390,18 @@ diff -r 265e110fa86c ircd/m_names.c
      if (IsDelayedJoin(member) && (member->user != sptr) && !(filter & NAMES_DEL))
          continue;
  
-diff -r 265e110fa86c ircd/m_who.c
---- a/ircd/m_who.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/m_who.c	Sun Jul 14 10:45:07 2013 +0200
-@@ -316,6 +316,8 @@
+diff -r 0f900921b53c ircd/m_who.c
+--- a/ircd/m_who.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/m_who.c	Sun Jul 14 11:27:33 2013 +0200
+@@ -94,6 +94,7 @@
+ #include "numeric.h"
+ #include "numnicks.h"
+ #include "send.h"
++#include "s_user.h"
+ #include "whocmds.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+@@ -316,6 +317,8 @@
            for (member = chptr->members; member; member = member->next_member)
            {
              acptr = member->user;
@@ -402,7 +410,7 @@ diff -r 265e110fa86c ircd/m_who.c
              if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr))
                continue;
              if ((acptr != sptr)
-@@ -381,6 +383,8 @@
+@@ -381,6 +384,8 @@
          for (member = chptr->members; member; member = member->next_member)
          {
            acptr = member->user;
@@ -411,7 +419,7 @@ diff -r 265e110fa86c ircd/m_who.c
            if (!(IsUser(acptr) && Process(acptr)))
              continue;           /* Now Process() is at the beginning, if we fail
                                     we'll never have to show this acptr in this query */
-@@ -419,6 +423,8 @@
+@@ -419,6 +424,8 @@
      if ((!(counter < 1)) && matchsel)
        for (acptr = cli_prev(&me); acptr; acptr = cli_prev(acptr))
        {
@@ -420,9 +428,9 @@ diff -r 265e110fa86c ircd/m_who.c
          if (!(IsUser(acptr) && Process(acptr)))
            continue;
  	if ((bitsel & WHOSELECT_OPER) && !SeeOper(sptr,acptr))
-diff -r 265e110fa86c ircd/m_whois.c
---- a/ircd/m_whois.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/m_whois.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/m_whois.c
+--- a/ircd/m_whois.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/m_whois.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -153,6 +153,9 @@
      for (chan = user->channel; chan; chan = chan->next_channel)
      {
@@ -433,9 +441,9 @@ diff -r 265e110fa86c ircd/m_whois.c
         
         if (!ShowChannel(sptr, chptr)
             && !(IsOper(sptr) && IsLocalChannel(chptr->chname)))
-diff -r 265e110fa86c ircd/parse.c
---- a/ircd/parse.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/parse.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/parse.c
+--- a/ircd/parse.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/parse.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -645,6 +645,20 @@
      /* UNREG, CLIENT, SERVER, OPER, SERVICE */
      { m_ignore, m_ignore, ms_xreply, m_ignore, m_ignore }
@@ -457,9 +465,9 @@ diff -r 265e110fa86c ircd/parse.c
  #if WE_HAVE_A_REAL_CAPABILITY_NOW
    {
      MSG_CAP,
-diff -r 265e110fa86c ircd/s_misc.c
---- a/ircd/s_misc.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/s_misc.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/s_misc.c
+--- a/ircd/s_misc.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/s_misc.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -235,6 +235,9 @@
        Count_clientdisconnects(bcptr, UserStats);
      else
@@ -470,9 +478,9 @@ diff -r 265e110fa86c ircd/s_misc.c
    }
    else if (IsServer(bcptr))
    {
-diff -r 265e110fa86c ircd/s_user.c
---- a/ircd/s_user.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/s_user.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/s_user.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -554,7 +554,8 @@
    { FLAG_SETHOST,     'h' },
    { FLAG_PARANOID,    'P' },
@@ -599,9 +607,9 @@ diff -r 265e110fa86c ircd/s_user.c
 +  cloaked_user->cloak_count = 0;
 +}
 +
-diff -r 265e110fa86c ircd/send.c
---- a/ircd/send.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/send.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/send.c
+--- a/ircd/send.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/send.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -563,6 +563,7 @@
  	 member = member->next_member)
        if (MyConnect(member->user)
@@ -628,9 +636,9 @@ diff -r 265e110fa86c ircd/send.c
          (skip & SKIP_DEAF && IsDeaf(member->user)) ||
          (skip & SKIP_NONOPS && !IsChanOp(member)) ||
          (skip & SKIP_NONVOICES && !IsChanOp(member) && !HasVoice(member)) ||
-diff -r 265e110fa86c ircd/whocmds.c
---- a/ircd/whocmds.c	Sun Jul 14 10:43:28 2013 +0200
-+++ b/ircd/whocmds.c	Sun Jul 14 10:45:07 2013 +0200
+diff -r 0f900921b53c ircd/whocmds.c
+--- a/ircd/whocmds.c	Sun Jul 14 11:23:57 2013 +0200
++++ b/ircd/whocmds.c	Sun Jul 14 11:27:33 2013 +0200
 @@ -103,6 +103,9 @@
          break;
    }
