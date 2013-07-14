@@ -302,9 +302,9 @@ diff -r ae04170a0876 ircd/m_remotemode.c
 +              hostmask = *++p;
 +            } else {
 +              if (!*(p+1))
-+                protocol_violation(sptr, "Received REMOTEMODE +h without host parameter for user %C", acptr);
++                protocol_violation(sptr, "Received REMOTEMODE +h for user %C but no host parameter", acptr);
 +              else {
-+                protocol_violation(sptr, "Received REMOTEMODE +h with invalid host parameter %s for user %C", *(p+1), acptr);
++                protocol_violation(sptr, "Received REMOTEMODE +h for user %C but invalid host parameter %s", acptr, *(p+1));
 +                p++; /* Swallow the arg anyway */
 +              }
 +            }
