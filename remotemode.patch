@@ -59,7 +59,7 @@ diff -r ae04170a0876 ircd/Makefile.in
 diff -r ae04170a0876 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
-@@ -0,0 +1,378 @@
+@@ -0,0 +1,386 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -196,6 +196,14 @@ diff -r ae04170a0876 ircd/m_remotemode.c
 +  /* check paramaters */
 +  if (parc < 3)
 +    return protocol_violation(cptr, "Received too few parameters for REMOTEMODE from %C (got %d - need at least 3)", parc, sptr);
++
++  /* check service */
++  if (!IsService(sptr))
++    return protocol_violation(sptr, "Received REMOTEMODE from %C but is not a service", sptr);
++
++  /* check Uworld block */
++  if (!find_conf_byhost(cli_confs(cptr), cli_name(sptr), CONF_UWORLD))
++    return protocol_violation(sptr, "Received REMOTEMODE from %C but has no Uworld block", sptr);
 +
 +  target = parv[1];
 +
