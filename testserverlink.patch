@@ -1,7 +1,52 @@
 # HG changeset patch
-# Parent fd1589069ce99cd33a3219ba0fa3bcd195be81da
+# Parent 79aba0186bf63e3467d079e3ad18a7ef2b22e681
 
 Handle an incoming test server link.
 
-TODO: check for some prefix in password, SIMULATE:<pass>
-abort in time when simulating
+Prefix the password send with PASS with SIM:
+Note: PASSWDLEN is 20 chars, the password check will fail if prefix+pass is longer than that!
+
+To simulate server connection send:
+PASS :SIM:<password>
+SERVER <server name> 1 <link timestamp> <start timestmap> J10 <server numeric><max client numeric> <+flags> :<description>
+
+Example:
+PASS :SIM:J3_Rasf2[Fg
+SERVER irc.netsplit.net 1 1361660437 1361660438 J10 1IA]] +hn6 :NetSplit IRC Server
+
+diff -r 79aba0186bf6 ircd/m_server.c
+--- a/ircd/m_server.c
++++ b/ircd/m_server.c
+@@ -519,6 +519,7 @@
+   struct Jupe*     ajupe;
+   int              hop;
+   int              ret;
++  int              simulate = 0;
+   unsigned short   prot;
+   time_t           start_timestamp;
+   time_t           timestamp;
+@@ -606,6 +607,12 @@
+                            "Access denied. No conf line for server %s", cli_name(cptr));
+   }
+ 
++  /* SIM: prefix on password - snircd */
++  if (cli_passwd(cptr) != NULL && strncmp(cli_passwd(cptr),"SIM:",4) == 0) {
++    simulate = 1;
++    memmove(cli_passwd(cptr), cli_passwd(cptr)+4, strlen(cli_passwd(cptr))-3);
++  }
++
+   if (*aconf->passwd && !!strcmp(aconf->passwd, cli_passwd(cptr))) {
+     ++ServerStats->is_ref;
+     sendto_opmask_butone(0, SNO_OLDSNO, "Access denied (passwd mismatch) %s",
+@@ -614,6 +621,11 @@
+                            "No Access (passwd mismatch) %s", cli_name(cptr));
+   }
+ 
++  /* simulate, stop here - snircd */
++  if (simulate)
++    return exit_client_msg(cptr, cptr, &me,
++                           "Simulate success %s", cli_name(cptr));
++
+   memset(cli_passwd(cptr), 0, sizeof(cli_passwd(cptr)));
+ 
+   ret = check_loop_and_lh(cptr, sptr, &ghost, host, (parc > 7 ? parv[6] : NULL), timestamp, hop, 1);
