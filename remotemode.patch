@@ -59,7 +59,7 @@ diff -r ae04170a0876 ircd/Makefile.in
 diff -r ae04170a0876 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
-@@ -0,0 +1,386 @@
+@@ -0,0 +1,385 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -208,10 +208,9 @@ diff -r ae04170a0876 ircd/m_remotemode.c
 +  target = parv[1];
 +
 +  /* find user */
-+  if(!(acptr = findNUser(target)))
++  if (!(acptr = findNUser(target)))
 +    return 0;
 +
-+  /* TODO: how to pass along all params in an easy way? */
 +  /* not for my user, pass it along */
 +  if (!MyConnect(acptr)) {
 +    sendcmdto_one(sptr, CMD_REMOTEMODE, acptr, "%C %s %s %s %s %s %s %s %s %s %s %s %s %s", acptr,
