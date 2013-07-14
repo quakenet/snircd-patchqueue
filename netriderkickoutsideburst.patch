@@ -1,6 +1,6 @@
 make anti net rider code use better fitting kick message when receiving burst from service outside of net.burst (e.g. Q)
 
-diff -r 4c97552d8c3f ircd/m_burst.c
+diff -r d26997ea109e ircd/m_burst.c
 --- a/ircd/m_burst.c
 +++ b/ircd/m_burst.c
 @@ -212,6 +212,7 @@
@@ -17,7 +17,7 @@ diff -r 4c97552d8c3f ircd/m_burst.c
          mode_invite_clear(chptr);
 +
 +        /* burst is from a services server outside of netburst - snircd */
-+        if (IsServer(sptr) && !IsBurst(sptr) && IsService(sptr)) {
++        if (IsServer(sptr) && !IsBurst(sptr) && IsService(sptr))
 +          kickmsg = "Channel is registered and modes do not allow you to be here";
 +
          for (member = chptr->members; member; member = nmember)
