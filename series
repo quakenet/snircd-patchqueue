@@ -1,7 +1,6 @@
 patchlevel.patch
 infofix.patch
 hginfo.patch
-compilewarnings.patch
 readme.snircd.patch
 delete_ircd_auth_files.patch
 testserverlink.patch

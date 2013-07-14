@@ -1,11 +1,11 @@
 # HG changeset patch
-# Parent 9e9e3508ccb949308183e57bcbc2c1b80a7525c8
+# Parent b4bb08e36872331e27b103f67cc64c0ed1304566
 
 Show auto connect setting in STATS connect.
 
-diff -r 9e9e3508ccb9 ircd/s_err.c
---- a/ircd/s_err.c
-+++ b/ircd/s_err.c
+diff -r b4bb08e36872 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jul 14 11:47:38 2013 +0200
++++ b/ircd/s_err.c	Sun Jul 14 11:51:42 2013 +0200
 @@ -458,7 +458,7 @@
  /* 212 */
    { RPL_STATSCOMMANDS, "%s %u %u", "212" },
@@ -15,17 +15,17 @@ diff -r 9e9e3508ccb9 ircd/s_err.c
  /* 214 */
    { 0 },
  /* 215 */
-diff -r 9e9e3508ccb9 ircd/s_stats.c
---- a/ircd/s_stats.c
-+++ b/ircd/s_stats.c
+diff -r b4bb08e36872 ircd/s_stats.c
+--- a/ircd/s_stats.c	Sun Jul 14 11:47:38 2013 +0200
++++ b/ircd/s_stats.c	Sun Jul 14 11:51:42 2013 +0200
 @@ -107,7 +107,9 @@
        if (tmp->status & CONF_UWORLD)
  	send_reply(sptr, RPL_STATSULINE, host);
        else if (tmp->status & CONF_SERVER)
 -	send_reply(sptr, RPL_STATSCLINE, name, port, maximum, hub_limit, get_conf_class(tmp));
 +	send_reply(sptr, RPL_STATSCLINE, name,
-+	           (tmp->flags & CONF_AUTOCONNECT) ? '+' : '-',
-+	           port, maximum, hub_limit, get_conf_class(tmp));
++                   (tmp->flags & CONF_AUTOCONNECT) ? '+' : '-',
++                   port, maximum, hub_limit, get_conf_class(tmp));
        else if (tmp->status & CONF_CLIENT)
          send_reply(sptr, RPL_STATSILINE,
                     (tmp->username ? tmp->username : ""), (tmp->username ? "@" : ""),
