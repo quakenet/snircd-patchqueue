@@ -37,7 +37,7 @@ diff -r e4ebd2bd9283 include/client.h
  #define SetParanoid(x)          SetFlag(x, FLAG_PARANOID)
  /** Mark a client as having mode +q (common chans only). */
  #define SetCommonChansOnly(x)   SetFlag(x, FLAG_COMMONCHANSONLY)
-+/** Mark a client as having mode +q (common chans restricted). */
++/** Mark a client as having mode +Q (common chans restricted). */
 +#define SetCommonChansOnlyRestricted(x) SetFlag(x, FLAG_COMMONCHANSONLY_RESTRICTED)
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
