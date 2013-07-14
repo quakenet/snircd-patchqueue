@@ -10,7 +10,6 @@ glinemaxexpire.patch
 whohisipfix.patch
 userhostipfix.patch
 broadcastmatchfix.patch
-statscshowfullinfo.patch
 statscshowautoconnect.patch
 disableglinesfeature.patch
 glinedestroy.patch
