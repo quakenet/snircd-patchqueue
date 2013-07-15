@@ -9,6 +9,7 @@ simulateserverlink.patch
 opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
+glinemasktoolong.patch
 whohisipfix.patch
 userhostipfix.patch
 broadcastmatchfix.patch

@@ -1,0 +1,17 @@
+# HG changeset patch
+# Parent 63737fc1f1d6262eb785282e50f9a93cea7b2709
+
+Take the nick part into account as well when checking the length of the gline mask.
+
+diff -r 63737fc1f1d6 ircd/gline.c
+--- a/ircd/gline.c
++++ b/ircd/gline.c
+@@ -451,7 +451,7 @@
+   } else {
+     canon_userhost(userhost, &nick, &user, &host, "*");
+     if (sizeof(uhmask) <
+-	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s@%s", user, host))
++	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s!%s@%s", nick, user, host))
+       return send_reply(sptr, ERR_LONGMASK);
+     else if (MyUser(sptr) || (IsUser(sptr) && flags & GLINE_LOCAL)) {
+       switch (gline_checkmask(host)) {
