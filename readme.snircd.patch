@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent d87a1b0ec69d6f23c866bca49691f2bc4b069dd7
+# Parent 5b73875fa97579e21895b70e91a23ce9267487e0
 
-diff -r d87a1b0ec69d doc/readme.snircd
+diff -r 5b73875fa975 doc/readme.snircd
 --- a/doc/readme.snircd
 +++ b/doc/readme.snircd
 @@ -4,9 +4,10 @@
@@ -16,7 +16,7 @@ diff -r d87a1b0ec69d doc/readme.snircd
  v1.3.1,   HG,  bug fixes, warn user if input line is too long.
            WWW, 10/11/2007
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,215 +94,351 @@
+@@ -93,215 +94,352 @@
  
   * Oper mode +X
       Allows opers to:
@@ -467,7 +467,8 @@ diff -r d87a1b0ec69d doc/readme.snircd
 + * Type: boolean
 + * Default: FALSE
 +
-+ Hide number of local servers linked in /LUSERS output from ordinary users.
++ Hide number of local users and servers linked in /LUSERS output from ordinary users.
++ 255 RPL_LUSERME "I have 1 clients and 1 servers"
 +
  - disclaimer ----------------------------------------------------------------
  
