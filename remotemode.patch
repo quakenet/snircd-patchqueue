@@ -59,7 +59,7 @@ diff -r 1be233effe77 ircd/Makefile.in
 diff -r 1be233effe77 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
-@@ -0,0 +1,381 @@
+@@ -0,0 +1,384 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -167,9 +167,12 @@ diff -r 1be233effe77 ircd/m_remotemode.c
 +/**
 + * ms_remotemode - remotemode server message handler
 + *
-+ * parv[0]  = sender prefix
-+ * parv[1]  = target user numeric
-+ * parv[2+] = mode and arguments
++ * parv[0] = sender prefix
++ * parv[1] = target user numeric
++ * parv[2] = modes
++ * parv[3] = modes or modes param (optional)
++ * parv[4] = modes or modes param (optional)
++ * parv[5] = modes or modes param (optional)
 + *
 + */
 +int ms_remotemode(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
