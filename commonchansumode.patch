@@ -126,7 +126,7 @@ diff -r d8f94a9363ed ircd/channel.c
 +  marker = get_channel_marker();
 +
 +  /* makes no difference to the big O complexity I know */
-+  if(ua->joined > ub->joined)
++  if (ua->joined > ub->joined)
 +  {
 +    struct User *swapee = ua;
 +    ua = ub;
