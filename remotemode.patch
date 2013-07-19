@@ -45,6 +45,18 @@ diff -r 1be233effe77 include/msg.h
  #define MSG_CAP			"CAP"
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
+diff -r 1be233effe77 include/s_user.h
+--- a/include/s_user.h
++++ b/include/s_user.h
+@@ -72,7 +72,7 @@
+ 
+ extern int set_nick_name(struct Client* cptr, struct Client* sptr,
+                          const char* nick, int parc, char* parv[]);
+-extern void send_umode_out(struct Client* cptr, struct Client* sptr,
++extern int send_umode_out(struct Client* cptr, struct Client* sptr,
+                           struct Flags* old, int prop);
+ extern int whisper(struct Client* source, const char* nick,
+                    const char* channel, const char* text, int is_notice);
 diff -r 1be233effe77 ircd/Makefile.in
 --- a/ircd/Makefile.in
 +++ b/ircd/Makefile.in
@@ -59,7 +71,7 @@ diff -r 1be233effe77 ircd/Makefile.in
 diff -r 1be233effe77 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
-@@ -0,0 +1,384 @@
+@@ -0,0 +1,386 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -146,6 +158,7 @@ diff -r 1be233effe77 ircd/m_remotemode.c
 +
 +#include "channel.h"
 +#include "client.h"
++#include "ircd.h"
 +#include "ircd_features.h"
 +#include "ircd_log.h"
 +#include "ircd_reply.h"
@@ -439,8 +452,9 @@ diff -r 1be233effe77 ircd/m_remotemode.c
 +  }
 +  assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
 +
-+  /* send out the mode */
-+  send_umode_out(acptr, acptr, &setflags, 0);
++  /* send out the mode, and tell user */
++  if (send_umode_out(acptr, acptr, &setflags, 0))
++    sendcmdto_one(&me, CMD_NOTICE, acptr, "A network service changed your usermodes.");
 +
 +  return 0;
 +}
@@ -464,7 +478,25 @@ diff -r 1be233effe77 ircd/parse.c
 diff -r 1be233effe77 ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
-@@ -1227,6 +1227,10 @@
+@@ -886,7 +886,7 @@
+  * @param[in] old Prior set of user flags.
+  * @param[in] prop If non-zero, also include FLAG_OPER.
+  */
+-void send_umode_out(struct Client *cptr, struct Client *sptr,
++int send_umode_out(struct Client *cptr, struct Client *sptr,
+                     struct Flags *old, int prop)
+ {
+   int i;
+@@ -912,6 +912,8 @@
+ 
+   if (cptr && MyUser(cptr))
+     send_umode(cptr, sptr, old, ALL_UMODES, 0);
++
++  return *umodeBuf ? 1 : 0;
+ }
+ 
+ 
+@@ -1227,6 +1229,10 @@
   *                        only permitting legitimate default user modes.
   * @return Zero.
   */
@@ -475,7 +507,7 @@ diff -r 1be233effe77 ircd/s_user.c
  int set_user_mode(struct Client *cptr, struct Client *sptr, int parc, 
  		char *parv[], int allow_modes)
  {
-@@ -1281,6 +1285,7 @@
+@@ -1281,6 +1287,7 @@
    /*
     * parse mode change string(s)
     */
