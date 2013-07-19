@@ -3,7 +3,7 @@
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
 #
-# <source numeric server> RM <target numeric user> <mode changes and arguments> (note: no : prefixing last parameter)
+# <source numeric server> RM <target numeric user> <mode> [<mode param1>] [<mode param2>] [<mode param3>] (note: no : prefixing last parameter)
 #
 # allow +-idwRnIxqQ
 # allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
@@ -59,7 +59,7 @@ diff -r 1be233effe77 ircd/Makefile.in
 diff -r 1be233effe77 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
-@@ -0,0 +1,390 @@
+@@ -0,0 +1,384 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -213,20 +213,14 @@ diff -r 1be233effe77 ircd/m_remotemode.c
 +
 +  /* not for my user, pass it along */
 +  if (!MyConnect(acptr)) {
-+    sendcmdto_one(sptr, CMD_REMOTEMODE, acptr, "%C %s %s %s %s %s %s %s %s %s %s %s %s %s", acptr,
++    sendcmdto_one(sptr, CMD_REMOTEMODE, acptr, "%C %s%s%s%s%s%s%s", acptr,
 +      parv[2],
-+      parc >  3 ?  parv[3] : "",
-+      parc >  4 ?  parv[4] : "", 
-+      parc >  5 ?  parv[5] : "",
-+      parc >  6 ?  parv[6] : "",
-+      parc >  7 ?  parv[7] : "",
-+      parc >  8 ?  parv[8] : "",
-+      parc >  9 ?  parv[9] : "",
-+      parc > 10 ? parv[10] : "",
-+      parc > 11 ? parv[11] : "",
-+      parc > 12 ? parv[12] : "",
-+      parc > 13 ? parv[13] : "",
-+      parc > 14 ? parv[14] : "");
++      parc > 3 ? " " : "",
++      parc > 3 ? parv[3] : "",
++      parc > 4 ? " " : "",
++      parc > 4 ? parv[4] : "",
++      parc > 5 ? " " : "", 
++      parc > 5 ? parv[5] : "");
 +    return 0;
 +  }
 +
