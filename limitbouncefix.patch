@@ -1,0 +1,29 @@
+# HG changeset patch
+# Parent bfc5036ab99de4cf6fd43a8577779d1521b44c62
+
+diff -r bfc5036ab99d ChangeLog
+--- a/ChangeLog	Fri Jul 19 20:44:21 2013 +0200
++++ b/ChangeLog	Fri Jul 19 20:46:34 2013 +0200
+@@ -123,6 +123,10 @@
+ 	* tools/iauth-test: Add reminder about perl's RTMIN signal and a
+ 	new handler to exercise the N command in the hurry state.
+ 
++2009-01-12  Michael Poole <mdpoole@troilus.org>
++
++	* ircd/channel.c (modebuf_mode_uint): Fix bouncing of limit changes.
++
+ 2007-11-17  Michael Poole <mdpoole@troilus.org>
+ 
+ 	* ircd/s_auth.c (iauth_disconnect): Avoid destroying invalid
+diff -r bfc5036ab99d ircd/channel.c
+--- a/ircd/channel.c	Fri Jul 19 20:44:21 2013 +0200
++++ b/ircd/channel.c	Fri Jul 19 20:46:34 2013 +0200
+@@ -2154,7 +2154,7 @@
+   assert(0 != mbuf);
+   assert(0 != (mode & (MODE_ADD | MODE_DEL)));
+ 
+-  if (mode == (MODE_LIMIT | ((mbuf->mb_dest & MODEBUF_DEST_BOUNCE) ? MODE_ADD : MODE_DEL))) {
++  if (mode == (MODE_LIMIT | MODE_DEL)) {
+       mbuf->mb_rem |= mode;
+       return;
+   }
