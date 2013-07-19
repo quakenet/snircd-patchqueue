@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 1be233effe779b82ba5093211062fd9e13744463
+# Parent 35547e709abebbe72ece1412669b2fd8651fceec
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
 #
@@ -20,7 +20,7 @@
 #
 # part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
 
-diff -r 1be233effe77 include/handlers.h
+diff -r 35547e709abe include/handlers.h
 --- a/include/handlers.h
 +++ b/include/handlers.h
 @@ -224,6 +224,7 @@
@@ -31,7 +31,7 @@ diff -r 1be233effe77 include/handlers.h
  extern int ms_rping(struct Client*, struct Client*, int, char*[]);
  extern int ms_rpong(struct Client*, struct Client*, int, char*[]);
  extern int ms_server(struct Client*, struct Client*, int, char*[]);
-diff -r 1be233effe77 include/msg.h
+diff -r 35547e709abe include/msg.h
 --- a/include/msg.h
 +++ b/include/msg.h
 @@ -363,6 +363,10 @@
@@ -45,7 +45,7 @@ diff -r 1be233effe77 include/msg.h
  #define MSG_CAP			"CAP"
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
-diff -r 1be233effe77 include/s_user.h
+diff -r 35547e709abe include/s_user.h
 --- a/include/s_user.h
 +++ b/include/s_user.h
 @@ -72,7 +72,7 @@
@@ -57,7 +57,7 @@ diff -r 1be233effe77 include/s_user.h
                            struct Flags* old, int prop);
  extern int whisper(struct Client* source, const char* nick,
                     const char* channel, const char* text, int is_notice);
-diff -r 1be233effe77 ircd/Makefile.in
+diff -r 35547e709abe ircd/Makefile.in
 --- a/ircd/Makefile.in
 +++ b/ircd/Makefile.in
 @@ -162,6 +162,7 @@
@@ -68,7 +68,7 @@ diff -r 1be233effe77 ircd/Makefile.in
  	m_reset.c \
  	m_restart.c \
  	m_rping.c \
-diff -r 1be233effe77 ircd/m_remotemode.c
+diff -r 35547e709abe ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
 @@ -0,0 +1,386 @@
@@ -454,11 +454,11 @@ diff -r 1be233effe77 ircd/m_remotemode.c
 +
 +  /* send out the mode, and tell user */
 +  if (send_umode_out(acptr, acptr, &setflags, 0))
-+    sendcmdto_one(&me, CMD_NOTICE, acptr, "A network service changed your usermodes.");
++    sendcmdto_one(&me, CMD_NOTICE, acptr, "%C :A network service changed your usermodes.", acptr);
 +
 +  return 0;
 +}
-diff -r 1be233effe77 ircd/parse.c
+diff -r 35547e709abe ircd/parse.c
 --- a/ircd/parse.c
 +++ b/ircd/parse.c
 @@ -541,6 +541,13 @@
@@ -475,7 +475,7 @@ diff -r 1be233effe77 ircd/parse.c
      MSG_HASH,
      TOK_HASH,
      0, MAXPARA, MFLG_SLOW, 0, NULL,
-diff -r 1be233effe77 ircd/s_user.c
+diff -r 35547e709abe ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
 @@ -886,7 +886,7 @@
