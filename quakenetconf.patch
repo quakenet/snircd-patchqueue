@@ -260,7 +260,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # host     = "user@host";      reason = "The reason the user will see";
  # realname = "realnametoban";    file = "path/to/file/with/reason/to/show";
-@@ -145,56 +203,56 @@
+@@ -145,66 +203,93 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -334,24 +334,56 @@ diff -r 43501ec6ea11 doc/quakenet.conf
 +  autoconnect = yes;
  };
  
- 
- 
+-
+-
  # -----------------------------------------------------------------------------
 -# CRule (aka dlines)
 +# CRule
  # -----------------------------------------------------------------------------
  # server = "servermask";     rule = "connectrule";
  # Setting all to yes makes the rule always apply. Otherwise it only
-@@ -204,7 +262,7 @@
+ # applies to autoconnects.
+ # all = yes;
+-# The following block is recommended for leaf servers:
++#
++# See doc/readme.crules for more information.
++#
++# Leaf:
++# The following block is recommended for leaf servers.
  CRULE { server = "*"; rule = "directcon(*)"; };
  
++# Leaf:
++#  If the leaf server is allowed to hub for some servers or services,
++#  but should never be connected to more than one hub server at a time,
++#  the following rule will stop auto connects to a second hub server.
++#CRULE { server = "hub.*"; rule = "directcon(hub.*)"; };
++#
++#  Besides stopping auto connects,
++#  to also stop oper connects to a second hub server,
++#  and stop incoming connections from a second hub server.
++#CRULE { all = yes; server = "hub.*"; rule = "directcon(hub.*)"; };
++
++# Leaf:
++#  If the leaf server is allowed to act as a hub for another leaf server,
++#  for example another server from the same cluster,
++#  the following rule will prevent the server from connecting
++#  to another hub server when a hub server is already connected,
++#  directly to the server or via another server.
++#CRULE { all = yes; server = "hub.*"; rule = "connected(hub.*)"; };
++
++# Hub:
++#  If the hub server should not connect to more than one hub or one type of hub,
++#  for example on another continent.
++#CRULE { all = yes; server = "hub.*"; rule = "directcon(hub.*)"; };
++#CRULE { all = yes; server = "hub.cc.*"; rule = "directcon(hub.cc.*)"; };
++
  # -----------------------------------------------------------------------------
 -# spoofhosts (aka slines)
 +# Spoofhost
  # -----------------------------------------------------------------------------
  # username = "ident"    host = "host"    password = "passwd"
  
-@@ -214,7 +272,7 @@
+@@ -214,7 +299,7 @@
  #Spoofhost "testsline2.quakenet.org" { username = "x"; host = "nohost"; };
  
  # -----------------------------------------------------------------------------
@@ -360,7 +392,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  
  #Server Admin
-@@ -236,7 +294,7 @@
+@@ -236,7 +321,7 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -369,7 +401,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  #Quarantine {
  #  "#shells" = "Thou shalt not support the h4><0rz";
-@@ -244,7 +302,7 @@
+@@ -244,7 +329,7 @@
  #};
  
  # -----------------------------------------------------------------------------
@@ -378,7 +410,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
  #Pseudo "CHANSERV" {
-@@ -253,105 +311,85 @@
+@@ -253,105 +338,85 @@
  #};
  Pseudo "AUTH" {
    name = "Q";
