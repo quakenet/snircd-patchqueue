@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent 43501ec6ea11617199fc83b1b957418f95491afe
+# Parent 75cef5a6b820a5a9899856df0ded7a138b6b553e
 
-diff -r 43501ec6ea11 doc/quakenet.conf
+diff -r 75cef5a6b820 doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
 @@ -6,16 +6,40 @@
@@ -260,7 +260,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # host     = "user@host";      reason = "The reason the user will see";
  # realname = "realnametoban";    file = "path/to/file/with/reason/to/show";
-@@ -145,66 +203,93 @@
+@@ -145,66 +203,94 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -334,23 +334,22 @@ diff -r 43501ec6ea11 doc/quakenet.conf
 +  autoconnect = yes;
  };
  
--
--
- # -----------------------------------------------------------------------------
--# CRule (aka dlines)
++# -----------------------------------------------------------------------------
 +# CRule
- # -----------------------------------------------------------------------------
- # server = "servermask";     rule = "connectrule";
- # Setting all to yes makes the rule always apply. Otherwise it only
- # applies to autoconnects.
- # all = yes;
--# The following block is recommended for leaf servers:
++# -----------------------------------------------------------------------------
++# server = "servermask";     rule = "connectrule";
++# all = yes;
++#
++# Setting all to yes makes the rule always apply to auto connects, oper connects,
++# and incoming connections. Otherwise it only applies to autoconnects.
++#
++# A connect is refused when a rule evaluates to true.
 +#
 +# See doc/readme.crules for more information.
 +#
 +# Leaf:
 +# The following block is recommended for leaf servers.
- CRULE { server = "*"; rule = "directcon(*)"; };
++CRULE { server = "*"; rule = "directcon(*)"; };
  
 +# Leaf:
 +#  If the leaf server is allowed to hub for some servers or services,
@@ -358,9 +357,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
 +#  the following rule will stop auto connects to a second hub server.
 +#CRULE { server = "hub.*"; rule = "directcon(hub.*)"; };
 +#
-+#  Besides stopping auto connects,
-+#  to also stop oper connects to a second hub server,
-+#  and stop incoming connections from a second hub server.
++#  To stop all connections to and from a second hub server.
 +#CRULE { all = yes; server = "hub.*"; rule = "directcon(hub.*)"; };
 +
 +# Leaf:
@@ -376,14 +373,24 @@ diff -r 43501ec6ea11 doc/quakenet.conf
 +#  for example on another continent.
 +#CRULE { all = yes; server = "hub.*"; rule = "directcon(hub.*)"; };
 +#CRULE { all = yes; server = "hub.cc.*"; rule = "directcon(hub.cc.*)"; };
-+
+ 
  # -----------------------------------------------------------------------------
+-# CRule (aka dlines)
+-# -----------------------------------------------------------------------------
+-# server = "servermask";     rule = "connectrule";
+-# Setting all to yes makes the rule always apply. Otherwise it only
+-# applies to autoconnects.
+-# all = yes;
+-# The following block is recommended for leaf servers:
+-CRULE { server = "*"; rule = "directcon(*)"; };
+-
+-# -----------------------------------------------------------------------------
 -# spoofhosts (aka slines)
 +# Spoofhost
  # -----------------------------------------------------------------------------
  # username = "ident"    host = "host"    password = "passwd"
  
-@@ -214,7 +299,7 @@
+@@ -214,7 +300,7 @@
  #Spoofhost "testsline2.quakenet.org" { username = "x"; host = "nohost"; };
  
  # -----------------------------------------------------------------------------
@@ -392,7 +399,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  
  #Server Admin
-@@ -236,7 +321,7 @@
+@@ -236,7 +322,7 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -401,7 +408,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  #Quarantine {
  #  "#shells" = "Thou shalt not support the h4><0rz";
-@@ -244,7 +329,7 @@
+@@ -244,7 +330,7 @@
  #};
  
  # -----------------------------------------------------------------------------
@@ -410,7 +417,7 @@ diff -r 43501ec6ea11 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
  #Pseudo "CHANSERV" {
-@@ -253,105 +338,85 @@
+@@ -253,105 +339,85 @@
  #};
  Pseudo "AUTH" {
    name = "Q";
