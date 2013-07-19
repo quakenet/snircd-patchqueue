@@ -294,9 +294,9 @@ diff -r 1be233effe77 ircd/m_remotemode.c
 +          break;
 +        case 'Q':
 +          if (what == MODE_ADD)
-+            SetCommonChansOnlyRestricted(sptr);
++            SetCommonChansOnlyRestricted(acptr);
 +          else
-+            ClearCommonChansOnlyRestricted(sptr);
++            ClearCommonChansOnlyRestricted(acptr);
 +          break;
 +        case 'x':
 +          if (what == MODE_ADD)
