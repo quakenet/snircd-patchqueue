@@ -2,9 +2,9 @@ Add usermode +q which requires users /msg'ing or /notice'ing you to be in at lea
 This is designed to stop the spam bots which sit outside a channel, while a spy sits inside, preventing channel operators dealing with the problem.
 We currently also block invites, this might not be such a good idea, but these days everyone can get Q.
 
-diff -r d16784856d38 include/channel.h
---- a/include/channel.h	Sun Jul 14 11:33:49 2013 +0200
-+++ b/include/channel.h	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed include/channel.h
+--- a/include/channel.h
++++ b/include/channel.h
 @@ -280,6 +280,7 @@
    struct SLink*      invites;	   /**< List of invites on this channel */
    struct Ban*        banlist;      /**< List of bans on this channel */
@@ -22,9 +22,9 @@ diff -r d16784856d38 include/channel.h
 +extern unsigned int get_channel_marker(void);
 +
  #endif /* INCLUDED_channel_h */
-diff -r d16784856d38 include/client.h
---- a/include/client.h	Sun Jul 14 11:33:49 2013 +0200
-+++ b/include/client.h	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed include/client.h
+--- a/include/client.h
++++ b/include/client.h
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -34,7 +34,7 @@ diff -r d16784856d38 include/client.h
  
  /** Character to indicate no oper name available */
  #define NOOPERNAMECHARACTER '-'
-@@ -183,6 +183,8 @@
+@@ -184,6 +184,8 @@
      FLAG_NOCHAN,                    /**< user's channels are hidden */
      FLAG_NOIDLE,                    /**< user's idletime is hidden */
      FLAG_XTRAOP,                    /**< oper has special powers */
@@ -43,7 +43,7 @@ diff -r d16784856d38 include/client.h
  
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-@@ -268,7 +270,7 @@
+@@ -269,7 +271,7 @@
                                       server, XXX if this is a user */
    time_t         cli_firsttime;   /**< time client was created */
    time_t         cli_lastnick;    /**< TimeStamp on nick */
@@ -52,7 +52,7 @@ diff -r d16784856d38 include/client.h
    struct Flags   cli_flags;       /**< client flags */
    unsigned int   cli_hopcount;    /**< number of servers to this 0 = local */
    struct irc_in_addr cli_ip;      /**< Real IP of client */
-@@ -613,6 +615,8 @@
+@@ -616,6 +618,8 @@
  #define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
  /** Return non-zero if the server should send opername information */
  #define IsSendOperName(x)         HasFlag(x, FLAG_OPERNAME)
@@ -61,7 +61,7 @@ diff -r d16784856d38 include/client.h
  
  /** Return non-zero if the client has operator or server privileges. */
  #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
-@@ -676,6 +680,8 @@
+@@ -681,6 +685,8 @@
  #define SetAccountOnly(x)       SetFlag(x, FLAG_ACCOUNTONLY)
  /** Mark a client as having mode +P (paranoid). */
  #define SetParanoid(x)          SetFlag(x, FLAG_PARANOID)
@@ -70,7 +70,7 @@ diff -r d16784856d38 include/client.h
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
  #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
-@@ -721,6 +727,8 @@
+@@ -728,6 +734,8 @@
  #define ClearAccountOnly(x)     ClrFlag(x, FLAG_ACCOUNTONLY)
  /** Remove mode +P (paranoid) from a client */
  #define ClearParanoid(x)        ClrFlag(x, FLAG_PARANOID)
@@ -79,7 +79,7 @@ diff -r d16784856d38 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-@@ -794,6 +802,7 @@
+@@ -801,6 +809,7 @@
  			     struct Connection** con_p);
  extern void client_set_privs(struct Client *client, struct ConfItem *oper);
  extern int client_report_privs(struct Client* to, struct Client* client);
@@ -87,9 +87,9 @@ diff -r d16784856d38 include/client.h
  
  #endif /* INCLUDED_client_h */
  
-diff -r d16784856d38 include/numeric.h
---- a/include/numeric.h	Sun Jul 14 11:33:49 2013 +0200
-+++ b/include/numeric.h	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed include/numeric.h
+--- a/include/numeric.h
++++ b/include/numeric.h
 @@ -420,6 +420,7 @@
  /*	ERR_HTMDISABLED      486	   unreal */
  #define ERR_ACCOUNTONLY      486	/* QuakeNet/ASUKA extension */
@@ -98,9 +98,9 @@ diff -r d16784856d38 include/numeric.h
  /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
  #define ERR_VOICENEEDED      489        /* Undernet extension */
  
-diff -r d16784856d38 ircd/channel.c
---- a/ircd/channel.c	Sun Jul 14 11:33:49 2013 +0200
-+++ b/ircd/channel.c	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed ircd/channel.c
+--- a/ircd/channel.c
++++ b/ircd/channel.c
 @@ -3850,3 +3850,57 @@
                                       "%H -d", chan);
    }
@@ -112,7 +112,7 @@ diff -r d16784856d38 ircd/channel.c
 +  int count = 0;
 +  struct Membership *cptr;
 +  struct User *ua, *ub;
-+  unsigned int marker = get_client_marker();
++  unsigned int marker = get_channel_marker();
 +
 +  ua = cli_user(a);
 +  ub = cli_user(b);
@@ -159,9 +159,9 @@ diff -r d16784856d38 ircd/channel.c
 +
 +  return marker;
 +}
-diff -r d16784856d38 ircd/client.c
---- a/ircd/client.c	Sun Jul 14 11:33:49 2013 +0200
-+++ b/ircd/client.c	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed ircd/client.c
+--- a/ircd/client.c
++++ b/ircd/client.c
 @@ -266,3 +266,24 @@
  
    return 0;
@@ -187,9 +187,9 @@ diff -r d16784856d38 ircd/client.c
 +
 +  return marker;
 +}
-diff -r d16784856d38 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Sun Jul 14 11:33:49 2013 +0200
-+++ b/ircd/ircd_relay.c	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c
++++ b/ircd/ircd_relay.c
 @@ -304,6 +304,10 @@
    if (host)
      *--host = '%';
@@ -233,9 +233,9 @@ diff -r d16784856d38 ircd/ircd_relay.c
    /*
     * deliver the message
     */
-diff -r d16784856d38 ircd/m_invite.c
---- a/ircd/m_invite.c	Sun Jul 14 11:33:49 2013 +0200
-+++ b/ircd/m_invite.c	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed ircd/m_invite.c
+--- a/ircd/m_invite.c
++++ b/ircd/m_invite.c
 @@ -171,6 +171,9 @@
      return 0;
    }
@@ -246,9 +246,9 @@ diff -r d16784856d38 ircd/m_invite.c
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
      return 0;
  
-diff -r d16784856d38 ircd/m_who.c
---- a/ircd/m_who.c	Sun Jul 14 11:33:49 2013 +0200
-+++ b/ircd/m_who.c	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed ircd/m_who.c
+--- a/ircd/m_who.c
++++ b/ircd/m_who.c
 @@ -99,26 +99,6 @@
  /* #include <assert.h> -- Now using assert in ircd_log.h */
  #include <string.h>
@@ -293,9 +293,9 @@ diff -r d16784856d38 ircd/m_who.c
    commas = (mask && strchr(mask, ','));
  
    /* First treat mask as a list of plain nicks/channels */
-diff -r d16784856d38 ircd/s_err.c
---- a/ircd/s_err.c	Sun Jul 14 11:33:49 2013 +0200
-+++ b/ircd/s_err.c	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed ircd/s_err.c
+--- a/ircd/s_err.c
++++ b/ircd/s_err.c
 @@ -1006,7 +1006,7 @@
  /* 486 */
    { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user -- For details of how to obtain an account visit %s", "486" },
@@ -305,9 +305,9 @@ diff -r d16784856d38 ircd/s_err.c
  /* 488 */
    { 0 },
  /* 489 */
-diff -r d16784856d38 ircd/s_user.c
---- a/ircd/s_user.c	Sun Jul 14 11:33:49 2013 +0200
-+++ b/ircd/s_user.c	Sun Jul 14 11:34:58 2013 +0200
+diff -r d8f94a9363ed ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
 @@ -552,7 +552,8 @@
    { FLAG_NOCHAN,      'n' },
    { FLAG_NOIDLE,      'I' },
