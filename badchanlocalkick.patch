@@ -1,15 +1,15 @@
 dont sent kicks upstream for local channels
 
-diff -r fdb96a159967 ircd/gline.c
---- a/ircd/gline.c	Sat Jun 29 18:44:35 2013 +0200
-+++ b/ircd/gline.c	Sat Jun 29 18:46:20 2013 +0200
-@@ -231,7 +231,11 @@
+diff -r b3e677e85b26 ircd/gline.c
+--- a/ircd/gline.c
++++ b/ircd/gline.c
+@@ -234,7 +234,11 @@
          nmember=member->next_member;
          if (!MyUser(member->user) || IsZombie(member) || IsAnOper(member->user))
            continue;
 -        sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
 +
-+        /* dont sent kicks upstream for local channels.. */
++        /* do not send kicks upstream for local channels */
 +        if (!IsLocalChannel(chptr->chname))
 +          sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
 +
