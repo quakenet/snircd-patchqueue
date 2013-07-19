@@ -1,7 +1,7 @@
 # HG changeset patch
-# Parent cc1fa36e10b6e9886051fe3ad4a60b650c06dc5c
+# Parent 43501ec6ea11617199fc83b1b957418f95491afe
 
-diff -r cc1fa36e10b6 doc/quakenet.conf
+diff -r 43501ec6ea11 doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
 @@ -6,16 +6,40 @@
@@ -113,7 +113,7 @@ diff -r cc1fa36e10b6 doc/quakenet.conf
 +  # the number of users allowed on the server
 +  # this should not be greater than the number
 +  # of connections the server is compiled for  
-+  maxlinks = 30000;
++  maxlinks = @@@;
 +  usermode = "+iw";
  };
  
