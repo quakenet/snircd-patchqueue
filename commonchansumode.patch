@@ -101,7 +101,7 @@ diff -r d8f94a9363ed include/numeric.h
 diff -r d8f94a9363ed ircd/channel.c
 --- a/ircd/channel.c
 +++ b/ircd/channel.c
-@@ -3850,3 +3850,57 @@
+@@ -3850,3 +3850,65 @@
                                       "%H -d", chan);
    }
  }
@@ -112,10 +112,18 @@ diff -r d8f94a9363ed ircd/channel.c
 +  int count = 0;
 +  struct Membership *cptr;
 +  struct User *ua, *ub;
-+  unsigned int marker = get_channel_marker();
++  unsigned int marker;
 +
 +  ua = cli_user(a);
 +  ub = cli_user(b);
++
++  /* no channels, no need to check */
++  if ((ua->joined == 0) || (ub->joined == 0))
++  {
++    return 0;
++  }
++
++  marker = get_channel_marker();
 +
 +  /* makes no difference to the big O complexity I know */
 +  if(ua->joined > ub->joined)
