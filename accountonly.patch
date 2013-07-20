@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 8b801a1994c3d114000b71e08c90ef233e4336a0
+# Parent 3987f011c7e948cab04f6b67eadf86aedf0b55fa
 
-diff -r 8b801a1994c3 include/client.h
---- a/include/client.h	Sat Jul 20 14:21:41 2013 +0100
-+++ b/include/client.h	Sat Jul 20 14:45:22 2013 +0100
+diff -r 3987f011c7e9 include/client.h
+--- a/include/client.h	Sun Jul 21 00:14:19 2013 +0100
++++ b/include/client.h	Sun Jul 21 00:16:58 2013 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -50,9 +50,9 @@ diff -r 8b801a1994c3 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r 8b801a1994c3 include/numeric.h
---- a/include/numeric.h	Sat Jul 20 14:21:41 2013 +0100
-+++ b/include/numeric.h	Sat Jul 20 14:45:22 2013 +0100
+diff -r 3987f011c7e9 include/numeric.h
+--- a/include/numeric.h	Sun Jul 21 00:14:19 2013 +0100
++++ b/include/numeric.h	Sun Jul 21 00:16:58 2013 +0100
 @@ -181,14 +181,14 @@
  #define RPL_ENDOFGLIST       281        /* Undernet extension */
  #define RPL_JUPELIST         282        /* Undernet extension - jupe -Kev */
@@ -65,14 +65,14 @@ diff -r 8b801a1994c3 include/numeric.h
 -/*      RPL_CHANINFO_AWAY    289           aircd */
 -/*      RPL_CHANINFO_OPERS   290           aircd */
 -/*	RPL_HELPHDR	     290	Numeric List: Dalnet */
-+#define RPL_FEATURE          284        /* QuakeNet - Asuka */
-+#define RPL_NEWHOSTIS        285        /* QuakeNet - Asuka */
-+#define RPL_CHKHEAD          286        /* QuakeNet - Asuka */
-+#define RPL_CHANUSER         287        /* QuakeNet - Asuka */
-+#define RPL_PATCHHEAD        288        /* QuakeNet - Asuka */
-+#define RPL_PATCHCON         289        /* QuakeNet - Asuka */
-+#define RPL_DATASTR          290        /* QuakeNet - Asuka */
-+#define RPL_ENDOFCHECK	      291        /* QuakeNet - Asuka */
++#define RPL_FEATURE          284        /* QuakeNet - snircd */
++#define RPL_NEWHOSTIS        285        /* QuakeNet - snircd */
++#define RPL_CHKHEAD          286        /* QuakeNet - snircd */
++#define RPL_CHANUSER         287        /* QuakeNet - snircd */
++#define RPL_PATCHHEAD        288        /* QuakeNet - snircd */
++#define RPL_PATCHCON         289        /* QuakeNet - snircd */
++#define RPL_DATASTR          290        /* QuakeNet - snircd */
++#define RPL_ENDOFCHECK       291        /* QuakeNet - snircd */
  /*      RPL_CHANINFO_BANNED  291           aircd */
  /*	RPL_HELPOP	     291	Numeric List: Dalnet */
  /*      RPL_CHANINFO_BANS    292           aircd */
@@ -80,7 +80,7 @@ diff -r 8b801a1994c3 include/numeric.h
  #define ERR_TOOMANYCHANNELS  405
  #define ERR_WASNOSUCHNICK    406
  #define ERR_TOOMANYTARGETS   407
-+#define ERR_SEARCHNOMATCH    408		 /* QuakeNet - Asuka */
++#define ERR_SEARCHNOMATCH    408        /* QuakeNet - snircd */
  /*      ERR_NOSUCHSERVICE    408  IRCnet */
  /*	ERR_NOCOLORSONCHAN   408  Dalnet */
  #define ERR_NOORIGIN         409
@@ -92,9 +92,9 @@ diff -r 8b801a1994c3 include/numeric.h
  /*      ERR_CHANTOORECENT    487           IRCnet extension (?) */
  /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
  #define ERR_VOICENEEDED      489        /* Undernet extension */
-diff -r 8b801a1994c3 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Sat Jul 20 14:21:41 2013 +0100
-+++ b/ircd/ircd_relay.c	Sat Jul 20 14:45:22 2013 +0100
+diff -r 3987f011c7e9 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sun Jul 21 00:14:19 2013 +0100
++++ b/ircd/ircd_relay.c	Sun Jul 21 00:16:58 2013 +0100
 @@ -340,6 +340,16 @@
        is_silenced(sptr, acptr))
      return;
@@ -128,9 +128,9 @@ diff -r 8b801a1994c3 ircd/ircd_relay.c
    /*
     * deliver the message
     */
-diff -r 8b801a1994c3 ircd/m_invite.c
---- a/ircd/m_invite.c	Sat Jul 20 14:21:41 2013 +0100
-+++ b/ircd/m_invite.c	Sat Jul 20 14:45:22 2013 +0100
+diff -r 3987f011c7e9 ircd/m_invite.c
+--- a/ircd/m_invite.c	Sun Jul 21 00:14:19 2013 +0100
++++ b/ircd/m_invite.c	Sun Jul 21 00:16:58 2013 +0100
 @@ -166,6 +166,11 @@
  
    /* If we get here, it was a VALID and meaningful INVITE */
@@ -143,9 +143,9 @@ diff -r 8b801a1994c3 ircd/m_invite.c
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
      return 0;
  
-diff -r 8b801a1994c3 ircd/s_err.c
---- a/ircd/s_err.c	Sat Jul 20 14:21:41 2013 +0100
-+++ b/ircd/s_err.c	Sat Jul 20 14:45:22 2013 +0100
+diff -r 3987f011c7e9 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jul 21 00:14:19 2013 +0100
++++ b/ircd/s_err.c	Sun Jul 21 00:16:58 2013 +0100
 @@ -1004,7 +1004,7 @@
  /* 485 */
    { 0 },
@@ -155,9 +155,9 @@ diff -r 8b801a1994c3 ircd/s_err.c
  /* 487 */
    { 0 },
  /* 488 */
-diff -r 8b801a1994c3 ircd/s_user.c
---- a/ircd/s_user.c	Sat Jul 20 14:21:41 2013 +0100
-+++ b/ircd/s_user.c	Sat Jul 20 14:45:22 2013 +0100
+diff -r 3987f011c7e9 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 21 00:14:19 2013 +0100
++++ b/ircd/s_user.c	Sun Jul 21 00:16:58 2013 +0100
 @@ -502,7 +502,8 @@
    { FLAG_CHSERV,      'k' },
    { FLAG_DEBUG,       'g' },
