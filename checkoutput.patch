@@ -6,9 +6,9 @@ added zombie and delayedjoin prefix to header for check channel
 changed all (timestamp) output to [timestamp] seems more consistent with other places (e.g. snomask HACK MODEs)
 added [<remote server>] param to syntax of command in the comments
 
-diff -r a698927b198f ircd/m_check.c
---- a/ircd/m_check.c
-+++ b/ircd/m_check.c
+diff -r 8ebea3ccdca2 ircd/m_check.c
+--- a/ircd/m_check.c	Sat Jul 20 11:29:55 2013 +0100
++++ b/ircd/m_check.c	Sat Jul 20 11:48:52 2013 +0100
 @@ -71,7 +71,7 @@
   */
  
@@ -167,7 +167,7 @@ diff -r a698927b198f ircd/m_check.c
 -    ircd_snprintf(0, outbuf, sizeof(outbuf),  "      Signed on:: %s (%Tu)", myctime(acptr->cli_firsttime), acptr->cli_firsttime);
 -    send_reply(sptr, RPL_DATASTR, outbuf);
 -  }
-+  if (MyUser(acptr))  
++  if (MyUser(acptr))
 +    send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":      Signed on:: %s [%Tu]", myctime(acptr->cli_firsttime), acptr->cli_firsttime);
  
 -  ircd_snprintf(0, outbuf, sizeof(outbuf), "      Timestamp:: %s (%d)", myctime(acptr->cli_lastnick), acptr->cli_lastnick);
@@ -199,7 +199,7 @@ diff -r a698927b198f ircd/m_check.c
      else if (IsAnOper(acptr))
 -      send_reply(sptr, RPL_DATASTR, "         Status:: IRC Operator (service) (ID: %s)", cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
 +      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":         Status:: IRC Operator (service) (ID: %s)", cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
-     else 
+     else
 -      send_reply(sptr, RPL_DATASTR, "         Status:: Client (service)");
 -  } else if (IsAnOper(acptr)) {
 -    ircd_snprintf(0, outbuf, sizeof(outbuf), "         Status:: IRC Operator (ID: %s)", cli_user(acptr)->opername ? cli_user(acptr)->opername : "<unknown>");
@@ -295,7 +295,7 @@ diff -r a698927b198f ircd/m_check.c
        /* Note: sendq = receiveq for a client (it makes sense really) */
 -      ircd_snprintf(0, outbuf, sizeof(outbuf), "      Data sent:: %lu.%0.3u Kb (%u protocol messages)",
 -            (unsigned long)cli_receiveB(acptr) / 1024, (unsigned long)cli_receiveB(acptr) % 1024, cli_receiveM(acptr));
--      send_reply(sptr, RPL_DATASTR, outbuf);                          
+-      send_reply(sptr, RPL_DATASTR, outbuf);
 -      ircd_snprintf(0, outbuf, sizeof(outbuf), "  Data received:: %lu.%0.3lu Kb (%u protocol messages)",
 -            (unsigned long)cli_sendB(acptr) / 1024, (unsigned long)cli_sendB(acptr) % 1024, cli_sendM(acptr));
 -      send_reply(sptr, RPL_DATASTR, outbuf);
@@ -303,8 +303,8 @@ diff -r a698927b198f ircd/m_check.c
 -            DBufLength(&(cli_recvQ(acptr))), feature_int(FEAT_CLIENT_FLOOD));
 -      send_reply(sptr, RPL_DATASTR, outbuf);
 -            ircd_snprintf(0, outbuf, sizeof(outbuf), "     sendQ size:: %d bytes (max. %d bytes)",
--            DBufLength(&(cli_sendQ(acptr))), get_sendq(acptr));                                
--      send_reply(sptr, RPL_DATASTR, outbuf);                
+-            DBufLength(&(cli_sendQ(acptr))), get_sendq(acptr));
+-      send_reply(sptr, RPL_DATASTR, outbuf);
 +      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":      Data sent:: %lu.%0.3u Kb (%u protocol messages)",
 +        (unsigned long)cli_receiveB(acptr) / 1024, (unsigned long)cli_receiveB(acptr) % 1024, cli_receiveM(acptr));
 +      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":  Data received:: %lu.%0.3lu Kb (%u protocol messages)",
@@ -420,10 +420,10 @@ diff -r a698927b198f ircd/m_check.c
 -        send_reply(sptr, RPL_DATASTR, " ");
 +        send_reply(sptr, RPL_DATASTR, ": ");
          if (flags & CHECK_SHOWMORE)
--          ircd_snprintf(0, outbuf, sizeof(outbuf), "No. %s  nick  user@host  [IP]  (usermodes)  :realname", (flags & CHECK_CLONES) ? "[clients]" : ""); 
+-          ircd_snprintf(0, outbuf, sizeof(outbuf), "No. %s  nick  user@host  [IP]  (usermodes)  :realname", (flags & CHECK_CLONES) ? "[clients]" : "");
 +          send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":No. %s  nick  user@host  [IP]  (usermodes)  :realname",
-+            (flags & CHECK_CLONES) ? "[clients]" : ""); 
-         else 
++            (flags & CHECK_CLONES) ? "[clients]" : "");
+         else
 -          ircd_snprintf(0, outbuf, sizeof(outbuf),  "%s   %-*s%-*s%s", "No.", (NICKLEN + 2), "Nick",
 -                (USERLEN + 2), "User", "Host");
 -        send_reply(sptr, RPL_DATASTR, outbuf);
@@ -459,16 +459,16 @@ diff -r a698927b198f ircd/m_check.c
 +            cli_user(acptr)->realusername, cli_user(acptr)->realhost,
 +            ircd_ntoa(&(cli_ip(acptr))),
 +            umodes,
-+            (flags & CHECK_SHOWSERVER) ? cli_name(cli_user(acptr)->server) : cli_info(acptr));          
++            (flags & CHECK_SHOWSERVER) ? cli_name(cli_user(acptr)->server) : cli_info(acptr));
 +      } else
          /* default output */
 -        ircd_snprintf(0, outbuf, sizeof(outbuf), "%-4d  %-*s%-*s%s", (count+1), (NICKLEN + 2),
--              acptr->cli_name, (USERLEN + 2), cli_user(acptr)->realusername, 
+-              acptr->cli_name, (USERLEN + 2), cli_user(acptr)->realusername,
 -              (flags & CHECK_SHOWIPS) ? ircd_ntoa(&(cli_ip(acptr))) : cli_user(acptr)->realhost);
 -      }
 -      send_reply(sptr, RPL_DATASTR, outbuf);
 +        send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":%-4d  %-*s%-*s%s",
-+          (count+1), (NICKLEN + 2), acptr->cli_name, (USERLEN + 2), cli_user(acptr)->realusername, 
++          (count+1), (NICKLEN + 2), acptr->cli_name, (USERLEN + 2), cli_user(acptr)->realusername,
 +          (flags & CHECK_SHOWIPS) ? ircd_ntoa(&(cli_ip(acptr))) : cli_user(acptr)->realhost);
  
        /* Show channel output (if applicable) - the 50 channel limit sanity check
@@ -517,9 +517,9 @@ diff -r a698927b198f ircd/m_check.c
      send_reply(sptr, RPL_ENDOFCHECK, " ");
    }
  
-diff -r a698927b198f ircd/s_err.c
---- a/ircd/s_err.c
-+++ b/ircd/s_err.c
+diff -r 8ebea3ccdca2 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 11:29:55 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 11:48:52 2013 +0100
 @@ -612,7 +612,7 @@
  /* 289 */
    { 0 },
