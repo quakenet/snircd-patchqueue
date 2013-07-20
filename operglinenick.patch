@@ -1,12 +1,12 @@
 Allow oper to set gline in the form of nick!*@*, but only
 when the nick part contains no wildcards.
 
-diff -r fcfbd0f17eef ircd/gline.c
---- a/ircd/gline.c	Fri Jan 23 00:14:32 2009 +0100
-+++ b/ircd/gline.c	Fri Jan 23 00:25:24 2009 +0100
-@@ -530,7 +530,8 @@
+diff -r 3ef25a346a1c ircd/gline.c
+--- a/ircd/gline.c	Sat Jul 20 15:42:18 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 15:44:08 2013 +0100
+@@ -546,7 +546,8 @@
      if (sizeof(uhmask) <
- 	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s@%s", user, host))
+ 	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s!%s@%s", nick, user, host))
        return send_reply(sptr, ERR_LONGMASK);
 -    else if (MyUser(sptr) || (IsUser(sptr) && flags & GLINE_LOCAL)) {
 +    /* when the nick part contains no wildcards, let it through */
