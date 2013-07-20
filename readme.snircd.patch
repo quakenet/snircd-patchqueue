@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 5b73875fa97579e21895b70e91a23ce9267487e0
+# Parent dc8a005f9cf8880b89b3a5c645d848596f60bc47
 
-diff -r 5b73875fa975 doc/readme.snircd
---- a/doc/readme.snircd
-+++ b/doc/readme.snircd
+diff -r dc8a005f9cf8 doc/readme.snircd
+--- a/doc/readme.snircd	Sat Jul 20 09:10:16 2013 +0200
++++ b/doc/readme.snircd	Sat Jul 20 09:17:53 2013 +0200
 @@ -4,9 +4,10 @@
  ircu. This version is based on version 2.10.12 released by Undernet's
  Coder Committee. The original code can be obtained from their webpage,
@@ -16,7 +16,7 @@ diff -r 5b73875fa975 doc/readme.snircd
  v1.3.1,   HG,  bug fixes, warn user if input line is too long.
            WWW, 10/11/2007
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,215 +94,352 @@
+@@ -93,215 +94,356 @@
  
   * Oper mode +X
       Allows opers to:
@@ -157,6 +157,9 @@ diff -r 5b73875fa975 doc/readme.snircd
 +                  from there a normal usermode change is broadcasted.
  
 - * Topics can by sent during bursts to keep them synced throughout a network.
++ * IAUTHSETHOST:  Allows the iauth daemon to set hosts for new users with the H message.
+ 
+- * Ability to Gline a nick, new format now nick!ident@host.
 + * GLINE: Ability to Gline a nick, new format now nick!user@host.
 +          Changing nick and Gline matches the newnick!user@host,
 +          the change is refused for erroneous nick error.
@@ -164,38 +167,35 @@ diff -r 5b73875fa975 doc/readme.snircd
 +          used by services to sync glines with no lastmod to servers,
 +          as these glines are not part of the netburst.
  
-- * Ability to Gline a nick, new format now nick!ident@host.
+- * /stats C & H show full details for Opers.
 + * BADCHAN: Ability to use wildcards in BADCHANs (Glines on a channel)
 +            to deny access to channel names matching the badchan.
 +            When a badchan is placed, users on the channel(s) affected
 +            are kicked from the channel by their server.
  
-- * /stats C & H show full details for Opers.
+- * Ability to restart the resolver via /rehash and /DNS r.
 + * USERHOST/USERIP: Show real host and IP to opers.
  
-- * Ability to restart the resolver via /rehash and /DNS r.
+- * Ability for services to send BURST outside of net.burst.
 + * OPLEVELS: Oplevels below 100 (0-99) are only setable by a service (define MINOPLEVEL).
 +             Known issue: restriction applies to server modes too,
 +             causing a desynch in oplevels when modes are bounced (HACK3).
  
-- * Ability for services to send BURST outside of net.burst.
+-- configuration file options ------------------------------------------------
 + * MODE: Disallow ordinary users to see the banlist (/MODE #chan b)
 +         when they are not on the channel.
- 
--- configuration file options ------------------------------------------------
-+ * SNOMASK: Default snomask for opers changed, removed SNO_HACK4.
  
 -S: Sethost Lines 
 - Syntax:  S:<spoof host>:<password>:<*.host.cc|a.b.c.*|CIDR>:<ident>
 - Example: S:moo.fish.moo:elitepassword:host.example.com:user
-+ * OPER: Opers cannot excess flood
-+         Opers rate limited to 1 command per 1 second (instead 1 command of per 2 seconds)
-+         Opers always have a free target
++ * SNOMASK: Default snomask for opers changed, removed SNO_HACK4.
  
 - This adds the sethost 'moo.fish.moo' that can be activated by a user by using
 - the password 'elitepassword' and will automatically be applied to anyone
 - connecting from 'host.example.com' with the ident 'user'.
-+ * TOPICLEN: Define for TOPICLEN changed from 160 to 250.
++ * OPER: Opers cannot excess flood
++         Opers rate limited to 1 command per 1 second (instead 1 command of per 2 seconds)
++         Opers always have a free target
  
 - More Examples:
 -   Oper sethost for 'moo.fish.moo'
@@ -204,9 +204,11 @@ diff -r 5b73875fa975 doc/readme.snircd
 -          S:moo.fish.moo:elitepassword::
 -   Oper sethost for 'moo.fish.moo' with auto on 'ident@*.example.com"
 -          S:moo.fish.moo::*.example.com:ident
-+ * FREETARGETS: Start free targets changed from 10 to 20.
++ * TOPICLEN: Define for TOPICLEN changed from 160 to 250.
  
 -F:SETHOST
++ * FREETARGETS: Start free targets changed from 10 to 20.
++
 + * BADUSER: Rules for a bad username relaxed.
 +
 + * JOIN: Changed error message when joining channels, numeric replies:
@@ -240,6 +242,8 @@ diff -r 5b73875fa975 doc/readme.snircd
 +           A "-" char (define NOPERNAMECHARACTER) is used as opername when a server does not send them.
 +           A service can use this char as opername as well, since opernames for a service have little meaning.
 +           Added numeric reply 343 RPL_WHOISOPERNAME "<nick> :is opered as", shown to opers in /WHOIS.
++
++ * WEBIRC: Sends webirc arguments to the iauth daemon if there is one.
 +
 +- configuration options ------------------------------------------------
 +
