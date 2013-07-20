@@ -210,7 +210,7 @@ diff -r 35547e709abe ircd/m_remotemode.c
 +
 +  /* check paramaters */
 +  if (parc < 3)
-+    return protocol_violation(cptr, "Received too few parameters for REMOTEMODE from %C (got %d - need at least 3)", parc, sptr);
++    return protocol_violation(cptr, "Received too few parameters for REMOTEMODE from %C (got %d - need at least 2)", sptr, parc-1);
 +
 +  /* check service */
 +  if (!IsService(sptr))
