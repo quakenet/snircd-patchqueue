@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent ac161998de1c20cdca3b8054f043497c80a581e6
+# Parent 5da5765b8c23f11f0e2fc838b2646cc779b8d42f
 
-diff -r ac161998de1c include/client.h
---- a/include/client.h	Sat Jul 20 16:30:50 2013 +0200
-+++ b/include/client.h	Sat Jul 20 16:31:30 2013 +0200
+diff -r 5da5765b8c23 include/client.h
+--- a/include/client.h	Sat Jul 20 16:31:52 2013 +0200
++++ b/include/client.h	Sat Jul 20 16:52:59 2013 +0200
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -51,53 +51,57 @@ diff -r ac161998de1c include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r ac161998de1c ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Sat Jul 20 16:30:50 2013 +0200
-+++ b/ircd/ircd_relay.c	Sat Jul 20 16:31:30 2013 +0200
-@@ -305,7 +305,8 @@
+diff -r 5da5765b8c23 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jul 20 16:31:52 2013 +0200
++++ b/ircd/ircd_relay.c	Sat Jul 20 16:52:59 2013 +0200
+@@ -305,7 +305,9 @@
      *--host = '%';
  
    /* slug: same applies here, since only opers can be +k */
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) && !common_chan_count(acptr, sptr, 1))
++      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !common_chan_count(acptr, sptr, 1))
      return;
  
    if (!(is_silenced(sptr, acptr)))
-@@ -357,7 +358,8 @@
+@@ -357,7 +359,9 @@
    if (host)
      *--host = '%';
  
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) && !common_chan_count(acptr, sptr, 1))
++      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !common_chan_count(acptr, sptr, 1))
      return;
  
    if (!(is_silenced(sptr, acptr)))
-@@ -399,7 +401,8 @@
+@@ -399,7 +403,9 @@
      return;
    }
  
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1)) {
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) && !common_chan_count(acptr, sptr, 1)) {
++      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !common_chan_count(acptr, sptr, 1)) {
      send_reply(sptr, ERR_COMMONCHANSONLY, cli_name(acptr));
      return;
    }
-@@ -448,7 +451,8 @@
+@@ -448,7 +454,9 @@
    if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr))
      return;
  
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) && !common_chan_count(acptr, sptr, 1))
++      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !common_chan_count(acptr, sptr, 1))
      return;
  
    /*
-diff -r ac161998de1c ircd/m_invite.c
---- a/ircd/m_invite.c	Sat Jul 20 16:30:50 2013 +0200
-+++ b/ircd/m_invite.c	Sat Jul 20 16:31:30 2013 +0200
-@@ -170,8 +170,9 @@
+diff -r 5da5765b8c23 ircd/m_invite.c
+--- a/ircd/m_invite.c	Sat Jul 20 16:31:52 2013 +0200
++++ b/ircd/m_invite.c	Sat Jul 20 16:52:59 2013 +0200
+@@ -170,8 +170,10 @@
      send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr), feature_str(FEAT_URLREG));
      return 0;
    }
@@ -105,13 +109,14 @@ diff -r ac161998de1c ircd/m_invite.c
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1)) {
 + 
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) && !common_chan_count(acptr, sptr, 1))
++      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !common_chan_count(acptr, sptr, 1)) {
      send_reply(sptr, ERR_COMMONCHANSONLY, cli_name(acptr));
      return 0;
    }
-diff -r ac161998de1c ircd/s_user.c
---- a/ircd/s_user.c	Sat Jul 20 16:30:50 2013 +0200
-+++ b/ircd/s_user.c	Sat Jul 20 16:31:30 2013 +0200
+diff -r 5da5765b8c23 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 16:31:52 2013 +0200
++++ b/ircd/s_user.c	Sat Jul 20 16:52:59 2013 +0200
 @@ -553,7 +553,8 @@
    { FLAG_NOIDLE,      'I' },
    { FLAG_SETHOST,     'h' },
