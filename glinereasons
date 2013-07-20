@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 00dd98db050614640ffaf02955cb83f24b70e41b
+# Parent 6b7e62a448071eeb7ffaf9edb7ade22308c5fb8c
 
-diff -r 00dd98db0506 include/s_conf.h
---- a/include/s_conf.h	Sun Jul 14 22:01:19 2013 +0100
-+++ b/include/s_conf.h	Sun Jul 14 22:20:53 2013 +0100
+diff -r 6b7e62a44807 include/s_conf.h
+--- a/include/s_conf.h	Sat Jul 20 11:28:33 2013 +0100
++++ b/include/s_conf.h	Sat Jul 20 11:28:41 2013 +0100
 @@ -196,7 +196,7 @@
  extern enum AuthorizationCheckResult conf_check_client(struct Client *cptr);
  extern int  conf_check_server(struct Client *cptr);
@@ -13,10 +13,10 @@ diff -r 00dd98db0506 include/s_conf.h
  extern const char *find_quarantine(const char* chname);
  extern void lookup_confhost(struct ConfItem *aconf);
  extern void conf_parse_userhost(struct ConfItem *aconf, char *host);
-diff -r 00dd98db0506 ircd/channel.c
---- a/ircd/channel.c	Sun Jul 14 22:01:19 2013 +0100
-+++ b/ircd/channel.c	Sun Jul 14 22:20:53 2013 +0100
-@@ -2921,7 +2921,16 @@
+diff -r 6b7e62a44807 ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 11:28:33 2013 +0100
++++ b/ircd/channel.c	Sat Jul 20 11:28:41 2013 +0100
+@@ -2933,7 +2933,16 @@
    newban->flags = ((state->dir == MODE_ADD) ? BAN_ADD : BAN_DEL)
        | (*flag_p == MODE_BAN ? 0 : BAN_EXCEPTION);
    set_ban_mask(newban, collapse(pretty_mask(t_str)));
@@ -34,9 +34,9 @@ diff -r 00dd98db0506 ircd/channel.c
    newban->when = TStime();
    apply_ban(&state->chptr->banlist, newban, 0);
  }
-diff -r 00dd98db0506 ircd/gline.c
---- a/ircd/gline.c	Sun Jul 14 22:01:19 2013 +0100
-+++ b/ircd/gline.c	Sun Jul 14 22:20:53 2013 +0100
+diff -r 6b7e62a44807 ircd/gline.c
+--- a/ircd/gline.c	Sat Jul 20 11:28:33 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 11:28:41 2013 +0100
 @@ -282,6 +282,9 @@
                               get_client_name(acptr, SHOW_IP));
  
@@ -47,9 +47,9 @@ diff -r 00dd98db0506 ircd/gline.c
          if ((tval = exit_client_msg(cptr, acptr, &me, "G-lined (%s)", gline->gl_reason))) 
          retval = tval; /* retain killed status */
        }
-diff -r 00dd98db0506 ircd/s_auth.c
---- a/ircd/s_auth.c	Sun Jul 14 22:01:19 2013 +0100
-+++ b/ircd/s_auth.c	Sun Jul 14 22:20:53 2013 +0100
+diff -r 6b7e62a44807 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 20 11:28:33 2013 +0100
++++ b/ircd/s_auth.c	Sat Jul 20 11:28:41 2013 +0100
 @@ -233,6 +233,7 @@
    short digitgroups = 0;
    char  ch;
@@ -58,8 +58,8 @@ diff -r 00dd98db0506 ircd/s_auth.c
  
    if (FlagHas(&auth->flags, AR_IAUTH_USERNAME))
    {
-@@ -267,11 +268,14 @@
-     return exit_client(sptr, sptr, &me, "USER: Bogus userid.");
+@@ -270,11 +271,14 @@
+   ircd_strncpy(user->realusername, user->username, USERLEN);
  
    /* Check for K- or G-line. */
 -  killreason = find_kill(sptr, 1);
@@ -76,9 +76,9 @@ diff -r 00dd98db0506 ircd/s_auth.c
    }
  
    if (!FlagHas(&auth->flags, AR_IAUTH_FUSERNAME))
-diff -r 00dd98db0506 ircd/s_conf.c
---- a/ircd/s_conf.c	Sun Jul 14 22:01:19 2013 +0100
-+++ b/ircd/s_conf.c	Sun Jul 14 22:20:53 2013 +0100
+diff -r 6b7e62a44807 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sat Jul 20 11:28:33 2013 +0100
++++ b/ircd/s_conf.c	Sat Jul 20 11:28:41 2013 +0100
 @@ -909,6 +909,7 @@
    int               i;
    int               ret = 0;
@@ -155,9 +155,9 @@ diff -r 00dd98db0506 ircd/s_conf.c
      return -2;
    }
  
-diff -r 00dd98db0506 ircd/s_misc.c
---- a/ircd/s_misc.c	Sun Jul 14 22:01:19 2013 +0100
-+++ b/ircd/s_misc.c	Sun Jul 14 22:20:53 2013 +0100
+diff -r 6b7e62a44807 ircd/s_misc.c
+--- a/ircd/s_misc.c	Sat Jul 20 11:28:33 2013 +0100
++++ b/ircd/s_misc.c	Sat Jul 20 11:28:41 2013 +0100
 @@ -495,18 +495,20 @@
        if (IsServer(victim))
  	sendcmdto_one(killer, CMD_SQUIT, dlp->value.cptr, "%s %Tu :%s",
