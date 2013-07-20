@@ -1,15 +1,15 @@
 # HG changeset patch
-# Parent 4b1f7600b285020a1407751d8c50dfd3da5fc9b3
+# Parent 8b801a1994c3d114000b71e08c90ef233e4336a0
 
-diff -r 4b1f7600b285 include/client.h
---- a/include/client.h	Sun Jul 14 00:17:45 2013 +0100
-+++ b/include/client.h	Sun Jul 14 00:18:56 2013 +0100
+diff -r 8b801a1994c3 include/client.h
+--- a/include/client.h	Sat Jul 20 14:21:41 2013 +0100
++++ b/include/client.h	Sat Jul 20 14:45:22 2013 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
  /** String containing valid user modes, in no particular order. */
--#define infousermodes "dioswkgx"
-+#define infousermodes "dioswkgxR"
+-#define infousermodes "diOoswkgx"
++#define infousermodes "diOoswkgxR"
  
  /** Operator privileges. */
  enum Priv
@@ -22,7 +22,7 @@ diff -r 4b1f7600b285 include/client.h
      FLAG_HIDDENHOST,                /**< user's host is hidden */
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-@@ -581,6 +583,9 @@
+@@ -583,6 +585,9 @@
  #define IsHiddenHost(x)         HasFlag(x, FLAG_HIDDENHOST)
  /** Return non-zero if the client has an active PING request. */
  #define IsPingSent(x)           HasFlag(x, FLAG_PINGSENT)
@@ -32,7 +32,7 @@ diff -r 4b1f7600b285 include/client.h
  
  /** Return non-zero if the client has operator or server privileges. */
  #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
-@@ -627,6 +632,8 @@
+@@ -629,6 +634,8 @@
  #define SetHiddenHost(x)        SetFlag(x, FLAG_HIDDENHOST)
  /** Mark a client as having a pending PING. */
  #define SetPingSent(x)          SetFlag(x, FLAG_PINGSENT)
@@ -41,7 +41,7 @@ diff -r 4b1f7600b285 include/client.h
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
  #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
-@@ -662,6 +669,8 @@
+@@ -664,6 +671,8 @@
  #define ClearPingSent(x)        ClrFlag(x, FLAG_PINGSENT)
  /** Clear the client's HUB flag. */
  #define ClearHub(x)             ClrFlag(x, FLAG_HUB)
@@ -50,9 +50,9 @@ diff -r 4b1f7600b285 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r 4b1f7600b285 include/numeric.h
---- a/include/numeric.h	Sun Jul 14 00:17:45 2013 +0100
-+++ b/include/numeric.h	Sun Jul 14 00:18:56 2013 +0100
+diff -r 8b801a1994c3 include/numeric.h
+--- a/include/numeric.h	Sat Jul 20 14:21:41 2013 +0100
++++ b/include/numeric.h	Sat Jul 20 14:45:22 2013 +0100
 @@ -181,14 +181,14 @@
  #define RPL_ENDOFGLIST       281        /* Undernet extension */
  #define RPL_JUPELIST         282        /* Undernet extension - jupe -Kev */
@@ -92,9 +92,9 @@ diff -r 4b1f7600b285 include/numeric.h
  /*      ERR_CHANTOORECENT    487           IRCnet extension (?) */
  /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
  #define ERR_VOICENEEDED      489        /* Undernet extension */
-diff -r 4b1f7600b285 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Sun Jul 14 00:17:45 2013 +0100
-+++ b/ircd/ircd_relay.c	Sun Jul 14 00:18:56 2013 +0100
+diff -r 8b801a1994c3 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jul 20 14:21:41 2013 +0100
++++ b/ircd/ircd_relay.c	Sat Jul 20 14:45:22 2013 +0100
 @@ -340,6 +340,16 @@
        is_silenced(sptr, acptr))
      return;
@@ -128,9 +128,9 @@ diff -r 4b1f7600b285 ircd/ircd_relay.c
    /*
     * deliver the message
     */
-diff -r 4b1f7600b285 ircd/m_invite.c
---- a/ircd/m_invite.c	Sun Jul 14 00:17:45 2013 +0100
-+++ b/ircd/m_invite.c	Sun Jul 14 00:18:56 2013 +0100
+diff -r 8b801a1994c3 ircd/m_invite.c
+--- a/ircd/m_invite.c	Sat Jul 20 14:21:41 2013 +0100
++++ b/ircd/m_invite.c	Sat Jul 20 14:45:22 2013 +0100
 @@ -166,6 +166,11 @@
  
    /* If we get here, it was a VALID and meaningful INVITE */
@@ -143,9 +143,9 @@ diff -r 4b1f7600b285 ircd/m_invite.c
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
      return 0;
  
-diff -r 4b1f7600b285 ircd/s_err.c
---- a/ircd/s_err.c	Sun Jul 14 00:17:45 2013 +0100
-+++ b/ircd/s_err.c	Sun Jul 14 00:18:56 2013 +0100
+diff -r 8b801a1994c3 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 14:21:41 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 14:45:22 2013 +0100
 @@ -1004,7 +1004,7 @@
  /* 485 */
    { 0 },
@@ -155,9 +155,9 @@ diff -r 4b1f7600b285 ircd/s_err.c
  /* 487 */
    { 0 },
  /* 488 */
-diff -r 4b1f7600b285 ircd/s_user.c
---- a/ircd/s_user.c	Sun Jul 14 00:17:45 2013 +0100
-+++ b/ircd/s_user.c	Sun Jul 14 00:18:56 2013 +0100
+diff -r 8b801a1994c3 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 14:21:41 2013 +0100
++++ b/ircd/s_user.c	Sat Jul 20 14:45:22 2013 +0100
 @@ -502,7 +502,8 @@
    { FLAG_CHSERV,      'k' },
    { FLAG_DEBUG,       'g' },
