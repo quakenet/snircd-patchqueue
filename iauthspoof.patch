@@ -1,9 +1,23 @@
 # HG changeset patch
-# Parent cd13dc11279454cf07af8588ad276067478f3b82
+# Parent bf5c933d38153082b961a0cb7b4be88ee6622fe7
 
-diff -r cd13dc112794 ircd/s_auth.c
---- a/ircd/s_auth.c	Mon Jul 08 22:56:19 2013 +0200
-+++ b/ircd/s_auth.c	Mon Jul 08 22:56:22 2013 +0200
+diff -r bf5c933d3815 doc/readme.iauth
+--- a/doc/readme.iauth	Sat Jul 20 09:24:13 2013 +0200
++++ b/doc/readme.iauth	Sat Jul 20 09:27:32 2013 +0200
+@@ -488,3 +488,10 @@
+   sent to <servername>.
+ Compatibility: This is an Undernet extension and ircd does not support
+   this message.
++
++H - Set Host
++Syntax: H <id> <remoteip> <remoteport> <username> <hostname>
++Example: H 5 192.168.1.10 23367 webchat example.host
++Comments: Used by the iauth instance to set a user's spoof host.
++Compatibility: This is an Undernet extension and ircd does not support
++  this message.
+diff -r bf5c933d3815 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 20 09:24:13 2013 +0200
++++ b/ircd/s_auth.c	Sat Jul 20 09:27:32 2013 +0200
 @@ -103,6 +103,8 @@
    struct AuthRequestFlags flags;  /**< current state of request */
    unsigned int        cookie;     /**< cookie the user must PONG */
