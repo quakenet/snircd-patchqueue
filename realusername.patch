@@ -15,9 +15,9 @@ Check realusername in bans/silences too? Currently it only matches the visible u
 
 WHOWAS does not save the realusername, only the realhost.
 
-diff -r 4677b599b0cc ircd/gline.c
---- a/ircd/gline.c
-+++ b/ircd/gline.c
+diff -r e7d4fe283cd0 ircd/gline.c
+--- a/ircd/gline.c	Sat Jul 20 14:54:45 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 14:57:05 2013 +0100
 @@ -259,7 +259,7 @@
                match(gline->gl_nick, cli_name(acptr)) !=0)
              continue;
@@ -27,18 +27,18 @@ diff -r 4677b599b0cc ircd/gline.c
                match(gline->gl_user, (cli_user(acptr))->realusername) != 0)
              continue;
  
-@@ -415,8 +415,8 @@
+@@ -416,8 +416,8 @@
        continue;
  
      ircd_snprintf(0, namebuf, sizeof(namebuf), "%s@%s",
--		  cli_user(acptr)->username, cli_user(acptr)->host);
+-		  cli_user(acptr)->username, cli_user(acptr)->realhost);
 -    ircd_snprintf(0, ipbuf, sizeof(ipbuf), "%s@%s", cli_user(acptr)->username,
-+		  cli_user(acptr)->realusername, cli_user(acptr)->host); /* TODO: should be realhost? ircu bug? */
++		  cli_user(acptr)->realusername, cli_user(acptr)->realhost);
 +    ircd_snprintf(0, ipbuf, sizeof(ipbuf), "%s@%s", cli_user(acptr)->realusername,
  		  ircd_ntoa(&cli_ip(acptr)));
  
      if (!match(mask, namebuf)
-@@ -1342,7 +1342,7 @@
+@@ -1354,7 +1354,7 @@
      if (match(gline->gl_nick, nick) != 0)
        continue;
  
@@ -47,10 +47,10 @@ diff -r 4677b599b0cc ircd/gline.c
        continue;
  
      if (GlineIsIpMask(gline)) {
-diff -r 4677b599b0cc ircd/m_nick.c
---- a/ircd/m_nick.c
-+++ b/ircd/m_nick.c
-@@ -421,7 +421,7 @@
+diff -r e7d4fe283cd0 ircd/m_nick.c
+--- a/ircd/m_nick.c	Sat Jul 20 14:54:45 2013 +0100
++++ b/ircd/m_nick.c	Sat Jul 20 14:57:05 2013 +0100
+@@ -415,7 +415,7 @@
       */
      base64toip(parv[parc - 3], &ip);
      differ =  (0 != memcmp(&cli_ip(acptr), &ip, sizeof(cli_ip(acptr)))) ||
@@ -59,7 +59,7 @@ diff -r 4677b599b0cc ircd/m_nick.c
      sendto_opmask_butone(0, SNO_OLDSNO, "Nick collision on %C (%C %Tu <- "
  			 "%C %Tu (%s user@host))", acptr, cli_from(acptr),
  			 cli_lastnick(acptr), cptr, lastnick,
-@@ -435,7 +435,7 @@
+@@ -429,7 +429,7 @@
       * compare IP address and username
       */
      differ =  (0 != memcmp(&cli_ip(acptr), &cli_ip(sptr), sizeof(cli_ip(acptr)))) ||
@@ -68,10 +68,10 @@ diff -r 4677b599b0cc ircd/m_nick.c
      sendto_opmask_butone(0, SNO_OLDSNO, "Nick change collision from %C to "
  			 "%C (%C %Tu <- %C %Tu)", sptr, acptr, cli_from(acptr),
  			 cli_lastnick(acptr), cptr, lastnick);
-diff -r 4677b599b0cc ircd/m_who.c
---- a/ircd/m_who.c
-+++ b/ircd/m_who.c
-@@ -389,6 +389,10 @@
+diff -r e7d4fe283cd0 ircd/m_who.c
+--- a/ircd/m_who.c	Sat Jul 20 14:54:45 2013 +0100
++++ b/ircd/m_who.c	Sat Jul 20 14:57:05 2013 +0100
+@@ -390,6 +390,10 @@
                || matchexec(cli_name(acptr), mymask, minlen))
                && ((!(matchsel & WHO_FIELD_UID))
                || matchexec(cli_user(acptr)->username, mymask, minlen))
@@ -82,7 +82,7 @@ diff -r 4677b599b0cc ircd/m_who.c
                && ((!(matchsel & WHO_FIELD_SER))
                || (!(HasFlag(cli_user(acptr)->server, FLAG_MAP))))
                && ((!(matchsel & WHO_FIELD_HOS))
-@@ -428,6 +432,10 @@
+@@ -429,6 +433,10 @@
              || matchexec(cli_name(acptr), mymask, minlen))
              && ((!(matchsel & WHO_FIELD_UID))
              || matchexec(cli_user(acptr)->username, mymask, minlen))
@@ -93,10 +93,10 @@ diff -r 4677b599b0cc ircd/m_who.c
              && ((!(matchsel & WHO_FIELD_SER))
                  || (!(HasFlag(cli_user(acptr)->server, FLAG_MAP))))
              && ((!(matchsel & WHO_FIELD_HOS))
-diff -r 4677b599b0cc ircd/s_auth.c
---- a/ircd/s_auth.c
-+++ b/ircd/s_auth.c
-@@ -232,6 +232,7 @@
+diff -r e7d4fe283cd0 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 20 14:54:45 2013 +0100
++++ b/ircd/s_auth.c	Sat Jul 20 14:57:05 2013 +0100
+@@ -233,6 +233,7 @@
    char  last;
    char *reason;
  
@@ -104,7 +104,7 @@ diff -r 4677b599b0cc ircd/s_auth.c
    if (FlagHas(&auth->flags, AR_IAUTH_USERNAME))
    {
        ircd_strncpy(cli_user(sptr)->username, cli_username(sptr), USERLEN);
-@@ -264,6 +265,7 @@
+@@ -265,6 +266,7 @@
        || ((user->username[0] == '~') && (user->username[1] == '\0')))
      return exit_client(sptr, sptr, &me, "USER: Bogus userid.");
  
@@ -112,7 +112,7 @@ diff -r 4677b599b0cc ircd/s_auth.c
    /* Have to set up "realusername" before doing the gline check below */
    ircd_strncpy(user->realusername, user->username, USERLEN);
  
-@@ -1063,7 +1065,9 @@
+@@ -1065,7 +1067,9 @@
    FlagClr(&auth->flags, AR_NEEDS_USER);
    cptr = auth->client;
    ircd_strncpy(cli_info(cptr), userinfo, REALLEN);
@@ -122,7 +122,7 @@ diff -r 4677b599b0cc ircd/s_auth.c
    ircd_strncpy(cli_user(cptr)->host, cli_sockhost(cptr), HOSTLEN);
    if (IAuthHas(iauth, IAUTH_UNDERNET))
      sendto_iauth(cptr, "U %s %s %s :%s", username, hostname, servername, userinfo);
-@@ -1723,8 +1727,11 @@
+@@ -1725,8 +1729,11 @@
  {
    assert(cli_auth(cli) != NULL);
    FlagClr(&cli_auth(cli)->flags, AR_AUTH_PENDING);
@@ -135,10 +135,10 @@ diff -r 4677b599b0cc ircd/s_auth.c
    return 1;
  }
  
-diff -r 4677b599b0cc ircd/s_conf.c
---- a/ircd/s_conf.c
-+++ b/ircd/s_conf.c
-@@ -647,8 +647,8 @@
+diff -r e7d4fe283cd0 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sat Jul 20 14:54:45 2013 +0100
++++ b/ircd/s_conf.c	Sat Jul 20 14:57:05 2013 +0100
+@@ -645,8 +645,8 @@
          0 != ircd_strcmp(tmp->name, name))
        continue;
      if (tmp->username
@@ -149,7 +149,7 @@ diff -r 4677b599b0cc ircd/s_conf.c
        continue;
      if (tmp->addrbits < 0)
      {
-@@ -1061,7 +1061,7 @@
+@@ -1059,7 +1059,7 @@
      return 0;
  
    host = cli_sockhost(cptr);
@@ -158,9 +158,9 @@ diff -r 4677b599b0cc ircd/s_conf.c
    realname = cli_info(cptr);
  
    assert(strlen(host) <= HOSTLEN);
-diff -r 4677b599b0cc ircd/s_misc.c
---- a/ircd/s_misc.c
-+++ b/ircd/s_misc.c
+diff -r e7d4fe283cd0 ircd/s_misc.c
+--- a/ircd/s_misc.c	Sat Jul 20 14:54:45 2013 +0100
++++ b/ircd/s_misc.c	Sat Jul 20 14:57:05 2013 +0100
 @@ -399,7 +399,7 @@
      if (IsUser(victim))
        log_write(LS_USER, L_TRACE, 0, "%Tu %i %s@%s %s %s %s%s %s :%s",
@@ -168,5 +168,5 @@ diff -r 4677b599b0cc ircd/s_misc.c
 -		cli_user(victim)->username, cli_sockhost(victim),
 +		cli_user(victim)->realusername, cli_sockhost(victim),
                  ircd_ntoa(&cli_ip(victim)),
-                 IsAccount(victim) ? cli_username(victim) : "0",
+                 cli_account(victim),
                  NumNick(victim), /* two %s's */

@@ -1,15 +1,15 @@
 # HG changeset patch
-# Parent 6b2367e1e71232271c13775630b9f7e24a71734f
+# Parent 82274ef17f3290bcfbea13c35461fc5544a90cdf
 
-diff -r 6b2367e1e712 include/client.h
---- a/include/client.h	Sun Jul 14 00:23:44 2013 +0100
-+++ b/include/client.h	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 include/client.h
+--- a/include/client.h	Sat Jul 20 14:45:57 2013 +0100
++++ b/include/client.h	Sat Jul 20 14:46:31 2013 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
  /** String containing valid user modes, in no particular order. */
--#define infousermodes "dioswkgxR"
-+#define infousermodes "dioswkgxRXIn"
+-#define infousermodes "diOoswkgxR"
++#define infousermodes "diOoswkgxRXIn"
  
  /** Operator privileges. */
  enum Priv
@@ -24,7 +24,7 @@ diff -r 6b2367e1e712 include/client.h
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
      FLAG_GLOBAL_UMODES = FLAG_OPER  /**< First global mode flag */
-@@ -581,6 +585,12 @@
+@@ -583,6 +587,12 @@
  #define IsAccount(x)            HasFlag(x, FLAG_ACCOUNT)
  /** Return non-zero if the client has set mode +x (hidden host). */
  #define IsHiddenHost(x)         HasFlag(x, FLAG_HIDDENHOST)
@@ -37,7 +37,7 @@ diff -r 6b2367e1e712 include/client.h
  /** Return non-zero if the client has an active PING request. */
  #define IsPingSent(x)           HasFlag(x, FLAG_PINGSENT)
  /** Return non-zero if the client should not receive privmsgs/notices
-@@ -630,6 +640,12 @@
+@@ -632,6 +642,12 @@
  #define SetAccount(x)           SetFlag(x, FLAG_ACCOUNT)
  /** Mark a client as having mode +x (hidden host). */
  #define SetHiddenHost(x)        SetFlag(x, FLAG_HIDDENHOST)
@@ -50,7 +50,7 @@ diff -r 6b2367e1e712 include/client.h
  /** Mark a client as having a pending PING. */
  #define SetPingSent(x)          SetFlag(x, FLAG_PINGSENT)
  /** Mark a client as having mode +R (account only). */
-@@ -665,6 +681,12 @@
+@@ -667,6 +683,12 @@
  #define ClearServNotice(x)      ClrFlag(x, FLAG_SERVNOTICE)
  /** Remove mode +x (hidden host) from the client. */
  #define ClearHiddenHost(x)      ClrFlag(x, FLAG_HIDDENHOST)
@@ -63,9 +63,9 @@ diff -r 6b2367e1e712 include/client.h
  /** Clear the client's pending PING flag. */
  #define ClearPingSent(x)        ClrFlag(x, FLAG_PINGSENT)
  /** Clear the client's HUB flag. */
-diff -r 6b2367e1e712 include/ircd_features.h
---- a/include/ircd_features.h	Sun Jul 14 00:23:44 2013 +0100
-+++ b/include/ircd_features.h	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 include/ircd_features.h
+--- a/include/ircd_features.h	Sat Jul 20 14:45:57 2013 +0100
++++ b/include/ircd_features.h	Sat Jul 20 14:46:31 2013 +0100
 @@ -56,6 +56,7 @@
    FEAT_HIDDEN_IP,
    FEAT_AUTOINVISIBLE,
@@ -74,9 +74,9 @@ diff -r 6b2367e1e712 include/ircd_features.h
    FEAT_OPLEVELS,
    FEAT_ZANNELS,
    FEAT_LOCAL_CHANNELS,
-diff -r 6b2367e1e712 include/numeric.h
---- a/include/numeric.h	Sun Jul 14 00:23:44 2013 +0100
-+++ b/include/numeric.h	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 include/numeric.h
+--- a/include/numeric.h	Sat Jul 20 14:45:57 2013 +0100
++++ b/include/numeric.h	Sat Jul 20 14:46:31 2013 +0100
 @@ -410,6 +410,7 @@
  /*	ERR_DESYNC	     484	 Dalnet,PTlink */
  /*	ERR_ATTACKDENY	     484	 unreal */
@@ -85,9 +85,9 @@ diff -r 6b2367e1e712 include/numeric.h
  /*      ERR_UNIQOPRIVSNEEDED 485           IRCnet extension */
  /*	ERR_KILLDENY         485	   unreal */
  /*	ERR_CANTKICKADMIN    485	   PTlink */
-diff -r 6b2367e1e712 ircd/channel.c
---- a/ircd/channel.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/channel.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/channel.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -743,7 +743,7 @@
    /*
     * Servers can always speak on channels.
@@ -132,9 +132,9 @@ diff -r 6b2367e1e712 ircd/channel.c
  	  continue;
  	}
        }
-diff -r 6b2367e1e712 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/ircd_features.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/ircd_features.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -321,6 +321,7 @@
    F_S(HIDDEN_IP, 0, "127.0.0.1", 0),
    F_B(AUTOINVISIBLE, 0, 1, 0),
@@ -143,9 +143,9 @@ diff -r 6b2367e1e712 ircd/ircd_features.c
    F_B(OPLEVELS, 0, 1, 0),
    F_B(ZANNELS, 0, 1, 0),
    F_B(LOCAL_CHANNELS, 0, 1, 0),
-diff -r 6b2367e1e712 ircd/m_join.c
---- a/ircd/m_join.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/m_join.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/m_join.c
+--- a/ircd/m_join.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/m_join.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -207,6 +207,14 @@
        else if (*chptr->mode.key && (!key || strcmp(key, chptr->mode.key)))
          err = ERR_BADCHANNELKEY;
@@ -161,9 +161,9 @@ diff -r 6b2367e1e712 ircd/m_join.c
        /* An oper with WALK_LCHAN privilege can join a local channel
         * he otherwise could not join by using "OVERRIDE" as the key.
         * This will generate a HACK(4) notice, but fails if the oper
-diff -r 6b2367e1e712 ircd/m_kick.c
---- a/ircd/m_kick.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/m_kick.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/m_kick.c
+--- a/ircd/m_kick.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/m_kick.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -131,7 +131,15 @@
      return 0; /* find_chasing sends the reply for us */
  
@@ -181,9 +181,9 @@ diff -r 6b2367e1e712 ircd/m_kick.c
      return send_reply(sptr, ERR_ISCHANSERVICE, cli_name(who), chptr->chname);
  
    /* Prevent kicking opers from local channels -DM- */
-diff -r 6b2367e1e712 ircd/m_kill.c
---- a/ircd/m_kill.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/m_kill.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/m_kill.c
+--- a/ircd/m_kill.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/m_kill.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -277,7 +277,15 @@
    /*
     * if the user is +k, prevent a kill from local user
@@ -201,9 +201,9 @@ diff -r 6b2367e1e712 ircd/m_kill.c
      return send_reply(sptr, ERR_ISCHANSERVICE, "KILL", cli_name(victim));
  
  
-diff -r 6b2367e1e712 ircd/m_whois.c
---- a/ircd/m_whois.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/m_whois.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/m_whois.c
+--- a/ircd/m_whois.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/m_whois.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -144,7 +144,7 @@
  		   cli_info(acptr));
  
@@ -226,9 +226,9 @@ diff -r 6b2367e1e712 ircd/m_whois.c
         send_reply(sptr, RPL_WHOISIDLE, name, CurrentTime - user->last,
                    cli_firsttime(acptr));
    }
-diff -r 6b2367e1e712 ircd/s_err.c
---- a/ircd/s_err.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/s_err.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -1000,9 +1000,9 @@
  /* 483 */
    { ERR_CANTKILLSERVER, ":You cant kill a server!", "483" },
@@ -241,9 +241,9 @@ diff -r 6b2367e1e712 ircd/s_err.c
  /* 486 */
    { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user", "486" },
  /* 487 */
-diff -r 6b2367e1e712 ircd/s_user.c
---- a/ircd/s_user.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/s_user.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/s_user.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -503,7 +503,10 @@
    { FLAG_DEBUG,       'g' },
    { FLAG_ACCOUNT,     'r' },
@@ -307,9 +307,9 @@ diff -r 6b2367e1e712 ircd/s_user.c
      /*
       * only send wallops to opers
       */
-diff -r 6b2367e1e712 ircd/whocmds.c
---- a/ircd/whocmds.c	Sun Jul 14 00:23:44 2013 +0100
-+++ b/ircd/whocmds.c	Sun Jul 14 00:25:56 2013 +0100
+diff -r 82274ef17f32 ircd/whocmds.c
+--- a/ircd/whocmds.c	Sat Jul 20 14:45:57 2013 +0100
++++ b/ircd/whocmds.c	Sat Jul 20 14:46:31 2013 +0100
 @@ -90,7 +90,7 @@
      chan = find_channel_member(acptr, repchan);
    }

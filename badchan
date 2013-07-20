@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent f49987f27c65a72ee0611e57c25a0c5309e5cec1
+# Parent b303d3fb110ec90c10a105cc533a8a0b9b2baefb
 
-diff -r f49987f27c65 include/gline.h
---- a/include/gline.h	Sun Jul 14 18:24:36 2013 +0100
-+++ b/include/gline.h	Sun Jul 14 18:25:15 2013 +0100
+diff -r b303d3fb110e include/gline.h
+--- a/include/gline.h	Sat Jul 20 14:49:32 2013 +0100
++++ b/include/gline.h	Sat Jul 20 14:50:19 2013 +0100
 @@ -136,6 +136,7 @@
  			 struct Gline *gline);
  extern struct Gline *gline_find(char *userhost, unsigned int flags);
@@ -12,20 +12,18 @@ diff -r f49987f27c65 include/gline.h
  extern void gline_free(struct Gline *gline);
  extern void gline_burst(struct Client *cptr);
  extern int gline_resend(struct Client *cptr, struct Gline *gline);
-diff -r f49987f27c65 ircd/gline.c
---- a/ircd/gline.c	Sun Jul 14 18:24:36 2013 +0100
-+++ b/ircd/gline.c	Sun Jul 14 18:25:15 2013 +0100
-@@ -24,7 +24,9 @@
- #include "config.h"
- 
+diff -r b303d3fb110e ircd/gline.c
+--- a/ircd/gline.c	Sat Jul 20 14:49:32 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 14:50:19 2013 +0100
+@@ -26,6 +26,7 @@
  #include "gline.h"
-+#include "channel.h"
+ #include "channel.h"
  #include "client.h"
 +#include "hash.h"
  #include "ircd.h"
  #include "ircd_alloc.h"
  #include "ircd_features.h"
-@@ -184,8 +186,8 @@
+@@ -185,8 +186,8 @@
  }
  
  /** Check local clients against a new G-line.
@@ -36,7 +34,7 @@ diff -r f49987f27c65 ircd/gline.c
   * @param[in] cptr Peer connect that sent the G-line.
   * @param[in] sptr Client that originated the G-line.
   * @param[in] gline New G-line to check.
-@@ -200,53 +202,72 @@
+@@ -201,53 +202,72 @@
    if (feature_bool(FEAT_DISABLE_GLINES))
      return 0; /* G-lines are disabled */
  
@@ -147,7 +145,7 @@ diff -r f49987f27c65 ircd/gline.c
      }
    }
    return retval;
-@@ -972,6 +993,29 @@
+@@ -984,6 +1004,29 @@
    return gline;
  }
  
@@ -177,7 +175,7 @@ diff -r f49987f27c65 ircd/gline.c
  /** Find a matching G-line for a user.
   * @param[in] cptr Client to compare against.
   * @param[in] flags Bitwise combination of GLINE_GLOBAL and/or
-@@ -1162,6 +1206,16 @@
+@@ -1174,6 +1217,16 @@
  	       GlineIsRemActive(gline) ? '+' : '-',
  	       gline->gl_reason);
    }
@@ -194,9 +192,9 @@ diff -r f49987f27c65 ircd/gline.c
  }
  
  /** Calculate memory used by G-lines.
-diff -r f49987f27c65 ircd/m_join.c
---- a/ircd/m_join.c	Sun Jul 14 18:24:36 2013 +0100
-+++ b/ircd/m_join.c	Sun Jul 14 18:25:15 2013 +0100
+diff -r b303d3fb110e ircd/m_join.c
+--- a/ircd/m_join.c	Sat Jul 20 14:49:32 2013 +0100
++++ b/ircd/m_join.c	Sat Jul 20 14:50:19 2013 +0100
 @@ -150,9 +150,9 @@
      }
  
@@ -210,9 +208,9 @@ diff -r f49987f27c65 ircd/m_join.c
        continue;
      }
  
-diff -r f49987f27c65 ircd/s_err.c
---- a/ircd/s_err.c	Sun Jul 14 18:24:36 2013 +0100
-+++ b/ircd/s_err.c	Sun Jul 14 18:25:15 2013 +0100
+diff -r b303d3fb110e ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 14:49:32 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 14:50:19 2013 +0100
 @@ -990,7 +990,7 @@
  /* 478 */
    { ERR_BANLISTFULL, "%s %s :Channel ban/ignore list is full", "478" },

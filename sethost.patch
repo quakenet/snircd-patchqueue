@@ -45,15 +45,15 @@ show if spoofhost is valid or not (S = valid, s = invalid)
 removed numbering (not required anymore?)
 merged showing of user@host
 
-diff -r 103be431b156 include/client.h
---- a/include/client.h	Sat Jul 20 12:01:10 2013 +0100
-+++ b/include/client.h	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 include/client.h
+--- a/include/client.h	Sat Jul 20 14:54:11 2013 +0100
++++ b/include/client.h	Sat Jul 20 14:54:45 2013 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
  /** String containing valid user modes, in no particular order. */
--#define infousermodes "dioOswkgxRXInP"
-+#define infousermodes "dioOswkghxRXInP"
+-#define infousermodes "diOoswkgxRXInP"
++#define infousermodes "diOoswkghxRXInP"
  
  /** Character to indicate no oper name available */
  #define NOOPERNAMECHARACTER '-'
@@ -65,7 +65,7 @@ diff -r 103be431b156 include/client.h
      FLAG_LOCOP,                     /**< Local operator -- SRB */
      FLAG_SERVNOTICE,                /**< server notices such as kill */
      FLAG_OPER,                      /**< Operator */
-@@ -627,7 +628,8 @@
+@@ -629,7 +630,8 @@
  #define HasHiddenHost(x)        (IsHiddenHost(x) && IsAccount(x))
  /** Return non-zero if the client is using a spoofhost */
  #define IsSetHost(x)            HasFlag(x, FLAG_SETHOST)
@@ -75,7 +75,7 @@ diff -r 103be431b156 include/client.h
  
  /** Mark a client as having an in-progress net.burst. */
  #define SetBurst(x)             SetFlag(x, FLAG_BURST)
-@@ -671,6 +673,8 @@
+@@ -673,6 +675,8 @@
  #define SetHiddenHost(x)        SetFlag(x, FLAG_HIDDENHOST)
  /** Mark a client as having mode +h (spoofhost). */
  #define SetSetHost(x)           SetFlag(x, FLAG_SETHOST)
@@ -84,7 +84,7 @@ diff -r 103be431b156 include/client.h
  /** Mark a client as having mode +X (xtraop). */
  #define SetXtraOp(x)            SetFlag(x, FLAG_XTRAOP)
  /** Mark a client as having mode +n (hide channels). */
-@@ -716,6 +720,8 @@
+@@ -718,6 +722,8 @@
  #define ClearHiddenHost(x)      ClrFlag(x, FLAG_HIDDENHOST)
  /** Remove mode +h (spoofhost) from a client. */
  #define ClearSetHost(x)         ClrFlag(x, FLAG_SETHOST)
@@ -93,9 +93,9 @@ diff -r 103be431b156 include/client.h
  /** Remove mode +X (xtraop) from a client. */
  #define ClearXtraOp(x)          ClrFlag(x, FLAG_XTRAOP)
  /** Remove mode +n (hide channels) from a client. */
-diff -r 103be431b156 include/ircd_chattr.h
---- a/include/ircd_chattr.h	Sat Jul 20 12:01:10 2013 +0100
-+++ b/include/ircd_chattr.h	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 include/ircd_chattr.h
+--- a/include/ircd_chattr.h	Sat Jul 20 14:54:11 2013 +0100
++++ b/include/ircd_chattr.h	Sat Jul 20 14:54:45 2013 +0100
 @@ -117,6 +117,8 @@
  #define IsUserChar(c)      (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCUI)
  /** Test whether a character is valid in a hostname. */
@@ -111,9 +111,9 @@ diff -r 103be431b156 include/ircd_chattr.h
  
 +
  #endif /* INCLUDED_ircd_chattr_h */
-diff -r 103be431b156 include/numeric.h
---- a/include/numeric.h	Sat Jul 20 12:01:10 2013 +0100
-+++ b/include/numeric.h	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 include/numeric.h
+--- a/include/numeric.h	Sat Jul 20 14:54:11 2013 +0100
++++ b/include/numeric.h	Sat Jul 20 14:54:45 2013 +0100
 @@ -314,7 +314,7 @@
  /*      RPL_NOUSERS          395        Dalnet/EFnet/IRCnet */
  #define RPL_HOSTHIDDEN       396	/* UMODE +x completed succesfuly */
@@ -123,9 +123,9 @@ diff -r 103be431b156 include/numeric.h
  
  /*
   * Errors are in the range from 400-599 currently and are grouped by what
-diff -r 103be431b156 include/s_conf.h
---- a/include/s_conf.h	Sat Jul 20 12:01:10 2013 +0100
-+++ b/include/s_conf.h	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 include/s_conf.h
+--- a/include/s_conf.h	Sat Jul 20 14:54:11 2013 +0100
++++ b/include/s_conf.h	Sat Jul 20 14:54:45 2013 +0100
 @@ -205,7 +205,8 @@
  
  extern void conf_add_sline(const char* const* fields, int count);
@@ -136,9 +136,9 @@ diff -r 103be431b156 include/s_conf.h
  extern void free_spoofhost(struct sline *spoof);
  
  extern void yyerror(const char *msg);
-diff -r 103be431b156 include/s_user.h
---- a/include/s_user.h	Sat Jul 20 12:01:10 2013 +0100
-+++ b/include/s_user.h	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 include/s_user.h
+--- a/include/s_user.h	Sat Jul 20 14:54:11 2013 +0100
++++ b/include/s_user.h	Sat Jul 20 14:54:45 2013 +0100
 @@ -79,15 +79,15 @@
  extern int set_nick_name(struct Client* cptr, struct Client* sptr,
                           const char* nick, int parc, char* parv[]);
@@ -167,9 +167,9 @@ diff -r 103be431b156 include/s_user.h
  extern void set_snomask(struct Client *, unsigned int, int);
  extern int is_snomask(char *);
  extern int check_target_limit(struct Client *sptr, void *target, const char *name,
-diff -r 103be431b156 ircd/channel.c
---- a/ircd/channel.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/channel.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/channel.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -384,12 +384,12 @@
    ircd_ntoa_r(iphost, &cli_ip(cptr));
  
@@ -185,9 +185,9 @@ diff -r 103be431b156 ircd/channel.c
        sa = cli_user(cptr)->realhost;
      } else {
        ircd_snprintf(0, tmphost, HOSTLEN, "%s.%s",
-diff -r 103be431b156 ircd/m_oper.c
---- a/ircd/m_oper.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/m_oper.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/m_oper.c
+--- a/ircd/m_oper.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/m_oper.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -189,7 +189,7 @@
      
      set_snomask(sptr, SNO_OPERDEFAULT, SNO_ADD);
@@ -197,9 +197,9 @@ diff -r 103be431b156 ircd/m_oper.c
      send_reply(sptr, RPL_YOUREOPER);
  
      sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now operator (%c) as %s",
-diff -r 103be431b156 ircd/m_remotemode.c
---- a/ircd/m_remotemode.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/m_remotemode.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/m_remotemode.c
+--- a/ircd/m_remotemode.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/m_remotemode.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -126,6 +126,7 @@
    int what = MODE_ADD;
    int do_host_hiding = 0;
@@ -261,9 +261,9 @@ diff -r 103be431b156 ircd/m_remotemode.c
  
    return 0;
  }
-diff -r 103be431b156 ircd/m_sethost.c
---- a/ircd/m_sethost.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/m_sethost.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/m_sethost.c
+--- a/ircd/m_sethost.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/m_sethost.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -82,175 +82,233 @@
  #include "config.h"
  
@@ -613,9 +613,9 @@ diff -r 103be431b156 ircd/m_sethost.c
    return 0;
  }
  
-diff -r 103be431b156 ircd/m_userhost.c
---- a/ircd/m_userhost.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/m_userhost.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/m_userhost.c
+--- a/ircd/m_userhost.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/m_userhost.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -104,7 +104,7 @@
  	       * of +x.  If an oper wants the real host, he should go to
  	       * /whois to get it.
@@ -625,9 +625,9 @@ diff -r 103be431b156 ircd/m_userhost.c
  	      cli_user(cptr)->host : cli_user(cptr)->realhost);
  }
  
-diff -r 103be431b156 ircd/m_userip.c
---- a/ircd/m_userip.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/m_userip.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/m_userip.c
+--- a/ircd/m_userip.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/m_userip.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -106,7 +106,7 @@
  	       * of +x.  If an oper wants the real IP, he should go to
  	       * /whois to get it.
@@ -637,10 +637,10 @@ diff -r 103be431b156 ircd/m_userip.c
  	      feature_str(FEAT_HIDDEN_IP) :
  	      ircd_ntoa(&cli_ip(cptr)));
  }
-diff -r 103be431b156 ircd/m_who.c
---- a/ircd/m_who.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/m_who.c	Sat Jul 20 13:18:35 2013 +0100
-@@ -394,14 +394,14 @@
+diff -r a771a07b5020 ircd/m_who.c
+--- a/ircd/m_who.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/m_who.c	Sat Jul 20 14:54:45 2013 +0100
+@@ -395,14 +395,14 @@
                && ((!(matchsel & WHO_FIELD_HOS))
                || matchexec(cli_user(acptr)->host, mymask, minlen))
                && ((!(matchsel & WHO_FIELD_HOS))
@@ -657,7 +657,7 @@ diff -r 103be431b156 ircd/m_who.c
                || !ipmask_check(&cli_ip(acptr), &imask, ibits))
                && ((!(matchsel & WHO_FIELD_ACC))
                || matchexec(cli_user(acptr)->account, mymask, minlen)))
-@@ -433,14 +433,14 @@
+@@ -434,14 +434,14 @@
              && ((!(matchsel & WHO_FIELD_HOS))
              || matchexec(cli_user(acptr)->host, mymask, minlen))
              && ((!(matchsel & WHO_FIELD_HOS))
@@ -674,9 +674,9 @@ diff -r 103be431b156 ircd/m_who.c
              || !ipmask_check(&cli_ip(acptr), &imask, ibits))
              && ((!(matchsel & WHO_FIELD_ACC))
              || matchexec(cli_user(acptr)->account, mymask, minlen)))
-diff -r 103be431b156 ircd/m_whois.c
---- a/ircd/m_whois.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/m_whois.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/m_whois.c
+--- a/ircd/m_whois.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/m_whois.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -214,7 +214,7 @@
      if (IsAccount(acptr))
        send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
@@ -686,9 +686,9 @@ diff -r 103be431b156 ircd/m_whois.c
        send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
                   user->realhost, ircd_ntoa(&cli_ip(acptr)));
  
-diff -r 103be431b156 ircd/s_conf.c
---- a/ircd/s_conf.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/s_conf.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/s_conf.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -52,6 +52,7 @@
  #include "s_bsd.h"
  #include "s_debug.h"
@@ -697,7 +697,7 @@ diff -r 103be431b156 ircd/s_conf.c
  #include "send.h"
  #include "struct.h"
  #include "sys.h"
-@@ -1206,6 +1207,10 @@
+@@ -1204,6 +1205,10 @@
    return 0;
  }
  
@@ -708,7 +708,7 @@ diff -r 103be431b156 ircd/s_conf.c
  void clear_slines(void)
  {
    struct sline *sline;
-@@ -1222,61 +1227,164 @@
+@@ -1220,61 +1225,164 @@
    }
  }
  
@@ -906,9 +906,9 @@ diff -r 103be431b156 ircd/s_conf.c
  void free_spoofhost(struct sline *spoof) {
  	MyFree(spoof->spoofhost);
  	MyFree(spoof->passwd);
-diff -r 103be431b156 ircd/s_err.c
---- a/ircd/s_err.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/s_err.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -824,13 +824,13 @@
  /* 395 */
    { 0 },
@@ -938,9 +938,9 @@ diff -r 103be431b156 ircd/s_err.c
  /* 532 */
    { 0 },
  /* 533 */
-diff -r 103be431b156 ircd/s_stats.c
---- a/ircd/s_stats.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/s_stats.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/s_stats.c
+--- a/ircd/s_stats.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/s_stats.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -400,41 +400,37 @@
    }
  }
@@ -1003,9 +1003,9 @@ diff -r 103be431b156 ircd/s_stats.c
    }
  }
  
-diff -r 103be431b156 ircd/s_user.c
---- a/ircd/s_user.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/s_user.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/s_user.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -73,9 +73,6 @@
  #include <string.h>
  #include <sys/stat.h>
@@ -1475,7 +1475,7 @@ diff -r 103be431b156 ircd/s_user.c
      /*
       * only send wallops to opers
       */
-@@ -1521,11 +1432,38 @@
+@@ -1524,11 +1435,38 @@
    }
    if (!FlagHas(&setflags, FLAG_HIDDENHOST) && do_host_hiding && allow_modes != ALLOWMODES_DEFAULT)
      hide_hostmask(sptr, FLAG_HIDDENHOST);
@@ -1518,7 +1518,7 @@ diff -r 103be431b156 ircd/s_user.c
    }
  
    if (IsRegistered(sptr)) {
-@@ -1577,7 +1515,7 @@
+@@ -1580,7 +1518,7 @@
      }
      assert(UserStats.opers <= UserStats.clients + UserStats.unknowns);
      assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
@@ -1527,7 +1527,7 @@ diff -r 103be431b156 ircd/s_user.c
    }
  
    return 0;
-@@ -1652,9 +1590,11 @@
+@@ -1655,9 +1593,11 @@
   * @param[in] old Pre-change set of modes for \a sptr.
   * @param[in] sendset One of ALL_UMODES, SEND_UMODES_BUT_OPER,
   * SEND_UMODES, to select which changed user modes to send.
@@ -1540,7 +1540,7 @@ diff -r 103be431b156 ircd/s_user.c
  {
    int i;
    int flag;
-@@ -1697,12 +1637,15 @@
+@@ -1700,12 +1640,15 @@
      }
      /* Special case for SETHOST.. */
      if (flag == FLAG_SETHOST) {
@@ -1562,7 +1562,7 @@ diff -r 103be431b156 ircd/s_user.c
        	needhost++;    
      }
      if (FlagHas(old, flag))
-@@ -1741,7 +1684,7 @@
+@@ -1744,7 +1687,7 @@
    }
    if (needhost) {
      *m++ = ' ';
@@ -1571,7 +1571,7 @@ diff -r 103be431b156 ircd/s_user.c
           cli_user(sptr)->host);
    } else
      *m = '\0';
-@@ -1769,108 +1712,53 @@
+@@ -1772,108 +1715,53 @@
    return 0;
  }
  
@@ -1718,9 +1718,9 @@ diff -r 103be431b156 ircd/s_user.c
  }
  
  /** Update snomask \a oldmask according to \a arg and \a what.
-diff -r 103be431b156 ircd/send.c
---- a/ircd/send.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/send.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/send.c
+--- a/ircd/send.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/send.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -281,7 +281,7 @@
    {
      case MATCH_HOST:
@@ -1730,9 +1730,9 @@ diff -r 103be431b156 ircd/send.c
      case MATCH_SERVER:
      default:
        return (match(mask, cli_name(cli_user(one)->server)) == 0);
-diff -r 103be431b156 ircd/whocmds.c
---- a/ircd/whocmds.c	Sat Jul 20 12:01:10 2013 +0100
-+++ b/ircd/whocmds.c	Sat Jul 20 13:18:35 2013 +0100
+diff -r a771a07b5020 ircd/whocmds.c
+--- a/ircd/whocmds.c	Sat Jul 20 14:54:11 2013 +0100
++++ b/ircd/whocmds.c	Sat Jul 20 14:54:45 2013 +0100
 @@ -134,7 +134,7 @@
  
    if (fields & WHO_FIELD_NIP)

@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 89661813f5014dfceaa7e5be8dd57cebdab6a9d0
+# Parent cf10176805a0799e83451e1267a79eb055225adf
 
 Add information from hg to INFO command.
 
@@ -12,12 +12,12 @@ This patch is to remain in the patch queue, at the top, for development purposes
 
 Currently this patch sits in position 2 behind the patch for several fixes for m_info.c and version.c.SH.
 
-diff -r 89661813f501 ircd/version.c.SH
---- a/ircd/version.c.SH
-+++ b/ircd/version.c.SH
+diff -r cf10176805a0 ircd/version.c.SH
+--- a/ircd/version.c.SH	Sat Jul 20 15:04:47 2013 +0100
++++ b/ircd/version.c.SH	Sat Jul 20 15:04:51 2013 +0100
 @@ -99,6 +99,46 @@
-  echo "    \"[" `./umkpasswd -5 $file` " ]\"," >> version.c
- done
+ 
+ ( for file in ${srcdir}/include/*.h ; do echo $file ; done ) | ./umkpasswd -5 >> version.c
  
 +
 +# gather info from HG

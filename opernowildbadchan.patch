@@ -1,19 +1,19 @@
 Disallow wildcards in badchan set by local oper, and for local badchan by remote oper.
 
-diff -r 5eee2151f0b1 ircd/gline.c
---- a/ircd/gline.c	Thu Jan 22 21:50:34 2009 +0100
-+++ b/ircd/gline.c	Thu Jan 22 22:05:00 2009 +0100
-@@ -494,6 +494,13 @@
-   if (*userhost == '#' || *userhost == '&') {
-     if ((flags & GLINE_LOCAL) && !HasPriv(sptr, PRIV_LOCAL_BADCHAN))
-       return send_reply(sptr, ERR_NOPRIVILEGES);
-+
+diff -r 6349c8b21898 ircd/gline.c
+--- a/ircd/gline.c	Sat Jul 20 15:02:42 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 15:04:36 2013 +0100
+@@ -506,6 +506,13 @@
+     if (strlen(userhost+1) >= CHANNELLEN + 6)
+       return send_reply(sptr, ERR_LONGMASK);
+ 
 +    /* disallow wildcards in BADCHANs set by my oper
 +     *  and in local BADCHANs set by remote oper
 +     */
-+    if ((MyUser(sptr) || (IsUser(sptr) && flags & GLINE_LOCAL)) && 
++    if ((MyUser(sptr) || (IsUser(sptr) && flags & GLINE_LOCAL)) &&
 +         string_has_wildcards(userhost))
 +      return send_reply(sptr, ERR_MASKTOOWIDE, userhost);
- 
++
      flags |= GLINE_BADCHAN;
      user = userhost;
+     host = NULL;

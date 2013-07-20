@@ -1,15 +1,15 @@
 # HG changeset patch
-# Parent e4298df79634833ec535484917133672035db1b4
+# Parent 4a99caecf4d0ac2dccf921617dd974f66f8ad9b4
 
-diff -r e4298df79634 include/client.h
---- a/include/client.h	Sun Jul 14 00:49:57 2013 +0100
-+++ b/include/client.h	Sun Jul 14 00:54:52 2013 +0100
+diff -r 4a99caecf4d0 include/client.h
+--- a/include/client.h	Sat Jul 20 14:46:36 2013 +0100
++++ b/include/client.h	Sat Jul 20 14:47:02 2013 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
  /** String containing valid user modes, in no particular order. */
--#define infousermodes "dioswkgxRXIn"
-+#define infousermodes "dioswkgxRXInP"
+-#define infousermodes "diOoswkgxRXIn"
++#define infousermodes "diOoswkgxRXInP"
  
  /** Operator privileges. */
  enum Priv
@@ -21,7 +21,7 @@ diff -r e4298df79634 include/client.h
      FLAG_HIDDENHOST,                /**< user's host is hidden */
      FLAG_SETHOST,                   /**< ASUKA_h: oper's host is changed */
      FLAG_NOCHAN,                    /**< user's channels are hidden */
-@@ -597,6 +598,9 @@
+@@ -599,6 +600,9 @@
  /** Return non-zero if the client should not receive privmsgs/notices
   * from unauthed users */
  #define IsAccountOnly(x)        HasFlag(x, FLAG_ACCOUNTONLY)
@@ -31,7 +31,7 @@ diff -r e4298df79634 include/client.h
  
  /** Return non-zero if the client has operator or server privileges. */
  #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
-@@ -656,6 +660,8 @@
+@@ -658,6 +662,8 @@
  #define SetPingSent(x)          SetFlag(x, FLAG_PINGSENT)
  /** Mark a client as having mode +R (account only). */
  #define SetAccountOnly(x)       SetFlag(x, FLAG_ACCOUNTONLY)
@@ -40,7 +40,7 @@ diff -r e4298df79634 include/client.h
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
  #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
-@@ -701,6 +707,8 @@
+@@ -703,6 +709,8 @@
  #define ClearHub(x)             ClrFlag(x, FLAG_HUB)
  /** Remove mode +R (account only) from a client */
  #define ClearAccountOnly(x)     ClrFlag(x, FLAG_ACCOUNTONLY)
@@ -49,9 +49,9 @@ diff -r e4298df79634 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r e4298df79634 ircd/m_whois.c
---- a/ircd/m_whois.c	Sun Jul 14 00:49:57 2013 +0100
-+++ b/ircd/m_whois.c	Sun Jul 14 00:54:52 2013 +0100
+diff -r 4a99caecf4d0 ircd/m_whois.c
+--- a/ircd/m_whois.c	Sat Jul 20 14:46:36 2013 +0100
++++ b/ircd/m_whois.c	Sat Jul 20 14:47:02 2013 +0100
 @@ -215,6 +215,9 @@
        send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
                   user->realhost, ircd_ntoa(&cli_ip(acptr)));
@@ -62,10 +62,10 @@ diff -r e4298df79634 ircd/m_whois.c
      /* Hint: if your looking to add more flags to a user, eg +h, here's
       *       probably a good place to add them :)
       */
-diff -r e4298df79634 ircd/s_user.c
---- a/ircd/s_user.c	Sun Jul 14 00:49:57 2013 +0100
-+++ b/ircd/s_user.c	Sun Jul 14 00:54:52 2013 +0100
-@@ -525,7 +525,8 @@
+diff -r 4a99caecf4d0 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 14:46:36 2013 +0100
++++ b/ircd/s_user.c	Sat Jul 20 14:47:02 2013 +0100
+@@ -518,7 +518,8 @@
    { FLAG_XTRAOP,      'X' },
    { FLAG_NOCHAN,      'n' },
    { FLAG_NOIDLE,      'I' },
@@ -75,7 +75,7 @@ diff -r e4298df79634 ircd/s_user.c
  };
  
  /** Length of #userModeList. */
-@@ -1325,6 +1326,12 @@
+@@ -1339,6 +1340,12 @@
          else
            ClearAccountOnly(sptr);
          break;
@@ -88,7 +88,7 @@ diff -r e4298df79634 ircd/s_user.c
        default:
          send_reply(sptr, ERR_UMODEUNKNOWNFLAG, *m);
          break;
-@@ -1355,6 +1362,8 @@
+@@ -1369,6 +1376,8 @@
        ClearNoChan(sptr);
      if (!FlagHas(&setflags, FLAG_NOIDLE) && !IsOper(sptr))
        ClearNoIdle(sptr);

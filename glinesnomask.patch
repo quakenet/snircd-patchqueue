@@ -1,8 +1,8 @@
 use snomask SNO_GLINE when oper is the source of the GLINE message, else use SNO_AUTO
 
-diff -r 5302f8ba2ea2 ircd/gline.c
---- a/ircd/gline.c	Thu Mar 25 11:41:07 2010 +0100
-+++ b/ircd/gline.c	Thu Mar 25 11:53:55 2010 +0100
+diff -r 3ef00ebe95e6 ircd/gline.c
+--- a/ircd/gline.c	Sat Jul 20 14:58:23 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 15:02:35 2013 +0100
 @@ -231,7 +231,7 @@
          continue;
  
@@ -21,7 +21,7 @@ diff -r 5302f8ba2ea2 ircd/gline.c
                               get_client_name(acptr, SHOW_IP));
  
          /* and get rid of him */
-@@ -567,7 +567,7 @@
+@@ -576,7 +576,7 @@
    /* lifetime is already an absolute timestamp */
  
    /* Inform ops... */
@@ -30,7 +30,7 @@ diff -r 5302f8ba2ea2 ircd/gline.c
                         SNO_AUTO, "%s adding %s%s %s for %s%s%s%s%s, expiring at "
                         "%Tu: %s",
                         (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
-@@ -643,7 +643,7 @@
+@@ -652,7 +652,7 @@
      return 0; /* was active to begin with */
  
    /* Inform ops and log it */
@@ -39,7 +39,7 @@ diff -r 5302f8ba2ea2 ircd/gline.c
                         "expiring at %Tu: %s",
                         (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
                           get_client_name_and_opername(sptr) :
-@@ -716,7 +716,7 @@
+@@ -725,7 +725,7 @@
    }
  
    /* Inform ops and log it */
@@ -48,16 +48,16 @@ diff -r 5302f8ba2ea2 ircd/gline.c
  		       "%s",
                         (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
                           get_client_name_and_opername(sptr) :
-@@ -921,7 +921,7 @@
-   }
+@@ -932,7 +932,7 @@
  
    /* All right, inform ops... */
--  sendto_opmask_butone(0, SNO_GLINE, "%s modifying global %s for %s%s%s%s%s:%s",
-+  sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO, "%s modifying global %s for %s%s%s%s%s:%s",
+   non_auto = non_auto || ircd_strncmp(gline->gl_reason, "AUTO", 4);
+-  sendto_opmask_butone(0, non_auto ? SNO_GLINE : SNO_AUTO,
++  sendto_opmask_butone(0, IsUser(sptr) ? SNO_GLINE : SNO_AUTO,
+ 		       "%s modifying global %s for %s%s%s%s%s:%s",
  		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
  		       get_client_name_and_opername(sptr) : cli_name((cli_user(sptr))->server),
- 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
-@@ -968,7 +968,7 @@
+@@ -980,7 +980,7 @@
    assert(GlineIsLocal(gline));
  
    /* Inform ops and log it */

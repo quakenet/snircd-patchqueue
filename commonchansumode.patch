@@ -2,9 +2,9 @@ Add usermode +q which requires users /msg'ing or /notice'ing you to be in at lea
 This is designed to stop the spam bots which sit outside a channel, while a spy sits inside, preventing channel operators dealing with the problem.
 We currently also block invites, this might not be such a good idea, but these days everyone can get Q.
 
-diff -r 5787dbfaa811 include/channel.h
---- a/include/channel.h	Sat Jul 20 11:50:29 2013 +0100
-+++ b/include/channel.h	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c include/channel.h
+--- a/include/channel.h	Sat Jul 20 14:57:18 2013 +0100
++++ b/include/channel.h	Sat Jul 20 14:57:59 2013 +0100
 @@ -463,5 +463,6 @@
  extern void free_ban(struct Ban *ban);
  
@@ -12,15 +12,15 @@ diff -r 5787dbfaa811 include/channel.h
 +extern int common_chan_count(struct Client *a, struct Client *b, int max);
  
  #endif /* INCLUDED_channel_h */
-diff -r 5787dbfaa811 include/client.h
---- a/include/client.h	Sat Jul 20 11:50:29 2013 +0100
-+++ b/include/client.h	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c include/client.h
+--- a/include/client.h	Sat Jul 20 14:57:18 2013 +0100
++++ b/include/client.h	Sat Jul 20 14:57:59 2013 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
  /** String containing valid user modes, in no particular order. */
--#define infousermodes "dioOswkghxRXInP"
-+#define infousermodes "dioOswkghxRXInPq"
+-#define infousermodes "diOoswkghxRXInP"
++#define infousermodes "diOoswkghxRXInPq"
  
  /** Character to indicate no oper name available */
  #define NOOPERNAMECHARACTER '-'
@@ -33,7 +33,7 @@ diff -r 5787dbfaa811 include/client.h
  
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-@@ -623,6 +625,8 @@
+@@ -625,6 +627,8 @@
  #define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
  /** Return non-zero if the server should send opername information */
  #define IsSendOperName(x)         HasFlag(x, FLAG_OPERNAME)
@@ -42,7 +42,7 @@ diff -r 5787dbfaa811 include/client.h
  
  /** Return non-zero if the client has operator or server privileges. */
  #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
-@@ -689,6 +693,8 @@
+@@ -691,6 +695,8 @@
  #define SetAccountOnly(x)       SetFlag(x, FLAG_ACCOUNTONLY)
  /** Mark a client as having mode +P (paranoid). */
  #define SetParanoid(x)          SetFlag(x, FLAG_PARANOID)
@@ -51,7 +51,7 @@ diff -r 5787dbfaa811 include/client.h
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
  #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
-@@ -738,6 +744,8 @@
+@@ -740,6 +746,8 @@
  #define ClearAccountOnly(x)     ClrFlag(x, FLAG_ACCOUNTONLY)
  /** Remove mode +P (paranoid) from a client */
  #define ClearParanoid(x)        ClrFlag(x, FLAG_PARANOID)
@@ -60,9 +60,9 @@ diff -r 5787dbfaa811 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r 5787dbfaa811 include/numeric.h
---- a/include/numeric.h	Sat Jul 20 11:50:29 2013 +0100
-+++ b/include/numeric.h	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c include/numeric.h
+--- a/include/numeric.h	Sat Jul 20 14:57:18 2013 +0100
++++ b/include/numeric.h	Sat Jul 20 14:57:59 2013 +0100
 @@ -420,6 +420,7 @@
  /*	ERR_HTMDISABLED      486	   unreal */
  #define ERR_ACCOUNTONLY      486	/* QuakeNet/ASUKA extension */
@@ -71,9 +71,9 @@ diff -r 5787dbfaa811 include/numeric.h
  /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
  #define ERR_VOICENEEDED      489        /* Undernet extension */
  
-diff -r 5787dbfaa811 ircd/channel.c
---- a/ircd/channel.c	Sat Jul 20 11:50:29 2013 +0100
-+++ b/ircd/channel.c	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 14:57:18 2013 +0100
++++ b/ircd/channel.c	Sat Jul 20 14:57:59 2013 +0100
 @@ -3819,3 +3819,39 @@
  
    return marker;
@@ -114,9 +114,9 @@ diff -r 5787dbfaa811 ircd/channel.c
 +
 +  return count;
 +}
-diff -r 5787dbfaa811 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Sat Jul 20 11:50:29 2013 +0100
-+++ b/ircd/ircd_relay.c	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jul 20 14:57:18 2013 +0100
++++ b/ircd/ircd_relay.c	Sat Jul 20 14:57:59 2013 +0100
 @@ -310,6 +310,10 @@
    if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
       return;
@@ -160,9 +160,9 @@ diff -r 5787dbfaa811 ircd/ircd_relay.c
    /*
     * deliver the message
     */
-diff -r 5787dbfaa811 ircd/m_invite.c
---- a/ircd/m_invite.c	Sat Jul 20 11:50:29 2013 +0100
-+++ b/ircd/m_invite.c	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c ircd/m_invite.c
+--- a/ircd/m_invite.c	Sat Jul 20 14:57:18 2013 +0100
++++ b/ircd/m_invite.c	Sat Jul 20 14:57:59 2013 +0100
 @@ -171,6 +171,9 @@
      return 0;
    }
@@ -173,9 +173,9 @@ diff -r 5787dbfaa811 ircd/m_invite.c
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
      return 0;
  
-diff -r 5787dbfaa811 ircd/s_err.c
---- a/ircd/s_err.c	Sat Jul 20 11:50:29 2013 +0100
-+++ b/ircd/s_err.c	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 14:57:18 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 14:57:59 2013 +0100
 @@ -1006,7 +1006,7 @@
  /* 486 */
    { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user -- For details of how to obtain an account visit %s", "486" },
@@ -185,9 +185,9 @@ diff -r 5787dbfaa811 ircd/s_err.c
  /* 488 */
    { 0 },
  /* 489 */
-diff -r 5787dbfaa811 ircd/s_user.c
---- a/ircd/s_user.c	Sat Jul 20 11:50:29 2013 +0100
-+++ b/ircd/s_user.c	Sat Jul 20 11:50:33 2013 +0100
+diff -r 956791aea86c ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 14:57:18 2013 +0100
++++ b/ircd/s_user.c	Sat Jul 20 14:57:59 2013 +0100
 @@ -540,7 +540,8 @@
    { FLAG_NOCHAN,      'n' },
    { FLAG_NOIDLE,      'I' },

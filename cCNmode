@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 83c47745bd7655fa087616d2a8a7c3a02b299854
+# Parent 450ce608fb5cb90722bed3601ea5d424664796c6
 
-diff -r 83c47745bd76 include/channel.h
---- a/include/channel.h	Fri Jul 19 22:32:32 2013 +0100
-+++ b/include/channel.h	Fri Jul 19 22:49:07 2013 +0100
+diff -r 450ce608fb5c include/channel.h
+--- a/include/channel.h	Sat Jul 20 14:47:02 2013 +0100
++++ b/include/channel.h	Sat Jul 20 14:47:57 2013 +0100
 @@ -101,8 +101,12 @@
  #define MODE_LIMIT      0x0400		/**< +l Limit */
  #define MODE_REGONLY    0x0800  	/**< Only +r users may join */
@@ -23,14 +23,14 @@ diff -r 83c47745bd76 include/channel.h
  #define MODE_WPARAS     (MODE_CHANOP|MODE_VOICE|MODE_BAN|MODE_KEY|MODE_LIMIT|MODE_APASS|MODE_UPASS)
  
  /** Available Channel modes */
--#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDR" : "biklmnopstvrDR"
-+#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDRcCNu" : "biklmnopstvrDRcCNu"
+-#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDdR" : "biklmnopstvrDdR"
++#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDdRcCNu" : "biklmnopstvrDdRcCNu"
  /** Available Channel modes that take parameters */
  #define infochanmodeswithparams feature_bool(FEAT_OPLEVELS) ? "AbkloUv" : "bklov"
  
-diff -r 83c47745bd76 include/supported.h
---- a/include/supported.h	Fri Jul 19 22:32:32 2013 +0100
-+++ b/include/supported.h	Fri Jul 19 22:49:07 2013 +0100
+diff -r 450ce608fb5c include/supported.h
+--- a/include/supported.h	Sat Jul 20 14:47:02 2013 +0100
++++ b/include/supported.h	Sat Jul 20 14:47:57 2013 +0100
 @@ -65,7 +65,7 @@
  #define FEATURESVALUES2 NICKLEN, TOPICLEN, AWAYLEN, TOPICLEN, \
                          feature_int(FEAT_CHANNELLEN), CHANNELLEN, \
@@ -40,9 +40,9 @@ diff -r 83c47745bd76 include/supported.h
                          "rfc1459", feature_str(FEAT_NETWORK)
  
  #endif /* INCLUDED_supported_h */
-diff -r 83c47745bd76 ircd/channel.c
---- a/ircd/channel.c	Fri Jul 19 22:32:32 2013 +0100
-+++ b/ircd/channel.c	Fri Jul 19 22:49:07 2013 +0100
+diff -r 450ce608fb5c ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 14:47:02 2013 +0100
++++ b/ircd/channel.c	Sat Jul 20 14:47:57 2013 +0100
 @@ -835,6 +835,12 @@
      *mbuf++ = 'n';
    if (chptr->mode.mode & MODE_REGONLY)
@@ -108,9 +108,9 @@ diff -r 83c47745bd76 ircd/channel.c
      MODE_ADD,		'+',
      MODE_DEL,		'-',
      0x0, 0x0
-diff -r 83c47745bd76 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Fri Jul 19 22:32:32 2013 +0100
-+++ b/ircd/ircd_relay.c	Fri Jul 19 22:49:07 2013 +0100
+diff -r 450ce608fb5c ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jul 20 14:47:02 2013 +0100
++++ b/ircd/ircd_relay.c	Sat Jul 20 14:47:57 2013 +0100
 @@ -86,6 +86,7 @@
  void relay_channel_message(struct Client* sptr, const char* name, const char* text)
  {
@@ -170,9 +170,9 @@ diff -r 83c47745bd76 ircd/ircd_relay.c
    RevealDelayedJoinIfNeeded(sptr, chptr);
    sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
  			   SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
-diff -r 83c47745bd76 ircd/m_clearmode.c
---- a/ircd/m_clearmode.c	Fri Jul 19 22:32:32 2013 +0100
-+++ b/ircd/m_clearmode.c	Fri Jul 19 22:49:07 2013 +0100
+diff -r 450ce608fb5c ircd/m_clearmode.c
+--- a/ircd/m_clearmode.c	Sat Jul 20 14:47:02 2013 +0100
++++ b/ircd/m_clearmode.c	Sat Jul 20 14:47:57 2013 +0100
 @@ -125,6 +125,9 @@
      MODE_REGONLY,	'r',
      MODE_DELJOINS,      'D',
@@ -183,9 +183,9 @@ diff -r 83c47745bd76 ircd/m_clearmode.c
      0x0, 0x0
    };
    int *flag_p;
-diff -r 83c47745bd76 ircd/m_wallchops.c
---- a/ircd/m_wallchops.c	Fri Jul 19 22:32:32 2013 +0100
-+++ b/ircd/m_wallchops.c	Fri Jul 19 22:49:07 2013 +0100
+diff -r 450ce608fb5c ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Sat Jul 20 14:47:02 2013 +0100
++++ b/ircd/m_wallchops.c	Sat Jul 20 14:47:57 2013 +0100
 @@ -102,6 +102,7 @@
  int m_wallchops(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
  {
@@ -230,9 +230,9 @@ diff -r 83c47745bd76 ircd/m_wallchops.c
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
  			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
  			       "%H :%s", chptr, parv[parc - 1]);
-diff -r 83c47745bd76 ircd/m_wallvoices.c
---- a/ircd/m_wallvoices.c	Fri Jul 19 22:32:32 2013 +0100
-+++ b/ircd/m_wallvoices.c	Fri Jul 19 22:49:07 2013 +0100
+diff -r 450ce608fb5c ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Sat Jul 20 14:47:02 2013 +0100
++++ b/ircd/m_wallvoices.c	Sat Jul 20 14:47:57 2013 +0100
 @@ -101,6 +101,7 @@
  int m_wallvoices(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
  {
@@ -277,10 +277,10 @@ diff -r 83c47745bd76 ircd/m_wallvoices.c
        sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
  			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
  			       "%H :%s", chptr, parv[parc - 1]);
-diff -r 83c47745bd76 ircd/s_auth.c
---- a/ircd/s_auth.c	Fri Jul 19 22:32:32 2013 +0100
-+++ b/ircd/s_auth.c	Fri Jul 19 22:49:07 2013 +0100
-@@ -266,6 +266,9 @@
+diff -r 450ce608fb5c ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 20 14:47:02 2013 +0100
++++ b/ircd/s_auth.c	Sat Jul 20 14:47:57 2013 +0100
+@@ -267,6 +267,9 @@
        || ((user->username[0] == '~') && (user->username[1] == '\0')))
      return exit_client(sptr, sptr, &me, "USER: Bogus userid.");
  

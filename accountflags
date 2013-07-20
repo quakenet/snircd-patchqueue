@@ -1,12 +1,12 @@
 # HG changeset patch
-# Parent f6fcd33ea732f2d526a06264e4d34b1b1ecbc131
+# Parent 5440fc22cc1d524bb5bca9cfc1a8a7b6bf9dd0f3
 
-diff -r f6fcd33ea732 include/client.h
---- a/include/client.h	Fri Jul 19 22:21:04 2013 +0100
-+++ b/include/client.h	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d include/client.h
+--- a/include/client.h	Sat Jul 20 14:48:02 2013 +0100
++++ b/include/client.h	Sat Jul 20 14:48:06 2013 +0100
 @@ -92,6 +92,9 @@
  /** String containing valid user modes, in no particular order. */
- #define infousermodes "dioswkgxRXInP"
+ #define infousermodes "diOoswkgxRXInP"
  
 +/** Character to indicate no oper name available */
 +#define NOOPERNAMECHARACTER '-'
@@ -22,7 +22,7 @@ diff -r f6fcd33ea732 include/client.h
  
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-@@ -601,6 +605,8 @@
+@@ -603,6 +607,8 @@
  /** Return non-zero if the client should receive notices when someone
   * does a whois on it. */
  #define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
@@ -31,7 +31,7 @@ diff -r f6fcd33ea732 include/client.h
  
  /** Return non-zero if the client has operator or server privileges. */
  #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
-@@ -642,6 +648,8 @@
+@@ -644,6 +650,8 @@
  #define SetHub(x)               SetFlag(x, FLAG_HUB)
  /** Mark a client as being an IPv6-grokking server. */
  #define SetIPv6(x)              SetFlag(x, FLAG_IPV6)
@@ -40,9 +40,9 @@ diff -r f6fcd33ea732 include/client.h
  /** Mark a client as being a services server. */
  #define SetService(x)           SetFlag(x, FLAG_SERVICE)
  /** Mark a client as having an account stamp. */
-diff -r f6fcd33ea732 include/numeric.h
---- a/include/numeric.h	Fri Jul 19 22:21:04 2013 +0100
-+++ b/include/numeric.h	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d include/numeric.h
+--- a/include/numeric.h	Sat Jul 20 14:48:02 2013 +0100
++++ b/include/numeric.h	Sat Jul 20 14:48:06 2013 +0100
 @@ -259,6 +259,7 @@
  #define RPL_USERIP           340        /* Undernet extension */
  #define RPL_INVITING         341
@@ -51,9 +51,9 @@ diff -r f6fcd33ea732 include/numeric.h
  
  #define RPL_ISSUEDINVITE     345        /* Undernet extension */
  #define RPL_INVITELIST       346        /* IRCnet, Undernet extension */
-diff -r f6fcd33ea732 include/s_user.h
---- a/include/s_user.h	Fri Jul 19 22:21:04 2013 +0100
-+++ b/include/s_user.h	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d include/s_user.h
+--- a/include/s_user.h	Sat Jul 20 14:48:02 2013 +0100
++++ b/include/s_user.h	Sat Jul 20 14:48:06 2013 +0100
 @@ -100,9 +100,9 @@
  				int MustBeOper, const char *pattern,
  				int server, int parc, char *parv[]);
@@ -66,9 +66,9 @@ diff -r f6fcd33ea732 include/s_user.h
  extern void set_snomask(struct Client *, unsigned int, int);
  extern int is_snomask(char *);
  extern int check_target_limit(struct Client *sptr, void *target, const char *name,
-diff -r f6fcd33ea732 include/send.h
---- a/include/send.h	Fri Jul 19 22:21:04 2013 +0100
-+++ b/include/send.h	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d include/send.h
+--- a/include/send.h	Sat Jul 20 14:48:02 2013 +0100
++++ b/include/send.h	Sat Jul 20 14:48:06 2013 +0100
 @@ -50,6 +50,13 @@
                                         int require, int forbid,
                                         const char *pattern, ...);
@@ -83,9 +83,9 @@ diff -r f6fcd33ea732 include/send.h
  /* Send command to all servers except one */
  extern void sendcmdto_serv_butone(struct Client *from, const char *cmd,
  				  const char *tok, struct Client *one,
-diff -r f6fcd33ea732 include/struct.h
---- a/include/struct.h	Fri Jul 19 22:21:04 2013 +0100
-+++ b/include/struct.h	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d include/struct.h
+--- a/include/struct.h	Sat Jul 20 14:48:02 2013 +0100
++++ b/include/struct.h	Sat Jul 20 14:48:06 2013 +0100
 @@ -32,6 +32,13 @@
  #include "ircd_defs.h"       /* sizes */
  #endif
@@ -110,9 +110,9 @@ diff -r f6fcd33ea732 include/struct.h
  };
  
  #endif /* INCLUDED_struct_h */
-diff -r f6fcd33ea732 ircd/ircd_parser.y
---- a/ircd/ircd_parser.y	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/ircd_parser.y	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/ircd_parser.y	Sat Jul 20 14:48:06 2013 +0100
 @@ -580,6 +580,10 @@
  
    if (name == NULL)
@@ -124,9 +124,9 @@ diff -r f6fcd33ea732 ircd/ircd_parser.y
    else if (pass == NULL)
      parse_error("Missing password in operator block");
    /* Do not check password length because it may be crypted. */
-diff -r f6fcd33ea732 ircd/ircd_reslib.c
---- a/ircd/ircd_reslib.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/ircd_reslib.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/ircd_reslib.c
+--- a/ircd/ircd_reslib.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/ircd_reslib.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -80,6 +80,8 @@
   * - Dianora
   */
@@ -136,9 +136,9 @@ diff -r f6fcd33ea732 ircd/ircd_reslib.c
  #include "ircd.h"
  #include "res.h"
  #include "ircd_reslib.h"
-diff -r f6fcd33ea732 ircd/m_account.c
---- a/ircd/m_account.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/m_account.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/m_account.c
+--- a/ircd/m_account.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/m_account.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -90,6 +90,7 @@
  #include "s_debug.h"
  #include "s_user.h"
@@ -238,9 +238,9 @@ diff -r f6fcd33ea732 ircd/m_account.c
  
    return 0;
  }
-diff -r f6fcd33ea732 ircd/m_check.c
---- a/ircd/m_check.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/m_check.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/m_check.c
+--- a/ircd/m_check.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/m_check.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -413,6 +413,7 @@
    struct Membership *lp;
    struct irc_sockaddr sin;
@@ -249,9 +249,9 @@ diff -r f6fcd33ea732 ircd/m_check.c
    time_t nowr;
  
    /* Header */
-diff -r f6fcd33ea732 ircd/m_oper.c
---- a/ircd/m_oper.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/m_oper.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/m_oper.c
+--- a/ircd/m_oper.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/m_oper.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -150,8 +150,8 @@
    if (!aconf || IsIllegal(aconf))
    {
@@ -319,9 +319,9 @@ diff -r f6fcd33ea732 ircd/m_oper.c
    }
    return 0;
  }
-diff -r f6fcd33ea732 ircd/m_server.c
---- a/ircd/m_server.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/m_server.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/m_server.c
+--- a/ircd/m_server.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/m_server.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -492,6 +492,7 @@
      case 'h': SetHub(cptr); break;
      case 's': SetService(cptr); break;
@@ -343,9 +343,9 @@ diff -r f6fcd33ea732 ircd/m_server.c
                    cli_info(acptr));
    }
    return 0;
-diff -r f6fcd33ea732 ircd/m_whois.c
---- a/ircd/m_whois.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/m_whois.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/m_whois.c
+--- a/ircd/m_whois.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/m_whois.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -205,8 +205,11 @@
      if (user->away)
         send_reply(sptr, RPL_AWAY, name, user->away);
@@ -359,19 +359,19 @@ diff -r f6fcd33ea732 ircd/m_whois.c
  
      if (IsAccount(acptr))
        send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
-diff -r f6fcd33ea732 ircd/memdebug.c
---- a/ircd/memdebug.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/memdebug.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/memdebug.c
+--- a/ircd/memdebug.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/memdebug.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -1,4 +1,5 @@
  #include <sys/types.h>
 +#include "config.h"
  #include "ircd.h"
  #include "ircd_alloc.h"
  #include "ircd_log.h"
-diff -r f6fcd33ea732 ircd/s_auth.c
---- a/ircd/s_auth.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/s_auth.c	Fri Jul 19 22:21:39 2013 +0100
-@@ -1957,10 +1957,17 @@
+diff -r 5440fc22cc1d ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/s_auth.c	Sat Jul 20 14:48:06 2013 +0100
+@@ -1975,10 +1975,17 @@
    /* If account has a creation timestamp, use it. */
    assert(cli_user(cli) != NULL);
    if (params[0][len] == ':') {
@@ -391,9 +391,9 @@ diff -r f6fcd33ea732 ircd/s_auth.c
    /* Copy account name to User structure. */
    ircd_strncpy(cli_user(cli)->account, params[0], ACCOUNTLEN);
    SetAccount(cli);
-diff -r f6fcd33ea732 ircd/s_bsd.c
---- a/ircd/s_bsd.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/s_bsd.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/s_bsd.c
+--- a/ircd/s_bsd.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/s_bsd.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -354,7 +354,7 @@
    cli_lasttime(cptr) = CurrentTime;
    ClearPingSent(cptr);
@@ -403,9 +403,9 @@ diff -r f6fcd33ea732 ircd/s_bsd.c
                  cli_name(&me), cli_serv(&me)->timestamp, newts,
  		MAJOR_PROTOCOL, NumServCap(&me),
  		feature_bool(FEAT_HUB) ? "h" : "", cli_info(&me));
-diff -r f6fcd33ea732 ircd/s_err.c
---- a/ircd/s_err.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/s_err.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -718,7 +718,7 @@
  /* 342 */
    { 0 },
@@ -415,9 +415,9 @@ diff -r f6fcd33ea732 ircd/s_err.c
  /* 344 */
    { 0 },
  /* 345 */
-diff -r f6fcd33ea732 ircd/s_serv.c
---- a/ircd/s_serv.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/s_serv.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/s_serv.c
+--- a/ircd/s_serv.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/s_serv.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -128,7 +128,7 @@
      /*
       *  Pass my info to the new server
@@ -467,9 +467,9 @@ diff -r f6fcd33ea732 ircd/s_serv.c
        sendcmdto_one(cli_user(acptr)->server, CMD_NICK, cptr,
  		    "%s %d %Tu %s %s %s%s%s%s %s%s :%s",
  		    cli_name(acptr), cli_hopcount(acptr) + 1, cli_lastnick(acptr),
-diff -r f6fcd33ea732 ircd/s_stats.c
---- a/ircd/s_stats.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/s_stats.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/s_stats.c
+--- a/ircd/s_stats.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/s_stats.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -493,12 +493,12 @@
     */
    if (sd->sd_funcdata) {
@@ -494,9 +494,9 @@ diff -r f6fcd33ea732 ircd/s_stats.c
                 cli_hopcount(acptr),
                 NumServ(acptr),
                 base64toint(cli_yxx(acptr)),
-diff -r f6fcd33ea732 ircd/s_user.c
---- a/ircd/s_user.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/s_user.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/s_user.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -113,6 +113,8 @@
    if (--user->refcnt == 0) {
      if (user->away)
@@ -572,7 +572,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
      if ((cli_snomask(sptr) != SNO_DEFAULT) && HasFlag(sptr, FLAG_SERVNOTICE))
        send_reply(sptr, RPL_SNOMASK, cli_snomask(sptr), cli_snomask(sptr));
    }
-@@ -844,16 +870,26 @@
+@@ -845,16 +871,26 @@
    int i;
    struct Client *acptr;
  
@@ -603,7 +603,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
  }
  
  
-@@ -1228,9 +1264,29 @@
+@@ -1230,9 +1266,29 @@
            ClearWallops(sptr);
          break;
        case 'o':
@@ -635,7 +635,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
            ClrFlag(sptr, FLAG_OPER);
            ClrFlag(sptr, FLAG_LOCOP);
            if (MyConnect(sptr))
-@@ -1391,13 +1447,16 @@
+@@ -1420,13 +1476,16 @@
     */
    if (!FlagHas(&setflags, FLAG_ACCOUNT) && IsAccount(sptr)) {
        int len = ACCOUNTLEN;
@@ -656,7 +656,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
        }
        ircd_strncpy(cli_user(sptr)->account, account, len);
    }
-@@ -1418,7 +1477,23 @@
+@@ -1447,7 +1506,23 @@
        /* user no longer oper */
        assert(UserStats.opers > 0);
        --UserStats.opers;
@@ -680,7 +680,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
      }
      if (FlagHas(&setflags, FLAG_INVISIBLE) && !IsInvisible(sptr)) {
        assert(UserStats.inv_clients > 0);
-@@ -1439,7 +1514,7 @@
+@@ -1468,7 +1543,7 @@
   * @param[in] cptr Some user.
   * @return Pointer to a static buffer.
   */
@@ -689,7 +689,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
  {
    /* Maximum string size: "owidgrx\0" */
    char *m = umodeBuf;
-@@ -1456,30 +1531,40 @@
+@@ -1485,30 +1560,40 @@
        *m++ = userModeList[i].c;
    }
  
@@ -744,7 +744,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
      *m++ = ' ';
      ircd_snprintf(0, m, USERLEN + HOSTLEN + 2, "%s@%s", cli_user(cptr)->username,
           cli_user(cptr)->host);
-@@ -1497,11 +1582,12 @@
+@@ -1526,11 +1611,12 @@
   * SEND_UMODES, to select which changed user modes to send.
   */
  void send_umode(struct Client *cptr, struct Client *sptr, struct Flags *old,
@@ -758,7 +758,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
    char *m;
    int what = MODE_NULL;
  
-@@ -1531,6 +1617,12 @@
+@@ -1560,6 +1646,12 @@
          continue;
        break;      
      }
@@ -771,7 +771,7 @@ diff -r f6fcd33ea732 ircd/s_user.c
      /* Special case for SETHOST.. */
      if (flag == FLAG_SETHOST) {
        /* Don't send to users */
-@@ -1564,6 +1656,16 @@
+@@ -1593,6 +1685,16 @@
        }
      }
    }
@@ -788,9 +788,9 @@ diff -r f6fcd33ea732 ircd/s_user.c
    if (needhost) {
      *m++ = ' ';
      ircd_snprintf(0, m, USERLEN + HOSTLEN + 1, "%s@%s", cli_user(sptr)->username,
-diff -r f6fcd33ea732 ircd/send.c
---- a/ircd/send.c	Fri Jul 19 22:21:04 2013 +0100
-+++ b/ircd/send.c	Fri Jul 19 22:21:39 2013 +0100
+diff -r 5440fc22cc1d ircd/send.c
+--- a/ircd/send.c	Sat Jul 20 14:48:02 2013 +0100
++++ b/ircd/send.c	Sat Jul 20 14:48:06 2013 +0100
 @@ -405,6 +405,70 @@
  }
  
