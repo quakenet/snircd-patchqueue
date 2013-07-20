@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent c65dae2425be8a5d63d557fb9c55073e1b018e8b
+# Parent 551b70c8f77d787528b74f060234d656f477543b
 
-diff -r c65dae2425be include/gline.h
---- a/include/gline.h	Sat Jul 20 14:50:22 2013 +0100
-+++ b/include/gline.h	Sat Jul 20 15:06:19 2013 +0100
+diff -r 551b70c8f77d include/gline.h
+--- a/include/gline.h	Sat Jul 20 15:18:17 2013 +0100
++++ b/include/gline.h	Sat Jul 20 15:20:58 2013 +0100
 @@ -49,6 +49,7 @@
  struct Gline {
    struct Gline *gl_next;	/**< Next G-line in linked list. */
@@ -28,9 +28,9 @@ diff -r c65dae2425be include/gline.h
 +extern struct Gline *IsNickGlined(struct Client *cptr, char *nick);
  
  #endif /* INCLUDED_gline_h */
-diff -r c65dae2425be ircd/gline.c
---- a/ircd/gline.c	Sat Jul 20 14:50:22 2013 +0100
-+++ b/ircd/gline.c	Sat Jul 20 15:06:19 2013 +0100
+diff -r 551b70c8f77d ircd/gline.c
+--- a/ircd/gline.c	Sat Jul 20 15:18:17 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 15:20:58 2013 +0100
 @@ -26,7 +26,6 @@
  #include "gline.h"
  #include "channel.h"
@@ -156,15 +156,18 @@ diff -r c65dae2425be ircd/gline.c
    int tmp;
  
    assert(0 != userhost);
-@@ -503,7 +525,7 @@
+@@ -503,9 +525,9 @@
  	return send_reply(sptr, ERR_TOOMANYUSERS, tmp);
      }
    } else {
 -    canon_userhost(userhost, &user, &host, "*");
 +    canon_userhost(userhost, &nick, &user, &host, "*");
      if (sizeof(uhmask) <
- 	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s@%s", user, host))
+-	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s@%s", user, host))
++	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s!%s@%s", nick, user, host))
        return send_reply(sptr, ERR_LONGMASK);
+     else if (MyUser(sptr) || (IsUser(sptr) && flags & GLINE_LOCAL)) {
+       switch (gline_checkmask(host)) {
 @@ -545,29 +567,35 @@
  
    /* Inform ops... */
@@ -515,9 +518,9 @@ diff -r c65dae2425be ircd/gline.c
 +  return 0;
 +}
 +
-diff -r c65dae2425be ircd/m_nick.c
---- a/ircd/m_nick.c	Sat Jul 20 14:50:22 2013 +0100
-+++ b/ircd/m_nick.c	Sat Jul 20 15:06:19 2013 +0100
+diff -r 551b70c8f77d ircd/m_nick.c
+--- a/ircd/m_nick.c	Sat Jul 20 15:18:17 2013 +0100
++++ b/ircd/m_nick.c	Sat Jul 20 15:20:58 2013 +0100
 @@ -98,6 +98,7 @@
  #include "s_user.h"
  #include "send.h"
@@ -538,9 +541,9 @@ diff -r c65dae2425be ircd/m_nick.c
    /* 
     * Check if this is a LOCAL user trying to use a reserved (Juped)
     * nick, if so tell him that it's a nick in use...
-diff -r c65dae2425be ircd/s_err.c
---- a/ircd/s_err.c	Sat Jul 20 14:50:22 2013 +0100
-+++ b/ircd/s_err.c	Sat Jul 20 15:06:19 2013 +0100
+diff -r 551b70c8f77d ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 15:18:17 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 15:20:58 2013 +0100
 @@ -526,7 +526,7 @@
  /* 246 */
    { RPL_STATSTLINE, "%c %s %s", "246" },
