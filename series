@@ -17,7 +17,6 @@ paranoid.patch
 cCNmode.patch
 check.patch
 accountflags.patch
-update004response.patch
 serverkicks.patch
 filterip.patch
 hideidletime.patch
