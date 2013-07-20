@@ -111,3 +111,4 @@ opernowildbadchan.patch
 operglinenick.patch
 welcome.patch
 match.patch
+hginfo.patch

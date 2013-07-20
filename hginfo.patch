@@ -1,0 +1,64 @@
+# HG changeset patch
+# Parent 89661813f5014dfceaa7e5be8dd57cebdab6a9d0
+
+Add information from hg to INFO command.
+
+Information added:
+The output from 'hg identify'
+The list of applied patches from the patch queue and their revisions
+The list of patches from 'hg qseries' and their checksums
+
+This patch is to remain in the patch queue, at the top, for development purposes only.
+
+Currently this patch sits in position 2 behind the patch for several fixes for m_info.c and version.c.SH.
+
+diff -r 89661813f501 ircd/version.c.SH
+--- a/ircd/version.c.SH
++++ b/ircd/version.c.SH
+@@ -99,6 +99,46 @@
+  echo "    \"[" `./umkpasswd -5 $file` " ]\"," >> version.c
+ done
+ 
++
++# gather info from HG
++if hg --help 2>&1 >/dev/null; then
++
++ # gather info from the HG patch queue
++ if [ -d ${srcdir}/.hg/patches ]; then
++
++  echo "Extracting information from HG patch queue ..."
++
++  # revision for applied patches
++  echo "    \"\"," >> version.c
++  echo "    \"PatchApplied:\"," >> version.c
++
++  for file in $(cd ${srcdir} && hg qapplied); do
++   revision=$(cd ${srcdir}/.hg/patches && hg log $file | grep ^changeset | head -n 1 | awk '{print $2}')
++   if [ -z "$revision" ]; then
++    revision="none"
++   fi
++   echo "    \"[" $file: $revision " ]\"," >> version.c
++  done
++
++  # checksums for all patch files
++  echo "    \"\"," >> version.c
++  echo "    \"PatchQueue:\"," >> version.c
++
++  for file in $(cd ${srcdir} && hg qseries) ; do
++   echo "    \"[" `./umkpasswd -5 ${srcdir}/.hg/patches/$file` " ]\"," >> version.c
++  done
++
++ fi
++
++ echo "Extracting information from HG ..."
++
++ # hg identify information 
++ echo "\"Mercurial information: hg identify "`cd ${srcdir} && hg identify`"\"," >> version.c
++
++fi
++
++
++
+ /bin/cat >>version.c <<!SUB!THIS!
+     0,
+ };
