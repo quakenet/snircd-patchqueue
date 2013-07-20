@@ -5,7 +5,6 @@ compilewarnings.patch
 readme.snircd.patch
 delete_ircd_auth_files.patch
 testserverlink.patch
-simulateserverlink.patch
 opmodenobanlimit.patch
 opmodehidebannick.patch
 glinemaxexpire.patch
