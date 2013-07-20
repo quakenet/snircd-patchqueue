@@ -52,7 +52,6 @@ snomaskprefix.patch
 showkicks.patch
 serviceoplevels.patch
 delayedjoinXusersnotrevealed.patch
-glineoptimisation.patch
 opmodebanoverride.patch
 R_shouldn_t_be_overridden_by__o__but__X.patch
 checkparanoidonchannelbeforekick.patch
