@@ -3,7 +3,7 @@
 
 diff -r c65dae2425be include/gline.h
 --- a/include/gline.h	Sat Jul 20 14:50:22 2013 +0100
-+++ b/include/gline.h	Sat Jul 20 14:53:43 2013 +0100
++++ b/include/gline.h	Sat Jul 20 15:06:19 2013 +0100
 @@ -49,6 +49,7 @@
  struct Gline {
    struct Gline *gl_next;	/**< Next G-line in linked list. */
@@ -30,7 +30,7 @@ diff -r c65dae2425be include/gline.h
  #endif /* INCLUDED_gline_h */
 diff -r c65dae2425be ircd/gline.c
 --- a/ircd/gline.c	Sat Jul 20 14:50:22 2013 +0100
-+++ b/ircd/gline.c	Sat Jul 20 14:53:43 2013 +0100
++++ b/ircd/gline.c	Sat Jul 20 15:06:19 2013 +0100
 @@ -26,7 +26,6 @@
  #include "gline.h"
  #include "channel.h"
@@ -274,7 +274,7 @@ diff -r c65dae2425be ircd/gline.c
  	 gline->gl_user, gline->gl_host ? "@" : "",
  	 gline->gl_host ? gline->gl_host : "",
  	 action == GLINE_ACTIVATE ? "GLINE_ACTIVATE" :
-@@ -883,10 +923,12 @@
+@@ -883,17 +923,22 @@
    /* All right, inform ops... */
    non_auto = non_auto || ircd_strncmp(gline->gl_reason, "AUTO", 4);
    sendto_opmask_butone(0, non_auto ? SNO_GLINE : SNO_AUTO,
@@ -288,7 +288,19 @@ diff -r c65dae2425be ircd/gline.c
  		       gline->gl_user, gline->gl_host ? "@" : "",
  		       gline->gl_host ? gline->gl_host : "", buf);
  
-@@ -902,8 +944,10 @@
+   /* and log the change */
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C modifying global %s for %s%s%s:%s", sptr,
+-	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE", gline->gl_user,
++	    "%#C modifying global %s for %s%s%s%s%s:%s", sptr,
++	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++            gline->gl_user,
+ 	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "",
+ 	    buf);
+ 
+@@ -902,8 +947,10 @@
     */
    if (action != GLINE_LOCAL_ACTIVATE && action != GLINE_LOCAL_DEACTIVATE)
      sendcmdto_serv_butone(sptr, CMD_GLINE, cptr,
@@ -300,7 +312,7 @@ diff -r c65dae2425be ircd/gline.c
  			  gline->gl_user, gline->gl_host ? "@" : "",
  			  gline->gl_host ? gline->gl_host : "",
  			  gline->gl_expire - TStime(), gline->gl_lastmod,
-@@ -926,15 +970,20 @@
+@@ -926,15 +973,20 @@
    assert(GlineIsLocal(gline));
  
    /* Inform ops and log it */
@@ -324,7 +336,7 @@ diff -r c65dae2425be ircd/gline.c
  	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "");
  
    gline_free(gline); /* get rid of the G-line */
-@@ -962,7 +1011,7 @@
+@@ -962,7 +1014,7 @@
  {
    struct Gline *gline = 0;
    struct Gline *sgline;
@@ -333,7 +345,7 @@ diff -r c65dae2425be ircd/gline.c
  
    if (flags & (GLINE_BADCHAN | GLINE_ANY)) {
      gliter(BadChanGlineList, gline, sgline) {
-@@ -980,7 +1029,7 @@
+@@ -980,7 +1032,7 @@
      return 0;
  
    DupString(t_uh, userhost);
@@ -342,7 +354,7 @@ diff -r c65dae2425be ircd/gline.c
  
    gliter(GlobalGlineList, gline, sgline) {
      if ((flags & (GlineIsLocal(gline) ? GLINE_GLOBAL : GLINE_LOCAL)) ||
-@@ -989,12 +1038,18 @@
+@@ -989,12 +1041,18 @@
      else if (flags & GLINE_EXACT) {
        if (((gline->gl_host && host && ircd_strcmp(gline->gl_host, host) == 0)
             || (!gline->gl_host && !host)) &&
@@ -363,7 +375,7 @@ diff -r c65dae2425be ircd/gline.c
  	break;
      }
    }
-@@ -1050,7 +1105,9 @@
+@@ -1050,7 +1108,9 @@
          continue;
      }
      else {
@@ -374,7 +386,7 @@ diff -r c65dae2425be ircd/gline.c
          continue;
  
        if (GlineIsIpMask(gline)) {
-@@ -1101,8 +1158,11 @@
+@@ -1101,8 +1161,11 @@
  
    gliter(GlobalGlineList, gline, sgline) {
      if (!GlineIsLocal(gline) && gline->gl_lastmod)
@@ -388,7 +400,7 @@ diff -r c65dae2425be ircd/gline.c
                      gline->gl_host ? "@" : "",
                      gline->gl_host ? gline->gl_host : "",
  		    gline->gl_expire - TStime(), gline->gl_lastmod,
-@@ -1129,8 +1189,11 @@
+@@ -1129,8 +1192,11 @@
    if (GlineIsLocal(gline) || !gline->gl_lastmod)
      return 0;
  
@@ -402,7 +414,7 @@ diff -r c65dae2425be ircd/gline.c
  		gline->gl_host ? "@" : "",
                  gline->gl_host ? gline->gl_host : "",
  		gline->gl_expire - TStime(), gline->gl_lastmod,
-@@ -1157,8 +1220,10 @@
+@@ -1157,8 +1223,10 @@
        return send_reply(sptr, ERR_NOSUCHGLINE, userhost);
  
      /* send gline information along */
@@ -415,7 +427,7 @@ diff -r c65dae2425be ircd/gline.c
                 gline->gl_host ? gline->gl_host : "",
  	       gline->gl_expire, gline->gl_lastmod,
  	       gline->gl_lifetime,
-@@ -1168,7 +1233,10 @@
+@@ -1168,7 +1236,10 @@
  	       GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
    } else {
      gliter(GlobalGlineList, gline, sgline) {
@@ -427,7 +439,7 @@ diff -r c65dae2425be ircd/gline.c
  		 gline->gl_host ? "@" : "",
  		 gline->gl_host ? gline->gl_host : "",
  		 gline->gl_expire, gline->gl_lastmod,
-@@ -1180,7 +1248,7 @@
+@@ -1180,7 +1251,7 @@
      }
  
      gliter(BadChanGlineList, gline, sgline) {
@@ -436,7 +448,7 @@ diff -r c65dae2425be ircd/gline.c
  		 gline->gl_expire, gline->gl_lastmod,
  		 gline->gl_lifetime,
  		 GlineIsLocal(gline) ? cli_name(&me) : "*",
-@@ -1207,7 +1275,10 @@
+@@ -1207,7 +1278,10 @@
    struct Gline *sgline;
  
    gliter(GlobalGlineList, gline, sgline) {
@@ -448,7 +460,7 @@ diff -r c65dae2425be ircd/gline.c
  	       gline->gl_host ? "@" : "",
  	       gline->gl_host ? gline->gl_host : "",
  	       gline->gl_expire, gline->gl_lastmod,
-@@ -1242,6 +1313,7 @@
+@@ -1242,6 +1316,7 @@
    for (gline = GlobalGlineList; gline; gline = gline->gl_next) {
      gl++;
      *gl_size += sizeof(struct Gline);
@@ -456,7 +468,7 @@ diff -r c65dae2425be ircd/gline.c
      *gl_size += gline->gl_user ? (strlen(gline->gl_user) + 1) : 0;
      *gl_size += gline->gl_host ? (strlen(gline->gl_host) + 1) : 0;
      *gl_size += gline->gl_reason ? (strlen(gline->gl_reason) + 1) : 0;
-@@ -1257,3 +1329,46 @@
+@@ -1257,3 +1332,46 @@
  
    return gl;
  }
@@ -505,7 +517,7 @@ diff -r c65dae2425be ircd/gline.c
 +
 diff -r c65dae2425be ircd/m_nick.c
 --- a/ircd/m_nick.c	Sat Jul 20 14:50:22 2013 +0100
-+++ b/ircd/m_nick.c	Sat Jul 20 14:53:43 2013 +0100
++++ b/ircd/m_nick.c	Sat Jul 20 15:06:19 2013 +0100
 @@ -98,6 +98,7 @@
  #include "s_user.h"
  #include "send.h"
@@ -528,7 +540,7 @@ diff -r c65dae2425be ircd/m_nick.c
     * nick, if so tell him that it's a nick in use...
 diff -r c65dae2425be ircd/s_err.c
 --- a/ircd/s_err.c	Sat Jul 20 14:50:22 2013 +0100
-+++ b/ircd/s_err.c	Sat Jul 20 14:53:43 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 15:06:19 2013 +0100
 @@ -526,7 +526,7 @@
  /* 246 */
    { RPL_STATSTLINE, "%c %s %s", "246" },
