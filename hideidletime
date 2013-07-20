@@ -1,0 +1,37 @@
+# HG changeset patch
+# Parent ab533d2f09b2cf74cc38d3dfd54da4c0b6cb98bb
+
+diff -r ab533d2f09b2 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jul 14 17:28:44 2013 +0100
++++ b/include/ircd_features.h	Sun Jul 14 17:31:19 2013 +0100
+@@ -57,6 +57,7 @@
+   FEAT_AUTOINVISIBLE,
+   FEAT_CONNEXIT_NOTICES,
+   FEAT_USER_HIDECHANS,
++  FEAT_USER_HIDEIDLETIME,
+   FEAT_OPLEVELS,
+   FEAT_ZANNELS,
+   FEAT_LOCAL_CHANNELS,
+diff -r ab533d2f09b2 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jul 14 17:28:44 2013 +0100
++++ b/ircd/ircd_features.c	Sun Jul 14 17:31:19 2013 +0100
+@@ -322,6 +322,7 @@
+   F_B(AUTOINVISIBLE, 0, 1, 0),
+   F_B(CONNEXIT_NOTICES, 0, 0, 0),
+   F_B(USER_HIDECHANS, 0, 0, 0),
++  F_B(USER_HIDEIDLETIME, 0, 0, 0),
+   F_B(OPLEVELS, 0, 1, 0),
+   F_B(ZANNELS, 0, 1, 0),
+   F_B(LOCAL_CHANNELS, 0, 1, 0),
+diff -r ab533d2f09b2 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 14 17:28:44 2013 +0100
++++ b/ircd/s_user.c	Sun Jul 14 17:31:19 2013 +0100
+@@ -1360,7 +1360,7 @@
+       ClearXtraOp(sptr);
+     if (!FlagHas(&setflags, FLAG_NOCHAN) && !(IsOper(sptr) || feature_bool(FEAT_USER_HIDECHANS)))
+       ClearNoChan(sptr);
+-    if (!FlagHas(&setflags, FLAG_NOIDLE) && !IsOper(sptr))
++    if (!FlagHas(&setflags, FLAG_NOIDLE) && !(IsOper(sptr) || feature_bool(FEAT_USER_HIDEIDLETIME)))
+       ClearNoIdle(sptr);
+     if (!FlagHas(&setflags, FLAG_PARANOID) && !IsOper(sptr))
+       ClearParanoid(sptr);

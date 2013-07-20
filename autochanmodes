@@ -1,0 +1,123 @@
+# HG changeset patch
+# Parent 639342abeae0ace46b4aa58ad05fb636a199a21f
+
+diff -r 639342abeae0 include/channel.h
+--- a/include/channel.h	Sun Jul 14 00:21:33 2013 +0100
++++ b/include/channel.h	Sun Jul 14 00:23:44 2013 +0100
+@@ -372,6 +372,7 @@
+                              int parc, char *parv[], int badop, int mtype);
+ extern struct Channel *get_channel(struct Client *cptr,
+                                    char *chname, ChannelGetType flag);
++extern int SetAutoChanModes(struct Channel *chptr);
+ extern struct Membership* find_member_link(struct Channel * chptr,
+                                            const struct Client* cptr);
+ extern int sub1_from_channel(struct Channel* chptr);
+diff -r 639342abeae0 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jul 14 00:21:33 2013 +0100
++++ b/include/ircd_features.h	Sun Jul 14 00:23:44 2013 +0100
+@@ -61,6 +61,8 @@
+   FEAT_LOCAL_CHANNELS,
+   FEAT_TOPIC_BURST,
+   FEAT_DISABLE_GLINES,
++  FEAT_AUTOCHANMODES,
++  FEAT_AUTOCHANMODES_LIST,
+ 
+   /* features that probably should not be touched */
+   FEAT_KILLCHASETIMELIMIT,
+diff -r 639342abeae0 ircd/channel.c
+--- a/ircd/channel.c	Sun Jul 14 00:21:33 2013 +0100
++++ b/ircd/channel.c	Sun Jul 14 00:23:44 2013 +0100
+@@ -1272,6 +1272,53 @@
+   return chptr;
+ }
+ 
++int SetAutoChanModes(struct Channel *chptr)
++{
++  static int chan_flags[] = {
++    MODE_PRIVATE,       'p',
++    MODE_SECRET,        's',
++    MODE_MODERATED,     'm',
++    MODE_TOPICLIMIT,    't',
++    MODE_INVITEONLY,    'i',
++    MODE_NOPRIVMSGS,    'n',
++    MODE_REGONLY,       'r',
++/*    MODE_NOCOLOUR,      'c',
++    MODE_NOCTCP,        'C',
++    MODE_NONOTICE,      'N',*/
++    MODE_DELJOINS,      'D',
++    MODE_NOQUITPARTS,   'u'
++  };
++
++  unsigned int *flag_p;
++  unsigned int t_mode;
++  const char *modestr;
++
++  t_mode = 0;
++
++  assert(0 != chptr);
++
++  if (!feature_bool(FEAT_AUTOCHANMODES) || !feature_str(FEAT_AUTOCHANMODES_LIST) || strlen(feature_str(FEAT_AUTOCHANMODES_LIST)) <= 1)
++    return(-1);
++
++  modestr = feature_str(FEAT_AUTOCHANMODES_LIST);
++
++  for (; *modestr; modestr++) {
++    for (flag_p = chan_flags; flag_p[0]; flag_p += 2) /* look up flag */
++      if (flag_p[1] == *modestr)
++        break;
++
++    if (!flag_p[0]) /* didn't find it */
++      continue;
++
++    t_mode |= flag_p[0]; 
++
++  } /* for (; *modestr; modestr++) { */
++
++  if (t_mode != 0)
++    chptr->mode.mode = t_mode;
++  return(0);
++}
++
+ /** invite a user to a channel.
+  *
+  * Adds an invite for a user to a channel.  Limits the number of invites
+@@ -3602,6 +3649,15 @@
+   case JOINBUF_TYPE_CREATE:
+     sendcmdto_serv_butone(jbuf->jb_source, CMD_CREATE, jbuf->jb_connect,
+ 			  "%s %Tu", chanlist, jbuf->jb_create);
++    if (MyUser(jbuf->jb_source) && (feature_bool(FEAT_AUTOCHANMODES) && 
++    		  feature_str(FEAT_AUTOCHANMODES_LIST) && (strlen(feature_str(FEAT_AUTOCHANMODES_LIST)) > 0))) {
++      char *name;
++      char *p = 0;
++      for (name = ircd_strtok(&p, chanlist, ","); name; name = ircd_strtok(&p, 0, ",")) {
++        sendcmdto_serv_butone(jbuf->jb_source, CMD_MODE, jbuf->jb_connect,
++        		  "%s %s%s", name, "+", feature_str(FEAT_AUTOCHANMODES_LIST));
++      }
++    }
+     break;
+ 
+   case JOINBUF_TYPE_PART:
+diff -r 639342abeae0 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jul 14 00:21:33 2013 +0100
++++ b/ircd/ircd_features.c	Sun Jul 14 00:23:44 2013 +0100
+@@ -326,6 +326,8 @@
+   F_B(LOCAL_CHANNELS, 0, 1, 0),
+   F_B(TOPIC_BURST, 0, 0, 0),
+   F_B(DISABLE_GLINES, 0, 0, 0),
++  F_B(AUTOCHANMODES, 0, 1, 0),
++  F_S(AUTOCHANMODES_LIST, FEAT_CASE | FEAT_NULL, "ntCN", 0),
+ 
+   /* features that probably should not be touched */
+   F_I(KILLCHASETIMELIMIT, 0, 30, 0),
+diff -r 639342abeae0 ircd/m_join.c
+--- a/ircd/m_join.c	Sun Jul 14 00:21:33 2013 +0100
++++ b/ircd/m_join.c	Sun Jul 14 00:23:44 2013 +0100
+@@ -174,6 +174,8 @@
+       }
+ 
+       joinbuf_join(&create, chptr, CHFL_CHANOP | CHFL_CHANNEL_MANAGER);
++      if (feature_bool(FEAT_AUTOCHANMODES) && feature_str(FEAT_AUTOCHANMODES_LIST) && strlen(feature_str(FEAT_AUTOCHANMODES_LIST)) > 0)
++        SetAutoChanModes(chptr);
+     } else if (find_member_link(chptr, sptr)) {
+       continue; /* already on channel */
+     } else if (check_target_limit(sptr, chptr, chptr->chname, 0)) {

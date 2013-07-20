@@ -1,0 +1,44 @@
+# HG changeset patch
+# Parent bcc1a8879714d0ec8aedcdbabff4f76a3f1de575
+
+diff -r bcc1a8879714 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jul 14 00:18:56 2013 +0100
++++ b/include/ircd_features.h	Sun Jul 14 00:19:58 2013 +0100
+@@ -146,6 +146,8 @@
+   FEAT_HIS_MODEWHO,
+   FEAT_HIS_BANWHO,
+   FEAT_HIS_KILLWHO,
++  /* Asuka - Reimplement HEAD_IN_SAND_GLINE from Lain */
++  FEAT_HIS_GLINE,
+   FEAT_HIS_REWRITE,
+   FEAT_HIS_REMOTE,
+   FEAT_HIS_NETSPLIT,
+diff -r bcc1a8879714 ircd/gline.c
+--- a/ircd/gline.c	Sun Jul 14 00:18:56 2013 +0100
++++ b/ircd/gline.c	Sun Jul 14 00:19:58 2013 +0100
+@@ -243,9 +243,10 @@
+                            get_client_name(acptr, SHOW_IP));
+ 
+       /* and get rid of him */
+-      if ((tval = exit_client_msg(cptr, acptr, &me, "G-lined (%s)",
+-          gline->gl_reason)))
+-        retval = tval; /* retain killed status */
++      /* Asuka - Reimplement HEAD_IN_SAND_GLINE from Lain */
++      if ((tval = exit_client_msg(cptr, acptr, &me, 
++          feature_bool(FEAT_HIS_GLINE) ? "G-lined" : "G-lined (%s)", gline->gl_reason)))
++      retval = tval; /* retain killed status */
+     }
+   }
+   return retval;
+diff -r bcc1a8879714 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jul 14 00:18:56 2013 +0100
++++ b/ircd/ircd_features.c	Sun Jul 14 00:19:58 2013 +0100
+@@ -411,6 +411,8 @@
+   F_B(HIS_MODEWHO, 0, 1, 0),
+   F_B(HIS_BANWHO, 0, 1, 0),
+   F_B(HIS_KILLWHO, 0, 1, 0),
++  /* Asuka - Reimplement HEAD_IN_SAND_GLINE from Lain */
++  F_B(HIS_GLINE, 0, 1, 0),
+   F_B(HIS_REWRITE, 0, 1, 0),
+   F_I(HIS_REMOTE, 0, 1, 0),
+   F_B(HIS_NETSPLIT, 0, 1, 0),

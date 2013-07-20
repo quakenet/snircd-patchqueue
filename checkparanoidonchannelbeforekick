@@ -1,0 +1,16 @@
+# HG changeset patch
+# Parent b73ff0fe3073162cc97c1a94ccdbce9345b42b6d
+
+diff -r b73ff0fe3073 ircd/m_kick.c
+--- a/ircd/m_kick.c	Fri Jul 19 22:36:25 2013 +0100
++++ b/ircd/m_kick.c	Fri Jul 19 22:37:47 2013 +0100
+@@ -141,7 +141,8 @@
+       return send_reply(sptr, ERR_ISREALSERVICE, cli_name(who), chptr->chname);
+ 
+     if (!IsXtraOp(sptr) && (who!=sptr)) {
+-      if (IsParanoid(who) {
++      /* the victim is paranoid AND on the channel but not a zombie - wiebe */
++      if (IsParanoid(who) && (member = find_member_link(chptr, who)) && !IsZombie(member)) {
+         sendcmdto_one(&me, CMD_NOTICE, who, "%C :kick: %s tried to /KICK you from %s.", who, cli_name(sptr), chptr->chname);
+       }
+       return send_reply(sptr, ERR_ISCHANSERVICE, cli_name(who), chptr->chname);

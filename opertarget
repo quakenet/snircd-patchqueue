@@ -1,0 +1,17 @@
+# HG changeset patch
+# Parent 77f9b0ad8a6e22f013b6a3b2bbdf5dff77709721
+
+diff -r 77f9b0ad8a6e ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 14 14:11:37 2013 +0100
++++ b/ircd/s_user.c	Sun Jul 14 14:12:28 2013 +0100
+@@ -941,6 +941,10 @@
+   if (MyConnect(cptr))
+    send_reply(cptr, RPL_HOSTHIDDEN, cli_user(cptr)->host);
+ 
++  /* opers always have a free target */
++  if (IsAnOper(sptr))
++    return 0;
++
+   /*
+    * Go through all channels the client was on, rejoin him
+    * and set the modes, if any

@@ -1,0 +1,31 @@
+# HG changeset patch
+# Parent 265f4dce6df1a1fb3f28d4e9a2724fe27aeeaf8e
+
+diff -r 265f4dce6df1 ircd/m_kick.c
+--- a/ircd/m_kick.c	Fri Jul 19 22:37:47 2013 +0100
++++ b/ircd/m_kick.c	Fri Jul 19 22:41:00 2013 +0100
+@@ -221,20 +221,11 @@
+     return 0;
+ 
+   /* We go ahead and pass on the KICK for users not on the channel */
+-  member = find_member_link(chptr, who);
+-  if (member && IsZombie(member))
+-  {
+-    /* We might get a KICK from a zombie's own server because the user
+-     * net-rode during a burst (which always generates a KICK) *and*
+-     * was kicked via another server.  In that case, we must remove
+-     * the user from the channel.
+-     */
+-    if (sptr == cli_user(who)->server)
+-    {
+-      remove_user_from_channel(who, chptr);
++  if (!(member = find_member_link(chptr, who)) || IsZombie(member)) {
++    if (member) {
++      make_zombie(member, who, cptr, sptr, chptr);
++      member=0;
+     }
+-    /* Otherwise, we treat zombies like they are not channel members. */
+-    member = 0;
+   }
+ 
+   /* Send HACK notice, but not for servers in BURST */

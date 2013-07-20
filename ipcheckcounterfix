@@ -1,0 +1,17 @@
+# HG changeset patch
+# Parent 0304220bf8adef2d03a57aadeef62c06cf2b0a0f
+
+diff -r 0304220bf8ad ircd/IPcheck.c
+--- a/ircd/IPcheck.c	Sun Jul 14 14:12:28 2013 +0100
++++ b/ircd/IPcheck.c	Sun Jul 14 14:14:04 2013 +0100
+@@ -285,9 +285,7 @@
+    */
+   if (0 == ++entry->connected)
+   {
+-    entry->connected--;
+-    Debug((DEBUG_DNS, "IPcheck refusing local connection from %s: counter overflow.", ircd_ntoa(&entry->addr)));
+-    return 0;
++    ++entry->connected;
+   }
+ 
+   if (CONNECTED_SINCE(entry->last_connect) > IPCHECK_CLONE_PERIOD)

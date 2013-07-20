@@ -1,0 +1,864 @@
+# HG changeset patch
+# Parent f6fcd33ea732f2d526a06264e4d34b1b1ecbc131
+
+diff -r f6fcd33ea732 include/client.h
+--- a/include/client.h	Fri Jul 19 22:21:04 2013 +0100
++++ b/include/client.h	Fri Jul 19 22:21:39 2013 +0100
+@@ -92,6 +92,9 @@
+ /** String containing valid user modes, in no particular order. */
+ #define infousermodes "dioswkgxRXInP"
+ 
++/** Character to indicate no oper name available */
++#define NOOPERNAMECHARACTER '-'
++
+ /** Operator privileges. */
+ enum Priv
+   {
+@@ -173,6 +176,7 @@
+     FLAG_NOCHAN,                    /**< user's channels are hidden */
+     FLAG_NOIDLE,                    /**< user's idletime is hidden */
+     FLAG_XTRAOP,                    /**< oper has special powers */
++    FLAG_OPERNAME,                  /**< Server sends oper name in mode string */
+ 
+     FLAG_LAST_FLAG,                 /**< number of flags */
+     FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
+@@ -601,6 +605,8 @@
+ /** Return non-zero if the client should receive notices when someone
+  * does a whois on it. */
+ #define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
++/** Return non-zero if the server should send opername information */
++#define IsSendOperName(x)         HasFlag(x, FLAG_OPERNAME)
+ 
+ /** Return non-zero if the client has operator or server privileges. */
+ #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
+@@ -642,6 +648,8 @@
+ #define SetHub(x)               SetFlag(x, FLAG_HUB)
+ /** Mark a client as being an IPv6-grokking server. */
+ #define SetIPv6(x)              SetFlag(x, FLAG_IPV6)
++/** Mark a server as sending opername */
++#define SetOperName(x)          SetFlag(x, FLAG_OPERNAME)
+ /** Mark a client as being a services server. */
+ #define SetService(x)           SetFlag(x, FLAG_SERVICE)
+ /** Mark a client as having an account stamp. */
+diff -r f6fcd33ea732 include/numeric.h
+--- a/include/numeric.h	Fri Jul 19 22:21:04 2013 +0100
++++ b/include/numeric.h	Fri Jul 19 22:21:39 2013 +0100
+@@ -259,6 +259,7 @@
+ #define RPL_USERIP           340        /* Undernet extension */
+ #define RPL_INVITING         341
+ /*      RPL_SUMMONING        342           removed from RFC1459 */
++#define RPL_WHOISOPERNAME    343        /* QuakeNet Extension */
+ 
+ #define RPL_ISSUEDINVITE     345        /* Undernet extension */
+ #define RPL_INVITELIST       346        /* IRCnet, Undernet extension */
+diff -r f6fcd33ea732 include/s_user.h
+--- a/include/s_user.h	Fri Jul 19 22:21:04 2013 +0100
++++ b/include/s_user.h	Fri Jul 19 22:21:39 2013 +0100
+@@ -100,9 +100,9 @@
+ 				int MustBeOper, const char *pattern,
+ 				int server, int parc, char *parv[]);
+ extern struct Client* next_client(struct Client* next, const char* ch);
+-extern char *umode_str(struct Client *cptr);
++extern char *umode_str(struct Client *cptr, int type);
+ extern void send_umode(struct Client *cptr, struct Client *sptr,
+-                       struct Flags *old, int sendset);
++                       struct Flags *old, int sendset, int opernames);
+ extern void set_snomask(struct Client *, unsigned int, int);
+ extern int is_snomask(char *);
+ extern int check_target_limit(struct Client *sptr, void *target, const char *name,
+diff -r f6fcd33ea732 include/send.h
+--- a/include/send.h	Fri Jul 19 22:21:04 2013 +0100
++++ b/include/send.h	Fri Jul 19 22:21:39 2013 +0100
+@@ -50,6 +50,13 @@
+                                        int require, int forbid,
+                                        const char *pattern, ...);
+ 
++/* Send command to servers by flag arrays except one */
++void sendcmdto_flagarray_serv_butone(struct Client *from, const char *cmd,
++                                const char *tok, struct Client *one,
++                                int *require, unsigned int requiresize,
++                                int *forbid, unsigned int forbidsize,
++                                const char *pattern, ...);
++
+ /* Send command to all servers except one */
+ extern void sendcmdto_serv_butone(struct Client *from, const char *cmd,
+ 				  const char *tok, struct Client *one,
+diff -r f6fcd33ea732 include/struct.h
+--- a/include/struct.h	Fri Jul 19 22:21:04 2013 +0100
++++ b/include/struct.h	Fri Jul 19 22:21:39 2013 +0100
+@@ -32,6 +32,13 @@
+ #include "ircd_defs.h"       /* sizes */
+ #endif
+ 
++#ifdef HAVE_STDINT_H
++#ifndef INCLUDED_stdint_h
++#include <stdint.h>
++#define INCLUDED_stdint_h
++#endif
++#endif
++
+ struct DLink;
+ struct Client;
+ struct User;
+@@ -85,6 +92,9 @@
+   char               realhost[HOSTLEN + 1];     /**< actual hostname */
+   char               account[ACCOUNTLEN + 1];   /**< IRC account name */
+   time_t	     acc_create;                /**< IRC account timestamp */
++  unsigned long      acc_id;                    /**< IRC account unique id */
++  uint64_t           acc_flags;                 /**< IRC account flags */
++  char*              opername;                  /**< IRC Oper Account name */
+ };
+ 
+ #endif /* INCLUDED_struct_h */
+diff -r f6fcd33ea732 ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/ircd_parser.y	Fri Jul 19 22:21:39 2013 +0100
+@@ -580,6 +580,10 @@
+ 
+   if (name == NULL)
+     parse_error("Missing name in operator block");
++  else if (strlen(name) > ACCOUNTLEN)
++    parse_error("Operator name in operator block is too long");
++  else if ((name[0] == NOOPERNAMECHARACTER) && (name[1] == '\0'))
++    parse_error("Operator name can not be '%c'",NOOPERNAMECHARACTER);
+   else if (pass == NULL)
+     parse_error("Missing password in operator block");
+   /* Do not check password length because it may be crypted. */
+diff -r f6fcd33ea732 ircd/ircd_reslib.c
+--- a/ircd/ircd_reslib.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/ircd_reslib.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -80,6 +80,8 @@
+  * - Dianora
+  */
+ 
++#include "config.h"
++
+ #include "ircd.h"
+ #include "res.h"
+ #include "ircd_reslib.h"
+diff -r f6fcd33ea732 ircd/m_account.c
+--- a/ircd/m_account.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/m_account.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -90,6 +90,7 @@
+ #include "s_debug.h"
+ #include "s_user.h"
+ #include "send.h"
++#include "s_misc.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+ #include <stdlib.h>
+@@ -101,13 +102,19 @@
+  * parv[0] = sender prefix
+  * parv[1] = numeric of client to act on
+  * parv[2] = account name (12 characters or less)
++ * parv[3] = account timestamp
++ * parv[4] = account id
++ * parv[5] = account flags (optional)
+  */
+ int ms_account(struct Client* cptr, struct Client* sptr, int parc,
+ 	       char* parv[])
+ {
+   struct Client *acptr;
++  time_t acc_create;
++  unsigned long acc_id;
++  unsigned long long acc_flags;
+ 
+-  if (parc < 3)
++  if (parc < 5)
+     return need_more_params(sptr, "ACCOUNT");
+ 
+   if (!IsServer(sptr))
+@@ -117,10 +124,35 @@
+   if (!(acptr = findNUser(parv[1])))
+     return 0; /* Ignore ACCOUNT for a user that QUIT; probably crossed */
+ 
+-  if (IsAccount(acptr))
+-    return protocol_violation(cptr, "ACCOUNT for already registered user %s "
+-			      "(%s -> %s)", cli_name(acptr),
+-			      cli_user(acptr)->account, parv[2]);
++  acc_create = atoi(parv[3]);
++  acc_id = strtoul(parv[4], NULL, 10);
++  if (parc > 5) {
++    acc_flags = strtoull(parv[5], NULL, 10);
++  } else {
++    acc_flags = 0;
++  }
++
++  /* this section is used for updating acc_flags when
++   * all other elements match
++   */
++  if (IsAccount(acptr)) {
++    if (strcmp(cli_user(acptr)->account, parv[2]) || 
++        (cli_user(acptr)->acc_create != acc_create) ||
++        (cli_user(acptr)->acc_id != acc_id))
++      return protocol_violation(cptr, "ACCOUNT for already registered user %s "
++				"(%s -> %s)", cli_name(acptr),
++				cli_user(acptr)->account, parv[2]);
++
++    cli_user(acptr)->acc_flags = acc_flags;
++
++    sendcmdto_serv_butone(sptr, CMD_ACCOUNT, cptr, "%C %s %Tu %lu %"PRIu64,
++			  acptr, cli_user(acptr)->account,
++			  cli_user(acptr)->acc_create,
++			  cli_user(acptr)->acc_id,
++			  cli_user(acptr)->acc_flags);
++
++    return 0;
++  }
+ 
+   assert(0 == cli_user(acptr)->account[0]);
+ 
+@@ -129,20 +161,19 @@
+                               "Received account (%s) longer than %d for %s; "
+                               "ignoring.",
+                               parv[2], ACCOUNTLEN, cli_name(acptr));
+-
+-  if (parc > 3) {
+-    cli_user(acptr)->acc_create = atoi(parv[3]);
+-    Debug((DEBUG_DEBUG, "Received timestamped account: account \"%s\", "
+-           "timestamp %Tu", parv[2], cli_user(acptr)->acc_create));
+-  }
++    
++  cli_user(acptr)->acc_create = acc_create;
++  cli_user(acptr)->acc_id = acc_id;
++  cli_user(acptr)->acc_flags = acc_flags;
+ 
+   ircd_strncpy(cli_user(acptr)->account, parv[2], ACCOUNTLEN);
+   hide_hostmask(acptr, FLAG_ACCOUNT);
+ 
+-  sendcmdto_serv_butone(sptr, CMD_ACCOUNT, cptr,
+-                        cli_user(acptr)->acc_create ? "%C %s %Tu" : "%C %s",
+-                        acptr, cli_user(acptr)->account,
+-                        cli_user(acptr)->acc_create);
++  sendcmdto_serv_butone(sptr, CMD_ACCOUNT, cptr, "%C %s %Tu %lu %"PRIu64,
++                      acptr, cli_user(acptr)->account,
++                      cli_user(acptr)->acc_create,
++                      cli_user(acptr)->acc_id,
++                      cli_user(acptr)->acc_flags);
+ 
+   return 0;
+ }
+diff -r f6fcd33ea732 ircd/m_check.c
+--- a/ircd/m_check.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/m_check.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -413,6 +413,7 @@
+   struct Membership *lp;
+   struct irc_sockaddr sin;
+   char outbuf[BUFSIZE];
++  char *umodes;
+   time_t nowr;
+ 
+   /* Header */
+diff -r f6fcd33ea732 ircd/m_oper.c
+--- a/ircd/m_oper.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/m_oper.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -150,8 +150,8 @@
+   if (!aconf || IsIllegal(aconf))
+   {
+     send_reply(sptr, ERR_NOOPERHOST);
+-    sendto_opmask_butone(0, SNO_OLDREALOP, "Failed OPER attempt by %s (%s@%s)",
+-			 parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr));
++    sendto_opmask_butone(0, SNO_OLDREALOP, "Failed OPER attempt by %s (%s@%s) as %s",
++			 parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr), name);
+     return 0;
+   }
+   assert(0 != (aconf->status & CONF_OPERATOR));
+@@ -163,8 +163,8 @@
+     if (ACR_OK != attach_conf(sptr, aconf)) {
+       send_reply(sptr, ERR_NOOPERHOST);
+       sendto_opmask_butone(0, SNO_OLDREALOP, "Failed OPER attempt by %s "
+-			   "(%s@%s)", parv[0], cli_user(sptr)->realusername,
+-			   cli_sockhost(sptr));
++			   "(%s@%s) as %s", parv[0], cli_user(sptr)->realusername,
++			   cli_sockhost(sptr), aconf->name);
+       return 0;
+     }
+     SetLocOp(sptr);
+@@ -177,6 +177,12 @@
+     }
+     cli_handler(cptr) = OPER_HANDLER;
+ 
++    if (cli_user(sptr)->opername)
++      MyFree(cli_user(sptr)->opername);
++    cli_user(sptr)->opername = (char*) MyMalloc(strlen(name) + 1);
++    assert(0 != cli_user(sptr)->opername);
++    ircd_strncpy(cli_user(sptr)->opername,aconf->name,ACCOUNTLEN);
++
+     SetFlag(sptr, FLAG_WALLOP);
+     SetFlag(sptr, FLAG_SERVNOTICE);
+     SetFlag(sptr, FLAG_DEBUG);
+@@ -186,17 +192,17 @@
+     send_umode_out(cptr, sptr, &old_mode, HasPriv(sptr, PRIV_PROPAGATE));
+     send_reply(sptr, RPL_YOUREOPER);
+ 
+-    sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now operator (%c)",
++    sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now operator (%c) as %s",
+ 			 parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr),
+-			 IsOper(sptr) ? 'O' : 'o');
++			 IsOper(sptr) ? 'O' : 'o', cli_user(sptr)->opername);
+ 
+     log_write(LS_OPER, L_INFO, 0, "OPER (%s) by (%#R)", name, sptr);
+   }
+   else
+   {
+     send_reply(sptr, ERR_PASSWDMISMATCH);
+-    sendto_opmask_butone(0, SNO_OLDREALOP, "Failed OPER attempt by %s (%s@%s)",
+-			 parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr));
++    sendto_opmask_butone(0, SNO_OLDREALOP, "Failed OPER attempt by %s (%s@%s) as %s",
++			 parv[0], cli_user(sptr)->realusername, cli_sockhost(sptr), aconf->name);
+   }
+   return 0;
+ }
+@@ -215,7 +221,8 @@
+   {
+     ++UserStats.opers;
+     SetFlag(sptr, FLAG_OPER);
+-    sendcmdto_serv_butone(sptr, CMD_MODE, cptr, "%s :+o", parv[0]);
++    sendcmdto_flag_serv_butone(sptr, CMD_MODE, cptr, FLAG_LAST_FLAG, FLAG_OPERNAME, "%s :+o", parv[0]);
++    sendcmdto_flag_serv_butone(sptr, CMD_MODE, cptr, FLAG_OPERNAME, FLAG_LAST_FLAG, "%s :+o %c", parv[0], NOOPERNAMECHARACTER);
+   }
+   return 0;
+ }
+diff -r f6fcd33ea732 ircd/m_server.c
+--- a/ircd/m_server.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/m_server.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -492,6 +492,7 @@
+     case 'h': SetHub(cptr); break;
+     case 's': SetService(cptr); break;
+     case '6': SetIPv6(cptr); break;
++    case 'n': SetOperName(cptr); break;
+     }
+ }
+ 
+@@ -776,10 +777,11 @@
+       continue;
+     if (0 == match(cli_name(&me), cli_name(acptr)))
+       continue;
+-    sendcmdto_one(sptr, CMD_SERVER, bcptr, "%s %d 0 %s %s %s%s +%s%s%s :%s",
++    sendcmdto_one(sptr, CMD_SERVER, bcptr, "%s %d 0 %s %s %s%s +%s%s%s%s :%s",
+                   cli_name(acptr), hop + 1, parv[4], parv[5],
+                   NumServCap(acptr), IsHub(acptr) ? "h" : "",
+                   IsService(acptr) ? "s" : "", IsIPv6(acptr) ? "6" : "",
++                  IsSendOperName(acptr) ? "n" : "",
+                   cli_info(acptr));
+   }
+   return 0;
+diff -r f6fcd33ea732 ircd/m_whois.c
+--- a/ircd/m_whois.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/m_whois.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -205,8 +205,11 @@
+     if (user->away)
+        send_reply(sptr, RPL_AWAY, name, user->away);
+ 
+-    if (SeeOper(sptr,acptr))
++    if (SeeOper(sptr,acptr)) {
+        send_reply(sptr, RPL_WHOISOPERATOR, name);
++       if (IsAnOper(sptr) && user->opername)
++         send_reply(sptr, RPL_WHOISOPERNAME, name, user->opername);
++    }
+ 
+     if (IsAccount(acptr))
+       send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
+diff -r f6fcd33ea732 ircd/memdebug.c
+--- a/ircd/memdebug.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/memdebug.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -1,4 +1,5 @@
+ #include <sys/types.h>
++#include "config.h"
+ #include "ircd.h"
+ #include "ircd_alloc.h"
+ #include "ircd_log.h"
+diff -r f6fcd33ea732 ircd/s_auth.c
+--- a/ircd/s_auth.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/s_auth.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -1957,10 +1957,17 @@
+   /* If account has a creation timestamp, use it. */
+   assert(cli_user(cli) != NULL);
+   if (params[0][len] == ':') {
+-    cli_user(cli)->acc_create = strtoul(params[0] + len + 1, NULL, 10);
+-    params[0][len] = '\0';
++    char *end;
++    cli_user(cli)->acc_create = strtoul(params[0] + len + 1, &end, 10);
++    if (*end == ':') {
++      char *end2;
++      cli_user(cli)->acc_id = strtoul(end + 1, &end2, 10);
++      if (*end2 == ':')
++        cli_user(cli)->acc_flags = strtoull(end2 + 1, NULL, 10);
++    }
+   }
+ 
++
+   /* Copy account name to User structure. */
+   ircd_strncpy(cli_user(cli)->account, params[0], ACCOUNTLEN);
+   SetAccount(cli);
+diff -r f6fcd33ea732 ircd/s_bsd.c
+--- a/ircd/s_bsd.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/s_bsd.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -354,7 +354,7 @@
+   cli_lasttime(cptr) = CurrentTime;
+   ClearPingSent(cptr);
+ 
+-  sendrawto_one(cptr, MSG_SERVER " %s 1 %Tu %Tu J%s %s%s +%s6 :%s",
++  sendrawto_one(cptr, MSG_SERVER " %s 1 %Tu %Tu J%s %s%s +%s6n :%s",
+                 cli_name(&me), cli_serv(&me)->timestamp, newts,
+ 		MAJOR_PROTOCOL, NumServCap(&me),
+ 		feature_bool(FEAT_HUB) ? "h" : "", cli_info(&me));
+diff -r f6fcd33ea732 ircd/s_err.c
+--- a/ircd/s_err.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/s_err.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -718,7 +718,7 @@
+ /* 342 */
+   { 0 },
+ /* 343 */
+-  { 0 },
++  { RPL_WHOISOPERNAME, "%s %s :is opered as", "343" },
+ /* 344 */
+   { 0 },
+ /* 345 */
+diff -r f6fcd33ea732 ircd/s_serv.c
+--- a/ircd/s_serv.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/s_serv.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -128,7 +128,7 @@
+     /*
+      *  Pass my info to the new server
+      */
+-    sendrawto_one(cptr, MSG_SERVER " %s 1 %Tu %Tu J%s %s%s +%s6 :%s",
++    sendrawto_one(cptr, MSG_SERVER " %s 1 %Tu %Tu J%s %s%s +%s6n :%s",
+ 		  cli_name(&me), cli_serv(&me)->timestamp,
+ 		  cli_serv(cptr)->timestamp, MAJOR_PROTOCOL, NumServCap(&me),
+ 		  feature_bool(FEAT_HUB) ? "h" : "",
+@@ -184,10 +184,10 @@
+     if (!match(cli_name(&me), cli_name(cptr)))
+       continue;
+     sendcmdto_one(&me, CMD_SERVER, acptr,
+-		  "%s 2 0 %Tu J%02u %s%s +%s%s%s :%s", cli_name(cptr),
++		  "%s 2 0 %Tu J%02u %s%s +%s%s%s%s :%s", cli_name(cptr),
+ 		  cli_serv(cptr)->timestamp, Protocol(cptr), NumServCap(cptr),
+ 		  IsHub(cptr) ? "h" : "", IsService(cptr) ? "s" : "",
+-		  IsIPv6(cptr) ? "6" : "", cli_info(cptr));
++		  IsIPv6(cptr) ? "6" : "", IsSendOperName(cptr) ? "n" : "", cli_info(cptr));
+   }
+ 
+   /* Send these as early as possible so that glined users/juped servers can
+@@ -227,11 +227,11 @@
+       if (0 == match(cli_name(&me), cli_name(acptr)))
+         continue;
+       sendcmdto_one(cli_serv(acptr)->up, CMD_SERVER, cptr,
+-		    "%s %d 0 %Tu %s%u %s%s +%s%s%s :%s", cli_name(acptr),
++		    "%s %d 0 %Tu %s%u %s%s +%s%s%s%s :%s", cli_name(acptr),
+ 		    cli_hopcount(acptr) + 1, cli_serv(acptr)->timestamp,
+ 		    protocol_str, Protocol(acptr), NumServCap(acptr),
+ 		    IsHub(acptr) ? "h" : "", IsService(acptr) ? "s" : "",
+-		    IsIPv6(acptr) ? "6" : "", cli_info(acptr));
++		    IsIPv6(acptr) ? "6" : "", IsSendOperName(cptr) ? "n" : "", cli_info(acptr));
+     }
+   }
+ 
+@@ -243,7 +243,11 @@
+     if (IsUser(acptr))
+     {
+       char xxx_buf[25];
+-      char *s = umode_str(acptr);
++      char *s;
++      if (IsSendOperName(cptr))
++        s = umode_str(acptr, UMODE_ALL_PARAMS);
++      else
++        s = umode_str(acptr, UMODE_ALL_PARAMS_BUT_OPERID);
+       sendcmdto_one(cli_user(acptr)->server, CMD_NICK, cptr,
+ 		    "%s %d %Tu %s %s %s%s%s%s %s%s :%s",
+ 		    cli_name(acptr), cli_hopcount(acptr) + 1, cli_lastnick(acptr),
+diff -r f6fcd33ea732 ircd/s_stats.c
+--- a/ircd/s_stats.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/s_stats.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -493,12 +493,12 @@
+    */
+   if (sd->sd_funcdata) {
+     send_reply(sptr, SND_EXPLICIT | RPL_STATSVERBOSE,
+-               "%-20s %-20s Flags Hops Numeric   Lag  RTT   Up Down "
++               "%-20s %-20s Flags  Hops Numeric   Lag  RTT   Up Down "
+                "Clients/Max Proto %-10s :Info", "Servername", "Uplink",
+                "LinkTS");
+-    fmt = "%-20s %-20s %c%c%c%c%c  %4i %s %-4i %5i %4i %4i %4i %5i %5i P%-2i   %Tu :%s";
++    fmt = "%-20s %-20s %c%c%c%c%c%c  %4i %s %-4i %5i %4i %4i %4i %5i %5i P%-2i   %Tu :%s";
+   } else {
+-    fmt = "%s %s %c%c%c%c%c %i %s %i %i %i %i %i %i %i P%i %Tu :%s";
++    fmt = "%s %s %c%c%c%c%c%c %i %s %i %i %i %i %i %i %i P%i %Tu :%s";
+   }
+ 
+   for (acptr = GlobalClientList; acptr; acptr = cli_next(acptr))
+@@ -516,6 +516,7 @@
+                IsHub(acptr) ? 'H' : '-',
+                IsService(acptr) ? 'S' : '-',
+                IsIPv6(acptr) ? '6' : '-',
++               IsSendOperName(acptr) ? 'n' : '-',
+                cli_hopcount(acptr),
+                NumServ(acptr),
+                base64toint(cli_yxx(acptr)),
+diff -r f6fcd33ea732 ircd/s_user.c
+--- a/ircd/s_user.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/s_user.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -113,6 +113,8 @@
+   if (--user->refcnt == 0) {
+     if (user->away)
+       MyFree(user->away);
++    if (user->opername)
++      MyFree(user->opername);
+     /*
+      * sanity check
+      */
+@@ -347,6 +349,7 @@
+   char*            tmpstr;
+   struct User*     user = cli_user(sptr);
+   char             ip_base64[25];
++  int ipv6andopername[] = {FLAG_IPV6,FLAG_OPERNAME};
+ 
+   user->last = CurrentTime;
+   parv[0] = cli_name(sptr);
+@@ -458,10 +461,11 @@
+   if (IsOper(sptr))
+     ++UserStats.opers;
+ 
+-  tmpstr = umode_str(sptr);
+-  /* Send full IP address to IPv6-grokking servers. */
++  tmpstr = umode_str(sptr, UMODE_ALL_PARAMS_BUT_OPERID);
++
++  /* Do not send oper name and send full IP address to IPv6-grokking servers. */
+   sendcmdto_flag_serv_butone(user->server, CMD_NICK, cptr,
+-                             FLAG_IPV6, FLAG_LAST_FLAG,
++                             FLAG_IPV6, FLAG_OPERNAME,
+                              "%s %d %Tu %s %s %s%s%s%s %s%s :%s",
+                              cli_name(sptr), cli_hopcount(sptr) + 1,
+                              cli_lastnick(sptr),
+@@ -469,9 +473,31 @@
+                              *tmpstr ? "+" : "", tmpstr, *tmpstr ? " " : "",
+                              iptobase64(ip_base64, &cli_ip(sptr), sizeof(ip_base64), 1),
+                              NumNick(sptr), cli_info(sptr));
+-  /* Send fake IPv6 addresses to pre-IPv6 servers. */
++  /* Do not send oper name and send fake IPv6 addresses to pre-IPv6 servers. */
++  sendcmdto_flagarray_serv_butone(user->server, CMD_NICK, cptr,
++                             NULL, 0, ipv6andopername, 2,
++                             "%s %d %Tu %s %s %s%s%s%s %s%s :%s",
++                             cli_name(sptr), cli_hopcount(sptr) + 1,
++                             cli_lastnick(sptr),
++                             user->realusername, user->realhost,
++                             *tmpstr ? "+" : "", tmpstr, *tmpstr ? " " : "",
++                             iptobase64(ip_base64, &cli_ip(sptr), sizeof(ip_base64), 0),
++                             NumNick(sptr), cli_info(sptr));
++
++  tmpstr = umode_str(sptr, UMODE_ALL_PARAMS);
++  /* Send oper name and full IP address to IPv6-grokking servers. */
++  sendcmdto_flagarray_serv_butone(user->server, CMD_NICK, cptr,
++                             ipv6andopername, 2, NULL, 0,
++                             "%s %d %Tu %s %s %s%s%s%s %s%s :%s",
++                             cli_name(sptr), cli_hopcount(sptr) + 1,
++                             cli_lastnick(sptr),
++                             user->realusername, user->realhost,
++                             *tmpstr ? "+" : "", tmpstr, *tmpstr ? " " : "",
++                             iptobase64(ip_base64, &cli_ip(sptr), sizeof(ip_base64), 1),
++                             NumNick(sptr), cli_info(sptr));
++  /* Send oper name and fake IPv6 addresses to pre-IPv6 servers. */
+   sendcmdto_flag_serv_butone(user->server, CMD_NICK, cptr,
+-                             FLAG_LAST_FLAG, FLAG_IPV6,
++                             FLAG_OPERNAME, FLAG_IPV6,
+                              "%s %d %Tu %s %s %s%s%s%s %s%s :%s",
+                              cli_name(sptr), cli_hopcount(sptr) + 1,
+                              cli_lastnick(sptr),
+@@ -492,7 +518,7 @@
+     else
+       FlagClr(&flags, FLAG_ACCOUNT);
+     client_set_privs(sptr, NULL);
+-    send_umode(cptr, sptr, &flags, ALL_UMODES);
++    send_umode(cptr, sptr, &flags, ALL_UMODES, 0);
+     if ((cli_snomask(sptr) != SNO_DEFAULT) && HasFlag(sptr, FLAG_SERVNOTICE))
+       send_reply(sptr, RPL_SNOMASK, cli_snomask(sptr), cli_snomask(sptr));
+   }
+@@ -844,16 +870,26 @@
+   int i;
+   struct Client *acptr;
+ 
+-  send_umode(NULL, sptr, old, prop ? SEND_UMODES : SEND_UMODES_BUT_OPER);
++  send_umode(NULL, sptr, old, prop ? SEND_UMODES : SEND_UMODES_BUT_OPER, 0);
+ 
+   for (i = HighestFd; i >= 0; i--)
+   {
+     if ((acptr = LocalClientArray[i]) && IsServer(acptr) &&
+-        (acptr != cptr) && (acptr != sptr) && *umodeBuf)
+-      sendcmdto_one(sptr, CMD_MODE, acptr, "%s %s", cli_name(sptr), umodeBuf);
++        (acptr != cptr) && (acptr != sptr) && !IsSendOperName(acptr) && *umodeBuf)
++        sendcmdto_one(sptr, CMD_MODE, acptr, "%s %s", cli_name(sptr), umodeBuf);
+   }
++
++  send_umode(NULL, sptr, old, prop ? SEND_UMODES : SEND_UMODES_BUT_OPER, 1);
++
++  for (i = HighestFd; i >= 0; i--)
++  {
++    if ((acptr = LocalClientArray[i]) && IsServer(acptr) &&
++        (acptr != cptr) && (acptr != sptr) && IsSendOperName(acptr) && *umodeBuf)
++        sendcmdto_one(sptr, CMD_MODE, acptr, "%s %s", cli_name(sptr), umodeBuf);
++  }
++
+   if (cptr && MyUser(cptr))
+-    send_umode(cptr, sptr, old, ALL_UMODES);
++    send_umode(cptr, sptr, old, ALL_UMODES, 0);
+ }
+ 
+ 
+@@ -1228,9 +1264,29 @@
+           ClearWallops(sptr);
+         break;
+       case 'o':
+-        if (what == MODE_ADD)
++        if (what == MODE_ADD) {
+           SetOper(sptr);
+-        else {
++          if (IsServer(cptr) && IsSendOperName(cptr)) {
++            if (*(p + 1)) {
++              opername = *++p;
++              if (cli_user(sptr)->opername)
++                MyFree(cli_user(sptr)->opername);
++              if ((opername[0] == NOOPERNAMECHARACTER) && (opername[1] == '\0')) {
++                cli_user(sptr)->opername = NULL;
++              } else {
++                opernamelen = strlen(opername);
++                if (opernamelen > ACCOUNTLEN) {
++                  protocol_violation(cptr, "Received opername (%s) longer than %d for %s; ignoring.", opername, ACCOUNTLEN, cli_name(sptr));
++                  cli_user(sptr)->opername = NULL;
++                } else {
++                  cli_user(sptr)->opername = (char*) MyMalloc(opernamelen + 1);
++                  assert(0 != cli_user(sptr)->opername);
++                  ircd_strncpy(cli_user(sptr)->opername,opername,ACCOUNTLEN);
++                }
++              }
++            }
++          }
++        } else {
+           ClrFlag(sptr, FLAG_OPER);
+           ClrFlag(sptr, FLAG_LOCOP);
+           if (MyConnect(sptr))
+@@ -1391,13 +1447,16 @@
+    */
+   if (!FlagHas(&setflags, FLAG_ACCOUNT) && IsAccount(sptr)) {
+       int len = ACCOUNTLEN;
+-      char *ts;
++      char *pts, *ts;
+       if ((ts = strchr(account, ':'))) {
+ 	len = (ts++) - account;
+ 	cli_user(sptr)->acc_create = atoi(ts);
+-	Debug((DEBUG_DEBUG, "Received timestamped account in user mode; "
+-	      "account \"%s\", timestamp %Tu", account,
+-	      cli_user(sptr)->acc_create));
++        if ((pts = strchr(ts, ':'))) {
++          char *pflags;
++	  cli_user(sptr)->acc_id = strtoul(pts + 1, &pflags, 10);
++          if (*pflags == ':')
++	    cli_user(sptr)->acc_flags = strtoull(pflags + 1, NULL, 10);
++        }
+       }
+       ircd_strncpy(cli_user(sptr)->account, account, len);
+   }
+@@ -1418,7 +1477,23 @@
+       /* user no longer oper */
+       assert(UserStats.opers > 0);
+       --UserStats.opers;
++
++      /* notify my operators an operator has deOPERed on the network - wiebe */
++      if (MyConnect(sptr)) {
++        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s",
++        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>");
++      } else {
++        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s on %s",
++        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>", cli_name(cli_user(sptr)->server));
++      }
++     
+       client_set_privs(sptr, NULL); /* will clear propagate privilege */
++      if (cli_user(sptr)->opername) {
++        MyFree(cli_user(sptr)->opername);
++        cli_user(sptr)->opername = NULL;
++      }
+     }
+     if (FlagHas(&setflags, FLAG_INVISIBLE) && !IsInvisible(sptr)) {
+       assert(UserStats.inv_clients > 0);
+@@ -1439,7 +1514,7 @@
+  * @param[in] cptr Some user.
+  * @return Pointer to a static buffer.
+  */
+-char *umode_str(struct Client *cptr)
++char *umode_str(struct Client *cptr, int type)
+ {
+   /* Maximum string size: "owidgrx\0" */
+   char *m = umodeBuf;
+@@ -1456,30 +1531,40 @@
+       *m++ = userModeList[i].c;
+   }
+ 
++  /* OperID is wanted */
++  if (type == UMODE_ALL_PARAMS && IsOper(cptr))
++  {
++    *m++ = ' ';
++    if (cli_user(cptr)->opername) {
++      char* t = cli_user(cptr)->opername;
++      while ((*m++ = *t++))
++        ; /* Empty loop */
++      m--; /* Step back over the '\0' */
++    } else {
++      *m++ = NOOPERNAMECHARACTER;
++    }
++  }
++
+   if (IsAccount(cptr))
+   {
+-    char* t = cli_user(cptr)->account;
++    char *t, nbuf[64+ACCOUNTLEN];
+ 
+-    *m++ = ' ';
++    if ( type == UMODE_AND_ACCOUNT_SHORT)
++      ircd_snprintf(0, t = nbuf, sizeof(nbuf), " %s", cli_user(cptr)->account);
++    else
++      ircd_snprintf(0, t = nbuf, sizeof(nbuf), " %s:%Tu:%lu:%"PRIu64,
++                    cli_user(cptr)->account, cli_user(cptr)->acc_create,
++		    cli_user(cptr)->acc_id, cli_user(cptr)->acc_flags);
++
++
+     while ((*m++ = *t++))
+       ; /* Empty loop */
+ 
+-    if (cli_user(cptr)->acc_create) {
+-      char nbuf[20];
+-      Debug((DEBUG_DEBUG, "Sending timestamped account in user mode for "
+-	     "account \"%s\"; timestamp %Tu", cli_user(cptr)->account,
+-	     cli_user(cptr)->acc_create));
+-      ircd_snprintf(0, t = nbuf, sizeof(nbuf), ":%Tu",
+-		    cli_user(cptr)->acc_create);
+-      m--; /* back up over previous nul-termination */
+-      while ((*m++ = *t++))
+-	; /* Empty loop */
+-    }
+     m--; /* Step back over the '\0' */
+   }
+ 
+   /* sethost parameter is wanted */
+-  if (type != UMODE_AND_ACCOUNT && IsSetHost(cptr)) {
++  if ((type != UMODE_AND_ACCOUNT && type != UMODE_AND_ACCOUNT_SHORT) && IsSetHost(cptr)) {
+     *m++ = ' ';
+     ircd_snprintf(0, m, USERLEN + HOSTLEN + 2, "%s@%s", cli_user(cptr)->username,
+          cli_user(cptr)->host);
+@@ -1497,11 +1582,12 @@
+  * SEND_UMODES, to select which changed user modes to send.
+  */
+ void send_umode(struct Client *cptr, struct Client *sptr, struct Flags *old,
+-                int sendset)
++                int sendset, int opernames)
+ {
+   int i;
+   int flag;
+   int needhost = 0;
++  int needoper = 0;
+   char *m;
+   int what = MODE_NULL;
+ 
+@@ -1531,6 +1617,12 @@
+         continue;
+       break;      
+     }
++    /* Special case for OPER.. */
++    if (flag == FLAG_OPER) {
++      /* If we're setting +o, add the opername later */
++      if (!FlagHas(old, flag))
++      	needoper++;
++    }
+     /* Special case for SETHOST.. */
+     if (flag == FLAG_SETHOST) {
+       /* Don't send to users */
+@@ -1564,6 +1656,16 @@
+       }
+     }
+   }
++  if (opernames && needoper) {
++    *m++ = ' ';
++    if (cli_user(sptr)->opername) {
++      char* t = cli_user(sptr)->opername;
++      while ((*m++ = *t++))
++        ; /* Empty loop */
++    } else {
++      *m++ = NOOPERNAMECHARACTER;
++    }
++  }
+   if (needhost) {
+     *m++ = ' ';
+     ircd_snprintf(0, m, USERLEN + HOSTLEN + 1, "%s@%s", cli_user(sptr)->username,
+diff -r f6fcd33ea732 ircd/send.c
+--- a/ircd/send.c	Fri Jul 19 22:21:04 2013 +0100
++++ b/ircd/send.c	Fri Jul 19 22:21:39 2013 +0100
+@@ -405,6 +405,70 @@
+ }
+ 
+ /**
++ * Send a (prefixed) command to all servers matching or not matching a
++ * flag but one.
++ * @param[in] from Client sending the command.
++ * @param[in] cmd Long name of command (ignored).
++ * @param[in] tok Short name of command.
++ * @param[in] one Client direction to skip (or NULL).
++ * @param[in] require Only send to servers with all Flag bits in the array set.
++ * @param[in] requiresize Size of require flag array
++ * @param[in] forbid Do not send to servers with any Flag bits in the array set.
++ * @param[in] forbidsize Size of forbid flag array
++ * @param[in] pattern Format string for command arguments.
++ */
++void sendcmdto_flagarray_serv_butone(struct Client *from, const char *cmd,
++                                const char *tok, struct Client *one,
++                                int *require, unsigned int requiresize,
++                                int *forbid, unsigned int forbidsize,
++                                const char *pattern, ...)
++{
++  struct VarData vd;
++  struct MsgBuf *mb;
++  struct DLink *lp;
++  unsigned int i, skip;
++
++  vd.vd_format = pattern; /* set up the struct VarData for %v */
++  va_start(vd.vd_args, pattern);
++
++  /* use token */
++  mb = msgq_make(&me, "%C %s %v", from, tok, &vd);
++  va_end(vd.vd_args);
++
++  /* send it to our downlinks */
++  for (lp = cli_serv(&me)->down; lp; lp = lp->next) {
++    if (one && lp->value.cptr == cli_from(one))
++      continue;
++
++    skip = 0;
++
++    for (i = 0; i < requiresize; i++) {
++      if ((require[i] < FLAG_LAST_FLAG) && !HasFlag(lp->value.cptr, require[i])) {
++        skip = 1;
++        break;
++      }
++    }
++
++    if (skip)
++      continue;
++
++    for (i = 0; i < forbidsize; i++) {
++      if ((forbid[i] < FLAG_LAST_FLAG) && HasFlag(lp->value.cptr, forbid[i])) {
++        skip = 1;
++        break;
++      }
++    }
++
++    if (skip)
++      continue;
++
++    send_buffer(lp->value.cptr, mb, 0);
++  }
++
++  msgq_clean(mb);
++}
++
++/**
+  * Send a (prefixed) command to all servers but one.
+  * @param[in] from Client sending the command.
+  * @param[in] cmd Long name of command (ignored).

@@ -1,0 +1,48 @@
+# HG changeset patch
+# Parent 7e97fdb380bf69c9efbdda9f58bca4aa841fbd0d
+
+diff -r 7e97fdb380bf include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jul 14 18:56:59 2013 +0100
++++ b/include/ircd_features.h	Fri Jul 19 21:53:36 2013 +0100
+@@ -54,6 +54,7 @@
+   FEAT_HOST_HIDING,
+   FEAT_HIDDEN_HOST,
+   FEAT_HIDDEN_IP,
++  FEAT_AUTOINVISIBLE,
+   FEAT_CONNEXIT_NOTICES,
+   FEAT_OPLEVELS,
+   FEAT_ZANNELS,
+diff -r 7e97fdb380bf ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jul 14 18:56:59 2013 +0100
++++ b/ircd/ircd_features.c	Fri Jul 19 21:53:36 2013 +0100
+@@ -319,6 +319,7 @@
+   F_B(HOST_HIDING, 0, 1, 0),
+   F_S(HIDDEN_HOST, FEAT_CASE, "users.undernet.org", 0),
+   F_S(HIDDEN_IP, 0, "127.0.0.1", 0),
++  F_B(AUTOINVISIBLE, 0, 1, 0),
+   F_B(CONNEXIT_NOTICES, 0, 0, 0),
+   F_B(OPLEVELS, 0, 1, 0),
+   F_B(ZANNELS, 0, 1, 0),
+diff -r 7e97fdb380bf ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 14 18:56:59 2013 +0100
++++ b/ircd/s_user.c	Fri Jul 19 21:53:36 2013 +0100
+@@ -365,6 +365,9 @@
+       set_user_mode(cptr, sptr, 3, umodev, ALLOWMODES_ANY);
+     }
+ 
++    if (feature_bool(FEAT_AUTOINVISIBLE))
++      SetInvisible(sptr);
++    
+     SetUser(sptr);
+     cli_handler(sptr) = CLIENT_HANDLER;
+     SetLocalNumNick(sptr);
+@@ -1053,7 +1056,8 @@
+         if (what == MODE_ADD)
+           SetInvisible(sptr);
+         else
+-          ClearInvisible(sptr);
++          if (!feature_bool(FEAT_AUTOINVISIBLE) || IsOper(sptr)) /* Don't allow non-opers to -i if FEAT_AUTOINVISIBLE is set */
++            ClearInvisible(sptr);
+         break;
+       case 'd':
+         if (what == MODE_ADD)

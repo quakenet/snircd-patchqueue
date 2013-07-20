@@ -1,0 +1,46 @@
+# HG changeset patch
+# Parent 721d58543cc7c0b60780e9826265a3224aebc216
+
+diff -r 721d58543cc7 include/channel.h
+--- a/include/channel.h	Sun Jul 14 19:04:45 2013 +0100
++++ b/include/channel.h	Sun Jul 14 19:05:53 2013 +0100
+@@ -282,6 +282,7 @@
+   struct SLink*      invites;	   /**< List of invites on this channel */
+   struct Ban*        banlist;      /**< List of bans on this channel */
+   struct Mode        mode;	   /**< This channels mode */
++  unsigned int       marker;       /**< Channel marker */
+   char               topic[TOPICLEN + 1]; /**< Channels topic */
+   char               topic_nick[NICKLEN + 1]; /**< Nick of the person who set
+ 						*  The topic
+@@ -459,4 +460,6 @@
+ extern int apply_ban(struct Ban **banlist, struct Ban *newban, int free);
+ extern void free_ban(struct Ban *ban);
+ 
++extern unsigned int get_channel_marker(void);
++
+ #endif /* INCLUDED_channel_h */
+diff -r 721d58543cc7 ircd/channel.c
+--- a/ircd/channel.c	Sun Jul 14 19:04:45 2013 +0100
++++ b/ircd/channel.c	Sun Jul 14 19:05:53 2013 +0100
+@@ -3744,3 +3744,21 @@
+   if (member && IsDelayedJoin(member))
+     RevealDelayedJoin(member);
+ }
++
++unsigned int get_channel_marker(void)
++{
++  static unsigned int marker = 0;
++
++  if (!++marker)
++  {
++    struct Channel *cptr;
++    for (cptr=GlobalChannelList;cptr;cptr=cptr->next)
++    {
++      cptr->marker = 0;
++    }
++
++    marker++;
++  }
++
++  return marker;
++}

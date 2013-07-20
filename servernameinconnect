@@ -1,0 +1,19 @@
+# HG changeset patch
+# Parent 8f8f78e115b694139394b3cd4050dbfadc1c4ff0
+
+diff -r 8f8f78e115b6 ircd/m_connect.c
+--- a/ircd/m_connect.c	Fri Jul 19 21:57:19 2013 +0100
++++ b/ircd/m_connect.c	Fri Jul 19 21:59:17 2013 +0100
+@@ -195,10 +195,10 @@
+    * Notify all operators about remote connect requests
+    */
+   sendwallto_group_butone(&me, WALL_WALLOPS, 0,
+-                       "Remote CONNECT %s %s from %s", parv[1],
++                       "Remote CONNECT %s %s from %s", aconf->name,
+ 			parv[2] ? parv[2] : "",
+ 			get_client_name(sptr, HIDE_IP));
+-  log_write(LS_NETWORK, L_INFO, 0, "CONNECT From %C : %s %s", sptr, parv[1],
++  log_write(LS_NETWORK, L_INFO, 0, "CONNECT From %C : %s %s", sptr, aconf->name,
+ 	    parv[2] ? parv[2] : "");
+ 
+   if (connect_server(aconf, sptr)) {

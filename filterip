@@ -1,0 +1,50 @@
+# HG changeset patch
+# Parent 36e5e33e7d19c9e6511c539ebbcbfab9bda9df3c
+
+diff -r 36e5e33e7d19 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jul 14 17:26:44 2013 +0100
++++ b/include/ircd_features.h	Sun Jul 14 17:28:44 2013 +0100
+@@ -152,6 +152,7 @@
+   FEAT_HIS_WHOIS_LOCALCHAN,
+   FEAT_HIS_WHO_SERVERNAME,
+   FEAT_HIS_WHO_HOPCOUNT,
++  FEAT_HIS_WHO_FILTERIP,
+   FEAT_HIS_MODEWHO,
+   FEAT_HIS_BANWHO,
+   FEAT_HIS_KILLWHO,
+diff -r 36e5e33e7d19 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jul 14 17:26:44 2013 +0100
++++ b/ircd/ircd_features.c	Sun Jul 14 17:28:44 2013 +0100
+@@ -417,6 +417,7 @@
+   F_B(HIS_WHOIS_LOCALCHAN, 0, 1, 0),
+   F_B(HIS_WHO_SERVERNAME, 0, 1, 0),
+   F_B(HIS_WHO_HOPCOUNT, 0, 1, 0),
++  F_B(HIS_WHO_FILTERIP, 0, 1, 0),
+   F_B(HIS_MODEWHO, 0, 1, 0),
+   F_B(HIS_BANWHO, 0, 1, 0),
+   F_B(HIS_KILLWHO, 0, 1, 0),
+diff -r 36e5e33e7d19 ircd/m_kick.c
+--- a/ircd/m_kick.c	Sun Jul 14 17:26:44 2013 +0100
++++ b/ircd/m_kick.c	Sun Jul 14 17:28:44 2013 +0100
+@@ -176,7 +176,7 @@
+     sendcmdto_one(sptr, CMD_KICK, sptr, "%H %C :%s", chptr, who, comment);
+     CheckDelayedJoins(chptr);
+   } else
+-    sendcmdto_channel_butserv_butone(sptr, CMD_KICK, chptr, NULL, 0, "%H %C :%s", chptr, who,
++    sendcmdto_channel_butserv_butone((IsServer(sptr) ? &me : sptr), CMD_KICK, chptr, NULL, 0, "%H %C :%s", chptr, who,
+                                      comment);
+ 
+   make_zombie(member, who, cptr, sptr, chptr);
+diff -r 36e5e33e7d19 ircd/m_who.c
+--- a/ircd/m_who.c	Sun Jul 14 17:26:44 2013 +0100
++++ b/ircd/m_who.c	Sun Jul 14 17:28:44 2013 +0100
+@@ -291,6 +291,9 @@
+   if (feature_bool(FEAT_HIS_WHO_SERVERNAME) && !IsAnOper(sptr))
+     matchsel &= ~WHO_FIELD_SER;
+ 
++  if (feature_bool(FEAT_HIS_WHO_FILTERIP) && !IsAnOper(sptr))
++    matchsel &= ~WHO_FIELD_NIP;
++
+   if (qrt && (fields & WHO_FIELD_QTY))
+   {
+     p = qrt;

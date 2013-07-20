@@ -1,0 +1,666 @@
+# HG changeset patch
+# Parent 49deac8a9792a5f312d2ebead245bcaa5f20f60c
+
+diff -r 49deac8a9792 include/client.h
+--- a/include/client.h	Fri Jul 19 22:50:34 2013 +0100
++++ b/include/client.h	Fri Jul 19 22:51:32 2013 +0100
+@@ -129,6 +129,19 @@
+     PRIV_FORCE_OPMODE, /**< can hack modes on quarantined channels */
+     PRIV_FORCE_LOCAL_OPMODE, /**< can hack modes on quarantined local channels */
+     PRIV_APASS_OPMODE, /**< can hack modes +A/-A/+U/-U */
++    PRIV_CHANSERV,       /* oper can set usermode +k */
++    PRIV_XTRA_OPER,      /* oper can set usermode +X */
++    PRIV_NOIDLE, /* oper can set usermode +I */
++    PRIV_FREEFORM,       /* oper can use freeform sethost */
++    PRIV_PARANOID,       /* oper can set paranoid */
++    PRIV_CHECK,          /* oper can use /check */
++    PRIV_WALL,           /* oper can use /wallusers, /wallops */
++    PRIV_CLOSE,          /* oper can use /close */
++    PRIV_ROUTE,          /* oper can use /connect/squit NOTE: you need serverinfo priv to do remote connect */
++    PRIV_ROUTEINFO,      /* oper can use /map, /trace, /asll, /links and view jupe list */
++    PRIV_USER_PRIVACY,  /* oper can bypass user privacy +x etc gives i.e. see real ip's */
++    PRIV_CHANNEL_PRIVACY, /* oper can bypass channel privacy i.e. can see modes on channels they are not on and channel keys */
++    PRIV_SERVERINFO,     /* oper can use /get, /stats, /hash, retrieve remote information */
+     PRIV_LAST_PRIV /**< number of privileges */
+   };
+ 
+diff -r 49deac8a9792 ircd/channel.c
+--- a/ircd/channel.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/channel.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -863,7 +863,7 @@
+     *mbuf++ = 'k';
+     if (previous_parameter)
+       strcat(pbuf, " ");
+-    if (is_chan_op(cptr, chptr) || IsServer(cptr) || IsOper(cptr)) {
++    if (is_chan_op(cptr, chptr) || IsServer(cptr) || (IsOper(cptr) && HasPriv(cptr, PRIV_CHANNEL_PRIVACY))) {
+       strcat(pbuf, chptr->mode.key);
+     } else
+       strcat(pbuf, "*");
+diff -r 49deac8a9792 ircd/client.c
+--- a/ircd/client.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/client.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -158,6 +158,11 @@
+     FlagClr(&privs_global, PRIV_BADCHAN);
+     FlagClr(&privs_global, PRIV_LOCAL_BADCHAN);
+     FlagClr(&privs_global, PRIV_APASS_OPMODE);
++    FlagClr(&privs_global, PRIV_GLINE);
++    FlagClr(&privs_global, PRIV_REHASH);
++    FlagClr(&privs_global, PRIV_DIE);
++    FlagClr(&privs_global, PRIV_RESTART);
++    FlagClr(&privs_global, PRIV_JUPE);
+ 
+     memset(&privs_local, 0, sizeof(privs_local));
+     FlagSet(&privs_local, PRIV_CHAN_LIMIT);
+@@ -236,6 +241,10 @@
+   P(BADCHAN),        P(LOCAL_BADCHAN),  P(SEE_CHAN),      P(PROPAGATE),
+   P(DISPLAY),        P(SEE_OPERS),      P(WIDE_GLINE),    P(LIST_CHAN),
+   P(FORCE_OPMODE),   P(FORCE_LOCAL_OPMODE), P(APASS_OPMODE),
++  P(CHANSERV),       P(XTRA_OPER),      P(NOIDLE),        P(FREEFORM),
++  P(PARANOID),       P(CHECK),          P(WALL),          P(CLOSE),
++  P(ROUTE),          P(ROUTEINFO),      P(SERVERINFO),    P(CHANNEL_PRIVACY),
++  P(USER_PRIVACY),
+ #undef P
+   { 0, 0 }
+ };
+diff -r 49deac8a9792 ircd/gline.c
+--- a/ircd/gline.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/gline.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -282,9 +282,7 @@
+                              get_client_name(acptr, SHOW_IP));
+ 
+         /* and get rid of him */
+-        /* Asuka - Reimplement HEAD_IN_SAND_GLINE from Lain */
+-        if ((tval = exit_client_msg(cptr, acptr, &me, 
+-            feature_bool(FEAT_HIS_GLINE) ? "G-lined" : "G-lined (%s)", gline->gl_reason)))
++        if ((tval = exit_client_msg(cptr, acptr, &me, "G-lined (%s)", gline->gl_reason))) 
+         retval = tval; /* retain killed status */
+       }
+     }
+diff -r 49deac8a9792 ircd/hash.c
+--- a/ircd/hash.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/hash.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -284,6 +284,9 @@
+   struct Client*  cl;
+   struct Channel* ch;
+   int i;
++
++  if (!HasPriv(sptr, PRIV_SERVERINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
+   
+   sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :Hash Table Statistics", sptr);
+ 
+diff -r 49deac8a9792 ircd/ircd_lexer.l
+--- a/ircd/ircd_lexer.l	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/ircd_lexer.l	Fri Jul 19 22:51:32 2013 +0100
+@@ -153,6 +153,19 @@
+   { "walk_lchan", TPRIV_WALK_LCHAN },
+   { "wide_gline", TPRIV_WIDE_GLINE },
+   { "whox", TPRIV_WHOX },
++  { "chanserv", TPRIV_CHANSERV },
++  { "xtraoper", TPRIV_XTRA_OPER },
++  { "noidle", TPRIV_NOIDLE },
++  { "freeform", TPRIV_FREEFORM },
++  { "paranoid", TPRIV_PARANOID },
++  { "check", TPRIV_CHECK },
++  { "wall", TPRIV_WALL },
++  { "close", TPRIV_CLOSE },
++  { "route", TPRIV_ROUTE },
++  { "routeinfo", TPRIV_ROUTEINFO },
++  { "serverinfo", TPRIV_SERVERINFO },
++  { "user_privacy", TPRIV_USER_PRIVACY },
++  { "channel_privacy", TPRIV_CHANNEL_PRIVACY },
+   { NULL, 0 }
+ };
+ static int ntokens;
+diff -r 49deac8a9792 ircd/ircd_parser.y
+--- a/ircd/ircd_parser.y	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/ircd_parser.y	Fri Jul 19 22:51:32 2013 +0100
+@@ -186,7 +186,9 @@
+ %token TPRIV_SEE_CHAN TPRIV_SHOW_INVIS TPRIV_SHOW_ALL_INVIS TPRIV_PROPAGATE
+ %token TPRIV_UNLIMIT_QUERY TPRIV_DISPLAY TPRIV_SEE_OPERS TPRIV_WIDE_GLINE
+ %token TPRIV_FORCE_OPMODE TPRIV_FORCE_LOCAL_OPMODE TPRIV_APASS_OPMODE
+-%token TPRIV_LIST_CHAN
++%token TPRIV_CHANSERV TPRIV_XTRA_OPER TPRIV_NOIDLE TPRIV_FREEFORM TPRIV_PARANOID
++%token TPRIV_CHECK TPRIV_WALL TPRIV_CLOSE TPRIV_ROUTE TPRIV_ROUTEINFO TPRIV_SERVERINFO
++%token TPRIV_CHANNEL_PRIVACY TPRIV_USER_PRIVACY TPRIV_LIST_CHAN 
+ /* and some types... */
+ %type <num> sizespec
+ %type <num> timespec timefactor factoredtimes factoredtime
+@@ -688,7 +690,20 @@
+           LOCAL { $$ = PRIV_PROPAGATE; invert = 1; } |
+           TPRIV_FORCE_OPMODE { $$ = PRIV_FORCE_OPMODE; } |
+           TPRIV_FORCE_LOCAL_OPMODE { $$ = PRIV_FORCE_LOCAL_OPMODE; } |
+-          TPRIV_APASS_OPMODE { $$ = PRIV_APASS_OPMODE; } ;
++          TPRIV_APASS_OPMODE { $$ = PRIV_APASS_OPMODE; } | 
++          TPRIV_CHANSERV { $$ = PRIV_CHANSERV; } |
++          TPRIV_XTRA_OPER { $$ = PRIV_XTRA_OPER; } |
++          TPRIV_NOIDLE { $$ = PRIV_NOIDLE; } |
++          TPRIV_FREEFORM { $$ = PRIV_FREEFORM; } |
++          TPRIV_CHECK { $$ = PRIV_CHECK; } |
++          TPRIV_WALL { $$ = PRIV_WALL; } |
++          TPRIV_CLOSE { $$ = PRIV_CLOSE ; } |
++          TPRIV_ROUTE { $$ = PRIV_ROUTE ; } |
++          TPRIV_ROUTEINFO { $$ = PRIV_ROUTEINFO ; } |
++          TPRIV_SERVERINFO { $$ = PRIV_SERVERINFO ; } |
++          TPRIV_CHANNEL_PRIVACY { $$ = PRIV_CHANNEL_PRIVACY ; } |
++          TPRIV_USER_PRIVACY { $$ = PRIV_USER_PRIVACY ; } |
++          TPRIV_PARANOID { $$ = PRIV_PARANOID; } ;
+ 
+ yesorno: YES { $$ = 1; } | NO { $$ = 0; };
+ 
+diff -r 49deac8a9792 ircd/m_asll.c
+--- a/ircd/m_asll.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_asll.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -159,6 +159,9 @@
+   int hits;
+   int i;
+ 
++  if (!HasPriv(sptr, PRIV_ROUTEINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   if (parc < 2)
+     return need_more_params(sptr, "ASLL");
+ 
+diff -r 49deac8a9792 ircd/m_check.c
+--- a/ircd/m_check.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_check.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -94,6 +94,9 @@
+   struct Client *acptr;
+   int flags = CHECK_SHOWUSERS, i;
+ 
++  if (!HasPriv(sptr, PRIV_CHECK))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   if (parc < 2) {
+     send_reply(sptr, ERR_NEEDMOREPARAMS, "CHECK");
+     return 0;
+diff -r 49deac8a9792 ircd/m_close.c
+--- a/ircd/m_close.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_close.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -101,6 +101,9 @@
+   assert(cptr == sptr);
+   assert(IsAnOper(sptr));
+ 
++  if (!HasPriv(sptr, PRIV_CLOSE))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   return send_reply(sptr, RPL_CLOSEEND,
+ 		    net_close_unregistered_connections(sptr));
+ }
+diff -r 49deac8a9792 ircd/m_connect.c
+--- a/ircd/m_connect.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_connect.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -235,6 +235,9 @@
+   assert(cptr == sptr);
+   assert(IsAnOper(sptr));
+ 
++  if (!HasPriv(sptr, PRIV_ROUTE))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   if (parc < 2)
+     return need_more_params(sptr, "CONNECT");
+ 
+diff -r 49deac8a9792 ircd/m_get.c
+--- a/ircd/m_get.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_get.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -99,5 +99,8 @@
+  */
+ int mo_get(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
++  if (!HasPriv(sptr, PRIV_SERVERINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   return feature_get(sptr, (const char* const*)parv + 1, parc - 1);
+ }
+diff -r 49deac8a9792 ircd/m_gline.c
+--- a/ircd/m_gline.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_gline.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -382,8 +382,12 @@
+   time_t expire = 0;
+   char *mask = parv[1], *target = 0, *reason = 0, *end;
+ 
+-  if (parc < 2)
+-    return gline_list(sptr, 0);
++  if (parc < 2) {
++    if (!HasPriv(sptr, PRIV_SERVERINFO)) 
++      return send_reply(sptr, ERR_NOPRIVILEGES);
++    else
++      return gline_list(sptr, 0);
++  }
+ 
+   if (*mask == '!') {
+     mask++;
+diff -r 49deac8a9792 ircd/m_jupe.c
+--- a/ircd/m_jupe.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_jupe.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -195,8 +195,11 @@
+   time_t expire_off;
+   char *server = parv[1], *target = 0, *reason;
+ 
+-  if (parc < 2)
++  if (parc < 2) {
++    if (!HasPriv(sptr, PRIV_ROUTEINFO))
++      return send_reply(sptr, ERR_NOPRIVILEGES);
+     return jupe_list(sptr, 0);
++  }
+ 
+   if (*server == '+') {
+     flags |= JUPE_ACTIVE;
+diff -r 49deac8a9792 ircd/m_links.c
+--- a/ircd/m_links.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_links.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -115,7 +115,7 @@
+   char *mask;
+   struct Client *acptr;
+ 
+-  if (feature_bool(FEAT_HIS_LINKS) && !IsAnOper(sptr))
++  if (feature_bool(FEAT_HIS_LINKS) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_ROUTEINFO))))
+   {
+     send_reply(sptr, RPL_ENDOFLINKS, parc < 2 ? "*" : parv[1]);
+     sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s", sptr,
+diff -r 49deac8a9792 ircd/m_map.c
+--- a/ircd/m_map.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_map.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -189,7 +189,7 @@
+ int m_map(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+   void *args[1];
+-  if (feature_bool(FEAT_HIS_MAP) && !IsAnOper(sptr))
++  if (feature_bool(FEAT_HIS_MAP) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_ROUTEINFO))))
+   {
+     sendcmdto_one(&me, CMD_NOTICE, sptr, "%C :%s %s", sptr,
+                   "/MAP has been disabled, from CFV-165.  "
+@@ -205,14 +205,3 @@
+ 
+   return 0;
+ }
+-
+-int mo_map(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+-{
+-  if (parc < 2)
+-    parv[1] = "*";
+-
+-  dump_map(sptr, &me, parv[1], 0);
+-  send_reply(sptr, RPL_MAPEND);
+-
+-  return 0;
+-}
+diff -r 49deac8a9792 ircd/m_mode.c
+--- a/ircd/m_mode.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_mode.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -146,6 +146,14 @@
+     return 0;
+   }
+ 
++  /* We don't want mode requests from non-members, prolly to counter ban evasion. Allow channel-privacy opers and opers overriding a local chan */
++  /* if the aim is to hide the banlist from outsiders, but not the modes and creation time
++     thus only block the request when 3 or more parameters are given -> move check here - wiebe */ 
++  if (! (member || HasPriv(sptr, PRIV_CHANNEL_PRIVACY) || (IsLocalChannel(chptr->chname) && HasPriv(sptr, PRIV_MODE_LCHAN)))) {
++    send_reply(sptr, ERR_NOTONCHANNEL, chptr->chname);
++    return 0;
++  }
++
+   if (!member || !IsChanOp(member)) {
+     if (IsLocalChannel(chptr->chname) && HasPriv(sptr, PRIV_MODE_LCHAN)) {
+       modebuf_init(&mbuf, sptr, cptr, chptr,
+diff -r 49deac8a9792 ircd/m_privs.c
+--- a/ircd/m_privs.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_privs.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -55,6 +55,9 @@
+   if (parc < 2)
+     return client_report_privs(sptr, sptr);
+ 
++  if (!HasPriv(sptr, PRIV_SERVERINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   for (i = 1; i < parc; i++) {
+     for (name = ircd_strtok(&p, parv[i], " "); name;
+ 	 name = ircd_strtok(&p, 0, " ")) {
+diff -r 49deac8a9792 ircd/m_rping.c
+--- a/ircd/m_rping.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_rping.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -206,6 +206,9 @@
+   assert(cptr == sptr);
+   assert(IsAnOper(sptr));
+ 
++  if (!HasPriv(sptr, PRIV_ROUTEINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   if (parc < 2)
+     return need_more_params(sptr, "RPING");
+ 
+diff -r 49deac8a9792 ircd/m_settime.c
+--- a/ircd/m_settime.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_settime.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -207,7 +207,7 @@
+   static char tbuf[11];
+ 
+   /* Must be a global oper */
+-  if (!IsOper(sptr))
++  if (!IsOper(sptr) || !HasPriv(sptr, PRIV_ROUTE))
+     return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
+   if (parc < 2) /* verify argument count */
+diff -r 49deac8a9792 ircd/m_squit.c
+--- a/ircd/m_squit.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_squit.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -117,6 +117,9 @@
+   struct Client *acptr;
+   struct Client *acptr2;
+   char *comment;
++
++  if (!HasPriv(sptr, PRIV_ROUTE))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
+       
+   if (parc < 2) 
+     return need_more_params(sptr, "SQUIT");
+diff -r 49deac8a9792 ircd/m_stats.c
+--- a/ircd/m_stats.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_stats.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -135,9 +135,9 @@
+    * This checks cptr rather than sptr so that a local oper may send
+    * /stats queries to other servers.
+    */
+-  if (!IsPrivileged(cptr) &&
++  if (!(IsPrivileged(cptr) && HasPriv(cptr, PRIV_SERVERINFO)) && 
+       ((sd->sd_flags & STAT_FLAG_OPERONLY) ||
+-       ((sd->sd_flags & STAT_FLAG_OPERFEAT) && feature_bool(sd->sd_control))))
++       ((sd->sd_flags & STAT_FLAG_OPERFEAT) && feature_bool(sd->sd_control)))) 
+     return send_reply(sptr, ERR_NOPRIVILEGES);
+ 
+   /* Check for extra parameter */
+diff -r 49deac8a9792 ircd/m_trace.c
+--- a/ircd/m_trace.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_trace.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -337,8 +337,8 @@
+  */
+ int mo_trace(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+-  if (feature_bool(FEAT_HIS_TRACE) && !IsAnOper(sptr))
+-    return send_reply(cptr, ERR_NOPRIVILEGES);
++  if (!HasPriv(sptr, PRIV_ROUTEINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
+   do_trace(cptr, sptr, parc, parv);
+   return 0;
+ }
+diff -r 49deac8a9792 ircd/m_uping.c
+--- a/ircd/m_uping.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_uping.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -181,6 +181,9 @@
+ 
+   assert(IsAnOper(sptr));
+ 
++  if (!HasPriv(sptr, PRIV_ROUTEINFO))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   if (parc < 2) {
+     send_reply(sptr, ERR_NEEDMOREPARAMS, "UPING");
+     return 0;
+diff -r 49deac8a9792 ircd/m_userhost.c
+--- a/ircd/m_userhost.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_userhost.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -104,7 +104,7 @@
+ 	       * of +x.  If an oper wants the real host, he should go to
+ 	       * /whois to get it.
+ 	       */
+-	      !IsAnOper(sptr) ?
++	      (HasHiddenHost(cptr) || HasSetHost(cptr)) && (sptr != cptr) ?
+ 	      cli_user(cptr)->host : cli_user(cptr)->realhost);
+ }
+ 
+diff -r 49deac8a9792 ircd/m_userip.c
+--- a/ircd/m_userip.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_userip.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -106,7 +106,7 @@
+ 	       * of +x.  If an oper wants the real IP, he should go to
+ 	       * /whois to get it.
+ 	       */
+-	      (HasHiddenHost(cptr) || HasSetHost(cptr)) && !IsAnOper(sptr) ?
++	      ((HasHiddenHost(cptr) || HasSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && (sptr != cptr)) ?
+ 	      feature_str(FEAT_HIDDEN_IP) :
+ 	      ircd_ntoa(&cli_ip(cptr)));
+ }
+diff -r 49deac8a9792 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_wallchops.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -103,6 +103,7 @@
+ {
+   struct Channel *chptr;
+   struct Membership* member;
++  const char *ch;
+ 
+   assert(0 != cptr);
+   assert(cptr == sptr);
+diff -r 49deac8a9792 ircd/m_wallops.c
+--- a/ircd/m_wallops.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_wallops.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -115,6 +115,9 @@
+ {
+   char *message;
+ 
++  if (!HasPriv(sptr, PRIV_WALL))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   message = parc > 1 ? parv[1] : 0;
+ 
+   if (EmptyString(message))
+diff -r 49deac8a9792 ircd/m_wallusers.c
+--- a/ircd/m_wallusers.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_wallusers.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -119,6 +119,9 @@
+ {
+   char *message;
+ 
++  if (!HasPriv(sptr, PRIV_WALL))
++    return send_reply(sptr, ERR_NOPRIVILEGES);
++
+   message = parc > 1 ? parv[1] : 0;
+ 
+   if (EmptyString(message))
+diff -r 49deac8a9792 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_wallvoices.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -102,6 +102,7 @@
+ {
+   struct Channel *chptr;
+   struct Membership* member;
++  const char *ch;
+ 
+   assert(0 != cptr);
+   assert(cptr == sptr);
+diff -r 49deac8a9792 ircd/m_who.c
+--- a/ircd/m_who.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_who.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -269,10 +269,10 @@
+   if (!fields)
+     counter = 7;
+ 
+-  if (feature_bool(FEAT_HIS_WHO_SERVERNAME) && !IsAnOper(sptr))
++  if (feature_bool(FEAT_HIS_WHO_SERVERNAME) && !HasPriv(sptr, PRIV_ROUTEINFO))
+     matchsel &= ~WHO_FIELD_SER;
+ 
+-  if (feature_bool(FEAT_HIS_WHO_FILTERIP) && !IsAnOper(sptr))
++  if (feature_bool(FEAT_HIS_WHO_FILTERIP) && !HasPriv(sptr, PRIV_USER_PRIVACY))
+     matchsel &= ~WHO_FIELD_NIP;
+ 
+   if (qrt && (fields & WHO_FIELD_QTY))
+@@ -323,7 +323,9 @@
+               continue;
+             if (!Process(acptr))        /* This can't be moved before other checks */
+               continue;
+-            if (!(isthere || (SHOW_MORE(sptr, counter))))
++            if (!(isthere ||
++                 (IsOper(sptr) && (bitsel & WHOSELECT_EXTRA) && HasPriv(sptr, PRIV_SEE_CHAN)) ||
++                 (SHOW_MORE(sptr, counter))))
+               break;
+             do_who(sptr, acptr, chptr, fields, qrt);
+           }
+diff -r 49deac8a9792 ircd/m_whois.c
+--- a/ircd/m_whois.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_whois.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -137,7 +137,7 @@
+   
+   const struct User* user = cli_user(acptr);
+   const char* name = (!*(cli_name(acptr))) ? "?" : cli_name(acptr);  
+-  a2cptr = feature_bool(FEAT_HIS_WHOIS_SERVERNAME) && !IsAnOper(sptr)
++  a2cptr = feature_bool(FEAT_HIS_WHOIS_SERVERNAME) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_ROUTEINFO)))
+       && sptr != acptr ? &his : user->server;
+   assert(user);
+   send_reply(sptr, RPL_WHOISUSER, name, user->username, user->host,
+@@ -214,7 +214,7 @@
+     if (IsAccount(acptr))
+       send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
+ 
+-    if ((HasHiddenHost(acptr) || HasSetHost(acptr)) && (IsAnOper(sptr) || acptr == sptr))
++    if ((HasHiddenHost(acptr) || HasSetHost(acptr)) && ((IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) || acptr == sptr))
+       send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
+                  user->realhost, ircd_ntoa(&cli_ip(acptr)));
+ 
+@@ -226,7 +226,7 @@
+      */
+ 
+     if (MyConnect(acptr) &&
+-        (IsAnOper(sptr) ||
++        ((IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) ||
+          (!IsNoIdle(acptr) && (!feature_bool(FEAT_HIS_WHOIS_IDLETIME) ||
+                               sptr == acptr || parc >= 3))))
+        send_reply(sptr, RPL_WHOISIDLE, name, CurrentTime - user->last,
+diff -r 49deac8a9792 ircd/m_whowas.c
+--- a/ircd/m_whowas.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/m_whowas.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -138,10 +138,10 @@
+       {
+ 	send_reply(sptr, RPL_WHOWASUSER, temp->name, temp->username,
+ 		   temp->hostname, temp->realname);
+-        if (IsAnOper(sptr) && temp->realhost)
++        if ((IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY)) && temp->realhost)
+           send_reply(sptr, RPL_WHOISACTUALLY, temp->name, temp->username, temp->realhost, "<untracked>");
+         send_reply(sptr, RPL_WHOISSERVER, temp->name,
+-                   (feature_bool(FEAT_HIS_WHOIS_SERVERNAME) && !IsOper(sptr)) ?
++                   (feature_bool(FEAT_HIS_WHOIS_SERVERNAME) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_ROUTEINFO)))) ?
+                      feature_str(FEAT_HIS_SERVERNAME) :
+                      temp->servername,
+ 		   myctime(temp->logoff));
+diff -r 49deac8a9792 ircd/parse.c
+--- a/ircd/parse.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/parse.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -552,7 +552,7 @@
+     TOK_HASH,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+     /* UNREG, CLIENT, SERVER, OPER, SERVICE */
+-    { m_unregistered, m_hash, m_hash, m_hash, m_ignore }
++    { m_unregistered, m_not_oper, m_hash, m_hash, m_ignore }
+   },
+   {
+     MSG_REHASH,
+diff -r 49deac8a9792 ircd/s_misc.c
+--- a/ircd/s_misc.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/s_misc.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -502,7 +502,11 @@
+   /* Then remove the client structures */
+   if (IsServer(victim))
+     exit_downlinks(victim, killer, comment1);
+-  exit_one_client(victim, comment);
++
++  if (strncmp(comment, "G-lined", 7))  
++    exit_one_client(victim, comment); 
++  else 
++    exit_one_client(victim, "G-lined");
+ 
+   /*
+    *  cptr can only have been killed if it was cptr itself that got killed here,
+diff -r 49deac8a9792 ircd/s_stats.c
+--- a/ircd/s_stats.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/s_stats.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -562,8 +562,9 @@
+   if (MyUser(to))
+     for (asd = statsinfo; asd->sd_name; asd++)
+       if (asd != sd) /* don't send the help for us */
+-        sendcmdto_one(&me, CMD_NOTICE, to, "%C :%c (%s) - %s", to, asd->sd_c,
+-                      asd->sd_name, asd->sd_desc);
++        if (((asd->sd_flags & STAT_FLAG_OPERFEAT) && !feature_bool(asd->sd_control)) || IsServer(to) || (IsAnOper(to) && HasPriv(to, PRIV_SERVERINFO)))
++          sendcmdto_one(&me, CMD_NOTICE, to, "%C :%c (%s) - %s", to, asd->sd_c,
++                        asd->sd_name, asd->sd_desc);
+ }
+ 
+ /** Contains information about all statistics. */
+diff -r 49deac8a9792 ircd/s_user.c
+--- a/ircd/s_user.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/s_user.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -197,7 +197,7 @@
+   if (parc <= server || EmptyString((to = parv[server])) || IsUnknown(from))
+     return (HUNTED_ISME);
+ 
+-  if (MustBeOper && !IsPrivileged(from))
++  if (MustBeOper && (!IsPrivileged(from) || (IsAnOper(from) && !HasPriv(from, PRIV_SERVERINFO))))
+   {
+     send_reply(from, ERR_NOPRIVILEGES);
+     return HUNTED_NOSUCH;
+@@ -1428,15 +1428,15 @@
+      * new umode; servers can set it, local users cannot;
+      * prevents users from /kick'ing or /mode -o'ing
+      */
+-    if (!FlagHas(&setflags, FLAG_CHSERV) && !IsOper(sptr))
++    if (!FlagHas(&setflags, FLAG_CHSERV) && !(IsOper(sptr) && HasPriv(sptr, PRIV_CHANSERV)))
+       ClearChannelService(sptr);
+-    if (!FlagHas(&setflags, FLAG_XTRAOP) && !IsOper(sptr))
++    if (!FlagHas(&setflags, FLAG_XTRAOP) && !(IsOper(sptr) && HasPriv(sptr, PRIV_XTRA_OPER))) 
+       ClearXtraOp(sptr);
+     if (!FlagHas(&setflags, FLAG_NOCHAN) && !(IsOper(sptr) || feature_bool(FEAT_USER_HIDECHANS)))
+       ClearNoChan(sptr);
+-    if (!FlagHas(&setflags, FLAG_NOIDLE) && !(IsOper(sptr) || feature_bool(FEAT_USER_HIDEIDLETIME)))
++    if (!FlagHas(&setflags, FLAG_NOIDLE) && !((IsOper(sptr) && HasPriv(sptr, PRIV_NOIDLE)) || feature_bool(FEAT_USER_HIDEIDLETIME))) 
+       ClearNoIdle(sptr);
+-    if (!FlagHas(&setflags, FLAG_PARANOID) && !IsOper(sptr))
++    if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID))) 
+       ClearParanoid(sptr);
+ 
+     /*
+diff -r 49deac8a9792 ircd/whocmds.c
+--- a/ircd/whocmds.c	Fri Jul 19 22:50:34 2013 +0100
++++ b/ircd/whocmds.c	Fri Jul 19 22:51:32 2013 +0100
+@@ -134,7 +134,7 @@
+ 
+   if (fields & WHO_FIELD_NIP)
+   {
+-    const char* p2 = (HasHiddenHost(acptr) || HasSetHost(acptr)) && !IsAnOper(sptr) ?
++    const char* p2 = (HasHiddenHost(acptr) || HasSetHost(acptr) || feature_bool(FEAT_HIS_USERIP)) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_USER_PRIVACY))) ?
+       feature_str(FEAT_HIDDEN_IP) :
+       ircd_ntoa(&cli_ip(acptr));
+     *(p1++) = ' ';
+@@ -150,7 +150,7 @@
+ 
+   if (!fields || (fields & WHO_FIELD_SER))
+   {
+-    const char *p2 = (feature_bool(FEAT_HIS_WHO_SERVERNAME) && !IsAnOper(sptr)) ?
++    const char *p2 = (feature_bool(FEAT_HIS_WHO_SERVERNAME) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_ROUTEINFO)))) ?
+                        feature_str(FEAT_HIS_SERVERNAME) :
+                        cli_name(cli_user(acptr)->server);
+     *(p1++) = ' ';
+@@ -202,7 +202,7 @@
+     }
+     if (IsDeaf(acptr))
+       *(p1++) = 'd';
+-    if (IsAnOper(sptr))
++    if (IsAnOper(sptr) && HasPriv(sptr, PRIV_USER_PRIVACY))
+     {
+       if (IsInvisible(acptr))
+         *(p1++) = 'i';
+@@ -222,7 +222,7 @@
+     *p1++ = ' ';
+     if (!fields)
+       *p1++ = ':';              /* Place colon here for default reply */
+-    if (feature_bool(FEAT_HIS_WHO_HOPCOUNT) && !IsAnOper(sptr))
++    if (feature_bool(FEAT_HIS_WHO_HOPCOUNT) && (!IsAnOper(sptr) || (IsAnOper(sptr) && !HasPriv(sptr, PRIV_ROUTEINFO))))
+       *p1++ = (sptr == acptr) ? '0' : '3';
+     else
+       /* three digit hopcount maximum */
+@@ -233,7 +233,7 @@
+   {
+     *p1++ = ' ';
+     if (MyUser(acptr) &&
+-	(IsAnOper(sptr) || !feature_bool(FEAT_HIS_WHO_SERVERNAME) ||
++	((IsAnOper(sptr) && HasPriv(sptr, PRIV_ROUTEINFO)) || !feature_bool(FEAT_HIS_WHO_SERVERNAME) ||
+ 	 acptr == sptr))
+       p1 += ircd_snprintf(0, p1, 11, "%d",
+                           CurrentTime - cli_user(acptr)->last);

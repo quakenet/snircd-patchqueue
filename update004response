@@ -1,0 +1,27 @@
+# HG changeset patch
+# Parent 534e4a23878c3744861bf2a6db94c011bd76e1ea
+
+diff -r 534e4a23878c include/channel.h
+--- a/include/channel.h	Wed Jul 17 22:53:47 2013 +0100
++++ b/include/channel.h	Fri Jul 19 20:28:41 2013 +0100
+@@ -123,7 +123,7 @@
+ #define MODE_WPARAS     (MODE_CHANOP|MODE_VOICE|MODE_BAN|MODE_KEY|MODE_LIMIT|MODE_APASS|MODE_UPASS)
+ 
+ /** Available Channel modes */
+-#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDRcCNu" : "biklmnopstvrDRcCNu"
++#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDdRcCNu" : "biklmnopstvrDdRcCNu"
+ /** Available Channel modes that take parameters */
+ #define infochanmodeswithparams feature_bool(FEAT_OPLEVELS) ? "AbkloUv" : "bklov"
+ 
+diff -r 534e4a23878c include/client.h
+--- a/include/client.h	Wed Jul 17 22:53:47 2013 +0100
++++ b/include/client.h	Fri Jul 19 20:28:41 2013 +0100
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioswkgxRXInP"
++#define infousermodes "dioOswkgxRXInP"
+ 
+ /** Character to indicate no oper name available */
+ #define NOOPERNAMECHARACTER '-'

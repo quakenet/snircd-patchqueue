@@ -1,0 +1,95 @@
+# HG changeset patch
+# Parent ce2db2c6f39af5bf1c41720dcf96cd93c55c9658
+
+diff -r ce2db2c6f39a doc/api/log.txt
+--- a/doc/api/log.txt	Fri Jul 19 21:34:34 2013 +0100
++++ b/doc/api/log.txt	Fri Jul 19 21:37:28 2013 +0100
+@@ -221,7 +221,7 @@
+ </function>
+ 
+ <function>
+-void log_feature_report(struct Client *to, int flag);
++void log_feature_report(struct Client *to, int flag, int showall);
+ 
+ This function is called by the ircd_features.c subsystem and should
+ not be called by any other part of ircd.  See the features API
+diff -r ce2db2c6f39a include/ircd_log.h
+--- a/include/ircd_log.h	Fri Jul 19 21:34:34 2013 +0100
++++ b/include/ircd_log.h	Fri Jul 19 21:37:28 2013 +0100
+@@ -110,7 +110,7 @@
+ 
+ extern void log_feature_unmark(void);
+ extern int log_feature_mark(int flag);
+-extern void log_feature_report(struct Client *to, int flag);
++extern void log_feature_report(struct Client *to, int flag, int showall);
+ 
+ extern int log_inassert;
+ 
+diff -r ce2db2c6f39a ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Fri Jul 19 21:34:34 2013 +0100
++++ b/ircd/ircd_features.c	Fri Jul 19 21:37:28 2013 +0100
+@@ -244,7 +244,7 @@
+  * @param[in] sptr Client asking for feature list.
+  * @param[in] marked Non-zero if the feature is marked.
+  */
+-typedef void (*feat_report_call)(struct Client* sptr, int marked);
++typedef void (*feat_report_call)(struct Client* sptr, int marked, int showall);
+ 
+ #define FEAT_NONE   0x0000	/**< no value */
+ #define FEAT_INT    0x0001	/**< set if entry contains an integer value */
+@@ -851,7 +851,7 @@
+     switch (features[i].flags & FEAT_MASK) {
+     case FEAT_NONE:
+       if (features[i].report) /* let the callback handle this */
+-	(*features[i].report)(to, report);
++	(*features[i].report)(to, report, sd->sd_funcdata);
+       break;
+ 
+ 
+diff -r ce2db2c6f39a ircd/ircd_log.c
+--- a/ircd/ircd_log.c	Fri Jul 19 21:34:34 2013 +0100
++++ b/ircd/ircd_log.c	Fri Jul 19 21:37:28 2013 +0100
+@@ -959,29 +959,34 @@
+ /** Feature list callback to report log settings.
+  * @param[in] to Client requesting list.
+  * @param[in] flag If non-zero, report default syslog facility.
++ * @param[in] showall If non-zero, report all (ignored). 
+  */
+ void
+-log_feature_report(struct Client *to, int flag)
++log_feature_report(struct Client *to, int flag, int showall)
+ {
+   int i;
+ 
+   for (i = 0; i < LS_LAST_SYSTEM; i++)
+   {
+-    if (logDesc[i].mark & LOG_MARK_FILE) /* report file */
+-      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "F LOG %s FILE %s",
++    if ((logDesc[i].mark & LOG_MARK_FILE) || (showall)) /* report file */
++      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "%c LOG %s FILE %s",
++                 (logDesc[i].mark & LOG_MARK_FILE) ? 'F' : 'f',
+                  logDesc[i].name, (logDesc[i].file && logDesc[i].file->file ?
+                                    logDesc[i].file->file : "(terminal)"));
+ 
+-    if (logDesc[i].mark & LOG_MARK_FACILITY) /* report facility */
+-      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "F LOG %s FACILITY %s",
++    if ((logDesc[i].mark & LOG_MARK_FACILITY) || (showall)) /* report facility */
++      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "%c LOG %s FACILITY %s",
++          (logDesc[i].mark & LOG_MARK_FACILITY) ? 'F' : 'f',
+ 		 logDesc[i].name, log_fac_name(logDesc[i].facility));
+ 
+-    if (logDesc[i].mark & LOG_MARK_SNOMASK) /* report snomask */
+-      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "F LOG %s SNOMASK %s",
++    if ((logDesc[i].mark & LOG_MARK_SNOMASK) || (showall))/* report snomask */
++      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "%c LOG %s SNOMASK %s",
++          (logDesc[i].mark & LOG_MARK_FACILITY) ? 'F' : 'f',
+ 		 logDesc[i].name, log_sno_name(logDesc[i].snomask));
+ 
+-    if (logDesc[i].mark & LOG_MARK_LEVEL) /* report log level */
+-      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "F LOG %s LEVEL %s",
++    if ((logDesc[i].mark & LOG_MARK_LEVEL) || (showall)) /* report log level */
++      send_reply(to, SND_EXPLICIT | RPL_STATSFLINE, "%c LOG %s LEVEL %s",
++          (logDesc[i].mark & LOG_MARK_FACILITY) ? 'F' : 'f',
+ 		 logDesc[i].name, log_lev_name(logDesc[i].level));
+   }
+ 

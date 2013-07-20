@@ -1,0 +1,19 @@
+# HG changeset patch
+# Parent 37ce050c47a1a86f5012248b8735344c490dedb9
+
+diff -r 37ce050c47a1 ircd/m_burst.c
+--- a/ircd/m_burst.c	Sun Jul 14 22:24:05 2013 +0100
++++ b/ircd/m_burst.c	Sun Jul 14 22:58:02 2013 +0100
+@@ -299,6 +299,12 @@
+           nmember = member->next_member;
+           if (!MyUser(member->user) || IsZombie(member))
+             continue;
++          /* Do not kick +k user or operator with priv to set it */
++          if (IsChannelService(member->user) || HasPriv(member->user, PRIV_CHANSERV))
++            continue;
++          /* Do not kick +X user or operator with priv to set it */
++          if (IsXtraOp(member->user) || HasPriv(member->user, PRIV_XTRA_OPER))
++            continue;
+           /* Kick as netrider if key mismatch *or* remote channel is
+            * +i (unless user is an oper) *or* remote channel is +r
+            * (unless user has an account).

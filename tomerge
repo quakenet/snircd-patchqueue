@@ -1,0 +1,265 @@
+# HG changeset patch
+# Parent 956177bd34a75c9221a0f81bfeb69f769ba7c86f
+
+diff -r 956177bd34a7 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Fri Jul 19 22:51:36 2013 +0100
++++ b/ircd/m_wallchops.c	Fri Jul 19 22:54:29 2013 +0100
+@@ -162,8 +162,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
+-      RevealDelayedJoinIfNeeded(sptr, chptr);
++    if (client_can_send_to_channel(sptr, chptr, 1)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
+ 			       "%H :%s", chptr, parv[parc - 1]);
+diff -r 956177bd34a7 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Fri Jul 19 22:51:36 2013 +0100
++++ b/ircd/m_wallvoices.c	Fri Jul 19 22:54:29 2013 +0100
+@@ -161,8 +161,7 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
+-      RevealDelayedJoinIfNeeded(sptr, chptr);
++    if (client_can_send_to_channel(sptr, chptr, 1)) {
+       sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
+ 			       "%H :%s", chptr, parv[parc - 1]);
+diff -r 956177bd34a7 ircd/s_auth.c
+--- a/ircd/s_auth.c	Fri Jul 19 22:51:36 2013 +0100
++++ b/ircd/s_auth.c	Fri Jul 19 22:54:29 2013 +0100
+@@ -1940,9 +1940,9 @@
+       if (*end2 == ':')
+         cli_user(cli)->acc_flags = strtoull(end2 + 1, NULL, 10);
+     }
++    params[0][len] = '\0';
+   }
+ 
+-
+   /* Copy account name to User structure. */
+   ircd_strncpy(cli_user(cli)->account, params[0], ACCOUNTLEN);
+   SetAccount(cli);
+diff -r 956177bd34a7 ircd/s_user.c
+--- a/ircd/s_user.c	Fri Jul 19 22:51:36 2013 +0100
++++ b/ircd/s_user.c	Fri Jul 19 22:54:29 2013 +0100
+@@ -485,6 +485,7 @@
+                              NumNick(sptr), cli_info(sptr));
+ 
+   tmpstr = umode_str(sptr, UMODE_ALL_PARAMS);
++
+   /* Send oper name and full IP address to IPv6-grokking servers. */
+   sendcmdto_flagarray_serv_butone(user->server, CMD_NICK, cptr,
+                              ipv6andopername, 2, NULL, 0,
+@@ -570,7 +571,6 @@
+                   const char* nick, int parc, char* parv[])
+ {
+   if (IsServer(sptr)) {
+-
+     /*
+      * A server introducing a new client, change source
+      */
+@@ -749,6 +749,10 @@
+   assert(cli_local(sptr));
+   targets = cli_targets(sptr);
+ 
++  /* opers always have a free target */
++  if (IsAnOper(sptr))
++    return 0;
++
+   /*
+    * Same target as last time?
+    */
+@@ -846,6 +850,12 @@
+   }
+   if (is_silenced(source, dest))
+     return 0;
++
++  if (IsAccountOnly(dest) && !IsAccount(source) && !IsXtraOp(source)) {
++    if(!is_notice)
++      send_reply(source, ERR_ACCOUNTONLY, cli_name(source), feature_str(FEAT_URLREG));
++    return 0;
++  }
+           
+   if (is_notice)
+     sendcmdto_one(source, CMD_NOTICE, dest, "%C :%s", dest, text);
+@@ -966,10 +976,6 @@
+   if (MyConnect(cptr))
+    send_reply(cptr, RPL_HOSTHIDDEN, cli_user(cptr)->host);
+ 
+-  /* opers always have a free target */
+-  if (IsAnOper(sptr))
+-    return 0;
+-
+   /*
+    * Go through all channels the client was on, rejoin him
+    * and set the modes, if any
+@@ -1042,17 +1048,30 @@
+   /* MODE_ADD: set a new hostmask */
+   } else {
+     /* chop up ident and host.cc */
+-    if ((host = strrchr(hostmask, '@'))) /* oper can specifiy ident@host.cc */
++    if ((host = strrchr(hostmask, '@'))) { /* oper can specifiy ident@host.cc */
+       *host++ = '\0';
+-    else /* user can only specifiy host.cc [password] */
++      if ( MyConnect(cptr) && (0 == strcmp(host, cli_user(cptr)->host)) && (0 == strcmp(hostmask, cli_user(cptr)->username))) {
++        ircd_snprintf(0, hiddenhost, HOSTLEN + USERLEN + 2, "%s@%s",
++            cli_user(cptr)->username, cli_user(cptr)->host);
++        send_reply(cptr, RPL_HOSTHIDDEN, hiddenhost);
++        return 0;
++      }
++    } else { /* user can only specifiy host.cc [password] */
+       host = hostmask;
++      if ( MyConnect(cptr) && (0 == strcmp(host, cli_user(cptr)->host))) {
++        ircd_snprintf(0, hiddenhost, HOSTLEN + USERLEN + 2, "%s@%s",
++            cli_user(cptr)->username, cli_user(cptr)->host);
++        send_reply(cptr, RPL_HOSTHIDDEN, hiddenhost);
++        return 0;
++      }
++    }
+     /*
+      * Oper sethost
+      */
+     if (MyConnect(cptr)) {
+       if (IsAnOper(cptr)) {
+         if ((new_vhost = IsVhost(host, 1)) == NULL) {
+-          if (!feature_bool(FEAT_SETHOST_FREEFORM)) {
++          if (!HasPriv(cptr, PRIV_FREEFORM)) {
+             send_reply(cptr, ERR_HOSTUNAVAIL, hostmask);
+             log_write(LS_SETHOST, L_INFO, LOG_NOSNOTICE,
+                 "SETHOST (%s@%s) by (%#R): no such s-line",
+@@ -1167,10 +1186,10 @@
+         "%H", chan->channel);
+     }
+     if (IsChanOp(chan) && HasVoice(chan)) {
+-      sendcmdto_channel_butserv_butone(&me, CMD_MODE, chan->channel, cptr, 0,
++      sendcmdto_channel_butserv_butone(&his, CMD_MODE, chan->channel, cptr, 0,
+         "%H +ov %C %C", chan->channel, cptr, cptr);
+     } else if (IsChanOp(chan) || HasVoice(chan)) {
+-      sendcmdto_channel_butserv_butone(&me, CMD_MODE, chan->channel, cptr, 0,
++      sendcmdto_channel_butserv_butone(&his, CMD_MODE, chan->channel, cptr, 0,
+         "%H +%c %C", chan->channel, IsChanOp(chan) ? 'o' : 'v', cptr);
+     }
+   }
+@@ -1201,11 +1220,15 @@
+   unsigned int tmpmask = 0;
+   int snomask_given = 0;
+   char buf[BUFSIZE];
++  char *hostmask, *password;
+   int prop = 0;
+   int do_host_hiding = 0;
+   int do_set_host = 0;
++  size_t opernamelen;
++  char *opername = 0;
+   char* account = NULL;
+ 
++  hostmask = password = NULL;
+   what = MODE_ADD;
+ 
+   if (parc < 3)
+@@ -1367,8 +1390,8 @@
+         break;
+       case 'x':
+         if (what == MODE_ADD)
+-	  do_host_hiding = 1;
+-	break;
++          do_host_hiding = 1;
++         break;
+       case 'h':
+          if (what == MODE_ADD) {
+            if (*(p + 1) && is_hostmask(*(p + 1))) {
+@@ -1393,13 +1416,6 @@
+            password = NULL;
+          }
+          break;
+-      case 'r':
+-	if (*(p + 1) && (what == MODE_ADD)) {
+-	  account = *(++p);
+-	  SetAccount(sptr);
+-	}
+-	/* There is no -r */
+-	break;
+       case 'R':
+         if (what == MODE_ADD)
+           SetAccountOnly(sptr);
+@@ -1412,6 +1428,13 @@
+         else
+           ClearParanoid(sptr);
+ 	break;
++      case 'r':
++	if ((what == MODE_ADD) && *(p + 1)) {
++	  account = *(++p);
++	  SetAccount(sptr);
++	}
++	/* There is no -r */
++	break;
+       default:
+         send_reply(sptr, ERR_UMODEUNKNOWNFLAG, *m);
+         break;
+@@ -1436,13 +1459,13 @@
+      */
+     if (!FlagHas(&setflags, FLAG_CHSERV) && !(IsOper(sptr) && HasPriv(sptr, PRIV_CHANSERV)))
+       ClearChannelService(sptr);
+-    if (!FlagHas(&setflags, FLAG_XTRAOP) && !(IsOper(sptr) && HasPriv(sptr, PRIV_XTRA_OPER))) 
++    if (!FlagHas(&setflags, FLAG_XTRAOP) && !(IsOper(sptr) && HasPriv(sptr, PRIV_XTRA_OPER)))
+       ClearXtraOp(sptr);
+     if (!FlagHas(&setflags, FLAG_NOCHAN) && !(IsOper(sptr) || feature_bool(FEAT_USER_HIDECHANS)))
+       ClearNoChan(sptr);
+-    if (!FlagHas(&setflags, FLAG_NOIDLE) && !((IsOper(sptr) && HasPriv(sptr, PRIV_NOIDLE)) || feature_bool(FEAT_USER_HIDEIDLETIME))) 
++    if (!FlagHas(&setflags, FLAG_NOIDLE) && !((IsOper(sptr) && HasPriv(sptr, PRIV_NOIDLE)) || feature_bool(FEAT_USER_HIDEIDLETIME)))
+       ClearNoIdle(sptr);
+-    if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID))) 
++    if (!FlagHas(&setflags, FLAG_PARANOID) && !(IsOper(sptr) && HasPriv(sptr, PRIV_PARANOID)))
+       ClearParanoid(sptr);
+ 
+     /*
+@@ -1498,6 +1521,12 @@
+   }
+   if (!FlagHas(&setflags, FLAG_HIDDENHOST) && do_host_hiding && allow_modes != ALLOWMODES_DEFAULT)
+     hide_hostmask(sptr, FLAG_HIDDENHOST);
++  if (do_set_host) {
++    /* We clear the flag in the old mask, so that the +h will be sent */
++    /* Only do this if we're SETTING +h and it succeeded */
++    if (set_hostmask(sptr, hostmask, password) && hostmask)
++      FlagClr(&setflags, FLAG_SETHOST);
++  }
+ 
+   if (IsRegistered(sptr)) {
+     if (!FlagHas(&setflags, FLAG_OPER) && IsOper(sptr)) {
+@@ -1521,7 +1550,18 @@
+       /* user no longer oper */
+       assert(UserStats.opers > 0);
+       --UserStats.opers;
+-
++      
++      /* notify my operators an operator has deOPERed on the network - wiebe */
++      if (MyConnect(sptr)) {
++        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s",
++        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>");
++      } else {
++        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s on %s",
++        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>", cli_name(cli_user(sptr)->server));
++      }
++      
+       client_set_privs(sptr, NULL); /* will clear propagate privilege */
+       if (cli_user(sptr)->opername) {
+         MyFree(cli_user(sptr)->opername);
+@@ -1589,7 +1629,6 @@
+                     cli_user(cptr)->account, cli_user(cptr)->acc_create,
+ 		    cli_user(cptr)->acc_id, cli_user(cptr)->acc_flags);
+ 
+-
+     while ((*m++ = *t++))
+       ; /* Empty loop */
+ 
+@@ -1695,6 +1734,7 @@
+       char* t = cli_user(sptr)->opername;
+       while ((*m++ = *t++))
+         ; /* Empty loop */
++      m--; /* Step back over the '\0' */
+     } else {
+       *m++ = NOOPERNAMECHARACTER;
+     }

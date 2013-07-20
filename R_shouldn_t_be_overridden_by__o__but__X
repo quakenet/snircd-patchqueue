@@ -1,0 +1,57 @@
+# HG changeset patch
+# Parent 18bf4aaa5854bbfc71fde928990a073da78a8496
+
+diff -r 18bf4aaa5854 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Fri Jul 19 22:01:42 2013 +0100
++++ b/ircd/ircd_relay.c	Fri Jul 19 22:05:24 2013 +0100
+@@ -305,6 +305,10 @@
+   if (host)
+     *--host = '%';
+ 
++  /* slug: I don't think this is required, but I might have missed something */
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
++     return;
++
+   if (!(is_silenced(sptr, acptr)))
+     sendcmdto_one(sptr, CMD_PRIVATE, acptr, "%s :%s", name, text);
+ }
+@@ -354,6 +358,9 @@
+   if (host)
+     *--host = '%';
+ 
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
++    return;
++
+   if (!(is_silenced(sptr, acptr)))
+     sendcmdto_one(sptr, CMD_NOTICE, acptr, "%s :%s", name, text);
+ }
+@@ -388,7 +395,7 @@
+    * deny the message
+    */
+ 
+-  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr)) {
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr)) {
+     send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr), feature_str(FEAT_URLREG));
+     return;
+   }
+@@ -434,7 +441,7 @@
+    * deny the message
+    */
+ 
+-  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr))
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
+     return;
+ 
+   /*
+diff -r 18bf4aaa5854 ircd/m_invite.c
+--- a/ircd/m_invite.c	Fri Jul 19 22:01:42 2013 +0100
++++ b/ircd/m_invite.c	Fri Jul 19 22:05:24 2013 +0100
+@@ -166,7 +166,7 @@
+ 
+   /* If we get here, it was a VALID and meaningful INVITE */
+ 
+-  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr)) {
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr)) {
+     send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr), feature_str(FEAT_URLREG));
+     return 0;
+   }

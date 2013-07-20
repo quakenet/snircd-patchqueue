@@ -1,0 +1,99 @@
+# HG changeset patch
+# Parent e4298df79634833ec535484917133672035db1b4
+
+diff -r e4298df79634 include/client.h
+--- a/include/client.h	Sun Jul 14 00:49:57 2013 +0100
++++ b/include/client.h	Sun Jul 14 00:54:52 2013 +0100
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioswkgxRXIn"
++#define infousermodes "dioswkgxRXInP"
+ 
+ /** Operator privileges. */
+ enum Priv
+@@ -167,6 +167,7 @@
+     FLAG_ACCOUNT,                   /**< account name has been set */
+     FLAG_ACCOUNTONLY,               /**< ASUKA_R: hide privmsgs/notices if
+ 				      user is not authed or opered */
++    FLAG_PARANOID,                  /**< ASUKA_P: sends notices on whois */
+     FLAG_HIDDENHOST,                /**< user's host is hidden */
+     FLAG_SETHOST,                   /**< ASUKA_h: oper's host is changed */
+     FLAG_NOCHAN,                    /**< user's channels are hidden */
+@@ -597,6 +598,9 @@
+ /** Return non-zero if the client should not receive privmsgs/notices
+  * from unauthed users */
+ #define IsAccountOnly(x)        HasFlag(x, FLAG_ACCOUNTONLY)
++/** Return non-zero if the client should receive notices when someone
++ * does a whois on it. */
++#define IsParanoid(x)           HasFlag(x, FLAG_PARANOID)
+ 
+ /** Return non-zero if the client has operator or server privileges. */
+ #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
+@@ -656,6 +660,8 @@
+ #define SetPingSent(x)          SetFlag(x, FLAG_PINGSENT)
+ /** Mark a client as having mode +R (account only). */
+ #define SetAccountOnly(x)       SetFlag(x, FLAG_ACCOUNTONLY)
++/** Mark a client as having mode +P (paranoid). */
++#define SetParanoid(x)          SetFlag(x, FLAG_PARANOID)
+ 
+ /** Return non-zero if \a sptr sees \a acptr as an operator. */
+ #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
+@@ -701,6 +707,8 @@
+ #define ClearHub(x)             ClrFlag(x, FLAG_HUB)
+ /** Remove mode +R (account only) from a client */
+ #define ClearAccountOnly(x)     ClrFlag(x, FLAG_ACCOUNTONLY)
++/** Remove mode +P (paranoid) from a client */
++#define ClearParanoid(x)        ClrFlag(x, FLAG_PARANOID)
+ 
+ /* free flags */
+ #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
+diff -r e4298df79634 ircd/m_whois.c
+--- a/ircd/m_whois.c	Sun Jul 14 00:49:57 2013 +0100
++++ b/ircd/m_whois.c	Sun Jul 14 00:54:52 2013 +0100
+@@ -215,6 +215,9 @@
+       send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
+                  user->realhost, ircd_ntoa(&cli_ip(acptr)));
+ 
++    if (!IsAnOper(sptr) && IsParanoid(acptr) && IsAnOper(acptr))
++      sendcmdto_one(&me, CMD_NOTICE, acptr, "%C :whois: %s performed a /WHOIS on you.", acptr, cli_name(sptr));
++    
+     /* Hint: if your looking to add more flags to a user, eg +h, here's
+      *       probably a good place to add them :)
+      */
+diff -r e4298df79634 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 14 00:49:57 2013 +0100
++++ b/ircd/s_user.c	Sun Jul 14 00:54:52 2013 +0100
+@@ -525,7 +525,8 @@
+   { FLAG_XTRAOP,      'X' },
+   { FLAG_NOCHAN,      'n' },
+   { FLAG_NOIDLE,      'I' },
+-  { FLAG_SETHOST,     'h' }
++  { FLAG_SETHOST,     'h' },
++  { FLAG_PARANOID,    'P' }
+ };
+ 
+ /** Length of #userModeList. */
+@@ -1325,6 +1326,12 @@
+         else
+           ClearAccountOnly(sptr);
+         break;
++      case 'P':
++	if (what == MODE_ADD)
++          SetParanoid(sptr);
++        else
++          ClearParanoid(sptr);
++	break;
+       default:
+         send_reply(sptr, ERR_UMODEUNKNOWNFLAG, *m);
+         break;
+@@ -1355,6 +1362,8 @@
+       ClearNoChan(sptr);
+     if (!FlagHas(&setflags, FLAG_NOIDLE) && !IsOper(sptr))
+       ClearNoIdle(sptr);
++    if (!FlagHas(&setflags, FLAG_PARANOID) && !IsOper(sptr))
++      ClearParanoid(sptr);
+ 
+     /*
+      * only send wallops to opers

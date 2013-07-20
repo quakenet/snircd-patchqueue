@@ -1,0 +1,549 @@
+# HG changeset patch
+# Parent 1ce0d004b836adf870a8c93691bf89c67369ba0f
+
+diff -r 1ce0d004b836 include/gline.h
+--- a/include/gline.h	Tue Jul 16 22:24:30 2013 +0100
++++ b/include/gline.h	Tue Jul 16 22:31:38 2013 +0100
+@@ -49,6 +49,7 @@
+ struct Gline {
+   struct Gline *gl_next;	/**< Next G-line in linked list. */
+   struct Gline**gl_prev_p;	/**< Previous pointer to this G-line. */
++  char         *gl_nick;        /**< Nickname mask. */
+   char	       *gl_user;	/**< Username mask (or channel/realname mask). */
+   char	       *gl_host;	/**< Host portion of mask. */
+   char	       *gl_reason;	/**< Reason for G-line. */
+@@ -110,6 +111,8 @@
+ /** Test whether \a g is local to this server. */
+ #define GlineIsLocal(g)		((g)->gl_flags & GLINE_LOCAL)
+ 
++/** Return nick mask of a G-line. */
++#define GlineNick(g)		((g)->gl_nick)
+ /** Return user mask of a G-line. */
+ #define GlineUser(g)		((g)->gl_user)
+ /** Return host mask of a G-line. */
+@@ -144,5 +147,6 @@
+ extern void gline_stats(struct Client *sptr, const struct StatDesc *sd,
+                         char *param);
+ extern int gline_memory_count(size_t *gl_size);
++extern struct Gline *IsNickGlined(struct Client *cptr, char *nick);
+ 
+ #endif /* INCLUDED_gline_h */
+diff -r 1ce0d004b836 ircd/gline.c
+--- a/ircd/gline.c	Tue Jul 16 22:24:30 2013 +0100
++++ b/ircd/gline.c	Tue Jul 16 22:31:38 2013 +0100
+@@ -26,7 +26,6 @@
+ #include "gline.h"
+ #include "channel.h"
+ #include "client.h"
+-#include "hash.h"
+ #include "ircd.h"
+ #include "ircd_alloc.h"
+ #include "ircd_features.h"
+@@ -46,6 +45,7 @@
+ #include "msg.h"
+ #include "numnicks.h"
+ #include "numeric.h"
++#include "hash.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+ #include <string.h>
+@@ -104,32 +104,43 @@
+  * Otherwise, assign \a def_user to *user_p and \a userhost to *host_p.
+  *
+  * @param[in] userhost Input string from user.
++ * @param[out] nick_p Gets pointer to nick part of hostmask.
+  * @param[out] user_p Gets pointer to user (or channel/realname) part of hostmask.
+  * @param[out] host_p Gets point to host part of hostmask (may be assigned NULL).
+  * @param[in] def_user Default value for user part.
+  */
+ static void
+-canon_userhost(char *userhost, char **user_p, char **host_p, char *def_user)
++canon_userhost(char *userhost, char **nick_p, char **user_p, char **host_p, char *def_user)
+ {
+-  char *tmp;
++  char *tmp, *s;
+ 
+   if (*userhost == '$') {
+     *user_p = userhost;
+     *host_p = NULL;
++    *nick_p = NULL;
+     return;
+   }
+ 
+-  if (!(tmp = strchr(userhost, '@'))) {
++  if ((tmp = strchr(userhost, '!'))) {
++    *nick_p = userhost;
++    *(tmp++) = '\0';
++  } else {
++    *nick_p = def_user;
++    tmp = userhost;
++  }
++
++  if (!(s = strchr(tmp, '@'))) {
+     *user_p = def_user;
+-    *host_p = userhost;
++    *host_p = tmp;
+   } else {
+-    *user_p = userhost;
+-    *(tmp++) = '\0';
+-    *host_p = tmp;
++    *user_p = tmp;
++    *(s++) = '\0';
++    *host_p = s;
+   }
+ }
+ 
+ /** Create a Gline structure.
++ * @param[in] nick Nick part of mask.
+  * @param[in] user User part of mask.
+  * @param[in] host Host part of mask (NULL if not applicable).
+  * @param[in] reason Reason for G-line.
+@@ -139,7 +150,7 @@
+  * @return Newly allocated G-line.
+  */
+ static struct Gline *
+-make_gline(char *user, char *host, char *reason, time_t expire, time_t lastmod,
++make_gline(char *nick, char *user, char *host, char *reason, time_t expire, time_t lastmod,
+ 	   time_t lifetime, unsigned int flags)
+ {
+   struct Gline *gline;
+@@ -166,7 +177,11 @@
+       BadChanGlineList->gl_prev_p = &gline->gl_next;
+     BadChanGlineList = gline;
+   } else {
+-    DupString(gline->gl_user, user); /* remember them... */
++    if (*user!='$')
++      DupString(gline->gl_nick, nick); /* remember them... */
++    else
++      gline->gl_nick = 0;
++    DupString(gline->gl_user, user);
+     if (*user != '$')
+       DupString(gline->gl_host, host);
+     else
+@@ -240,6 +255,10 @@
+               continue;
+           Debug((DEBUG_DEBUG,"Matched!"));
+         } else { /* Host/IP gline */
++          if (cli_name(acptr) &&
++              match(gline->gl_nick, cli_name(acptr)) !=0)
++            continue;
++
+           if (cli_user(acptr)->username &&
+               match(gline->gl_user, (cli_user(acptr))->realusername) != 0)
+             continue;
+@@ -359,8 +378,11 @@
+ 
+   assert(gline->gl_lastmod);
+ 
+-  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %c%s%s%s %Tu %Tu %Tu :%s",
+-			GlineIsRemActive(gline) ? '+' : '-', gline->gl_user,
++  sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %c%s%s%s%s%s %Tu %Tu %Tu :%s",
++			GlineIsRemActive(gline) ? '+' : '-',
++                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                        GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++                        gline->gl_user,
+ 			gline->gl_host ? "@" : "",
+ 			gline->gl_host ? gline->gl_host : "",
+ 			gline->gl_expire - TStime(), gline->gl_lastmod,
+@@ -454,8 +476,8 @@
+ 	  unsigned int flags)
+ {
+   struct Gline *agline;
+-  char uhmask[USERLEN + HOSTLEN + 2];
+-  char *user, *host;
++  char uhmask[NICKLEN + USERLEN + HOSTLEN + 3];
++  char *nick, *user, *host;
+   int tmp;
+ 
+   assert(0 != userhost);
+@@ -495,7 +517,7 @@
+ 	return send_reply(sptr, ERR_TOOMANYUSERS, tmp);
+     }
+   } else {
+-    canon_userhost(userhost, &user, &host, "*");
++    canon_userhost(userhost, &nick, &user, &host, "*");
+     if (sizeof(uhmask) <
+ 	ircd_snprintf(0, uhmask, sizeof(uhmask), "%s@%s", user, host))
+       return send_reply(sptr, ERR_LONGMASK);
+@@ -537,29 +559,35 @@
+ 
+   /* Inform ops... */
+   sendto_opmask_butone(0, ircd_strncmp(reason, "AUTO", 4) ? SNO_GLINE :
+-                       SNO_AUTO, "%s adding %s%s %s for %s%s%s, expiring at "
++                       SNO_AUTO, "%s adding %s%s %s for %s%s%s%s%s, expiring at "
+                        "%Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          cli_name(sptr) :
+                          cli_name((cli_user(sptr))->server),
+                        (flags & GLINE_ACTIVE) ? "" : "deactivated ",
+ 		       (flags & GLINE_LOCAL) ? "local" : "global",
+-		       (flags & GLINE_BADCHAN) ? "BADCHAN" : "GLINE", user,
++		       (flags & GLINE_BADCHAN) ? "BADCHAN" : "GLINE",
++                       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : nick,
++                       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : "!",
++                       user,
+ 		       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : "@",
+ 		       (flags & (GLINE_BADCHAN|GLINE_REALNAME)) ? "" : host,
+ 		       expire, reason);
+ 
+   /* and log it */
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C adding %s %s for %s%s%s, expiring at %Tu: %s", sptr,
++	    "%#C adding %s %s for %s%s%s%s%s, expiring at %Tu: %s", sptr,
+ 	    flags & GLINE_LOCAL ? "local" : "global",
+-	    flags & GLINE_BADCHAN ? "BADCHAN" : "GLINE", user,
++	    flags & GLINE_BADCHAN ? "BADCHAN" : "GLINE",
++            flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : nick,
++            flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : "!",
++            user,
+ 	    flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : "@",
+ 	    flags & (GLINE_BADCHAN|GLINE_REALNAME) ? "" : host,
+ 	    expire, reason);
+ 
+   /* make the gline */
+-  agline = make_gline(user, host, reason, expire, lastmod, lifetime, flags);
++  agline = make_gline(nick, user, host, reason, expire, lastmod, lifetime, flags);
+ 
+   /* since we've disabled overlapped G-line checking, agline should
+    * never be NULL...
+@@ -606,19 +634,24 @@
+     return 0; /* was active to begin with */
+ 
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s activating global %s for %s%s%s, "
++  sendto_opmask_butone(0, SNO_GLINE, "%s activating global %s for %s%s%s%s%s, "
+                        "expiring at %Tu: %s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          cli_name(sptr) :
+                          cli_name((cli_user(sptr))->server),
+                        GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+                        gline->gl_user, gline->gl_host ? "@" : "",
+                        gline->gl_host ? gline->gl_host : "",
+                        gline->gl_expire, gline->gl_reason);
+ 
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C activating global %s for %s%s%s, expiring at %Tu: %s", sptr,
+-	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE", gline->gl_user,
++            "%#C activating global %s for %s%s%s%s%s, expiring at %Tu: %s", sptr,
++            GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++            gline->gl_user,
+ 	    gline->gl_host ? "@" : "",
+ 	    gline->gl_host ? gline->gl_host : "",
+ 	    gline->gl_expire, gline->gl_reason);
+@@ -674,19 +707,24 @@
+   }
+ 
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s %s %s for %s%s%s, expiring at %Tu: "
++  sendto_opmask_butone(0, SNO_GLINE, "%s %s %s for %s%s%s%s%s, expiring at %Tu: "
+ 		       "%s",
+                        (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+                          cli_name(sptr) :
+                          cli_name((cli_user(sptr))->server),
+ 		       msg, GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+ 		       gline->gl_user, gline->gl_host ? "@" : "",
+                        gline->gl_host ? gline->gl_host : "",
+ 		       gline->gl_expire, gline->gl_reason);
+ 
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C %s %s for %s%s%s, expiring at %Tu: %s", sptr, msg,
+-	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE", gline->gl_user,
++            "%#C %s %s for %s%s%s%s%s, expiring at %Tu: %s", sptr, msg,
++            GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++            gline->gl_user,
+ 	    gline->gl_host ? "@" : "",
+ 	    gline->gl_host ? gline->gl_host : "",
+ 	    gline->gl_expire, gline->gl_reason);
+@@ -724,8 +762,10 @@
+   assert(gline);
+   assert(!GlineIsLocal(gline));
+ 
+-  Debug((DEBUG_DEBUG,  "gline_modify(\"%s\", \"%s\", \"%s%s%s\", %s, \"%s\", "
++  Debug((DEBUG_DEBUG,  "gline_modify(\"%s\", \"%s\", \"%s%s%s%s%s\", %s, \"%s\", "
+ 	 "%Tu, %Tu, %Tu, 0x%04x)", cli_name(cptr), cli_name(sptr),
++         GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++         GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+ 	 gline->gl_user, gline->gl_host ? "@" : "",
+ 	 gline->gl_host ? gline->gl_host : "",
+ 	 action == GLINE_ACTIVATE ? "GLINE_ACTIVATE" :
+@@ -872,10 +912,12 @@
+   }
+ 
+   /* All right, inform ops... */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s modifying global %s for %s%s%s:%s",
++  sendto_opmask_butone(0, SNO_GLINE, "%s modifying global %s for %s%s%s%s%s:%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+ 		       cli_name(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+ 		       gline->gl_user, gline->gl_host ? "@" : "",
+ 		       gline->gl_host ? gline->gl_host : "", buf);
+ 
+@@ -891,8 +933,10 @@
+    */
+   if (action != GLINE_LOCAL_ACTIVATE && action != GLINE_LOCAL_DEACTIVATE)
+     sendcmdto_serv_butone(sptr, CMD_GLINE, cptr,
+-			  "* %s%s%s%s%s %Tu %Tu %Tu :%s",
++			  "* %s%s%s%s%s%s%s %Tu %Tu %Tu :%s",
+ 			  flags & GLINE_OPERFORCE ? "!" : "", op,
++                          GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                          GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+ 			  gline->gl_user, gline->gl_host ? "@" : "",
+ 			  gline->gl_host ? gline->gl_host : "",
+ 			  gline->gl_expire - TStime(), gline->gl_lastmod,
+@@ -915,15 +959,20 @@
+   assert(GlineIsLocal(gline));
+ 
+   /* Inform ops and log it */
+-  sendto_opmask_butone(0, SNO_GLINE, "%s removing local %s for %s%s%s",
++  sendto_opmask_butone(0, SNO_GLINE, "%s removing local %s for %s%s%s%s%s",
+ 		       (feature_bool(FEAT_HIS_SNOTICES) || IsServer(sptr)) ?
+ 		       cli_name(sptr) : cli_name((cli_user(sptr))->server),
+ 		       GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                       GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
+ 		       gline->gl_user, gline->gl_host ? "@" : "",
+ 		       gline->gl_host ? gline->gl_host : "");
+   log_write(LS_GLINE, L_INFO, LOG_NOSNOTICE,
+-	    "%#C removing local %s for %s%s%s", sptr,
+-	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE", gline->gl_user,
++	    "%#C removing local %s for %s%s%s%s%s", sptr,
++	    GlineIsBadChan(gline) ? "BADCHAN" : "GLINE",
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++            GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++            gline->gl_user,
+ 	    gline->gl_host ? "@" : "", gline->gl_host ? gline->gl_host : "");
+ 
+   gline_free(gline); /* get rid of the G-line */
+@@ -951,7 +1000,7 @@
+ {
+   struct Gline *gline = 0;
+   struct Gline *sgline;
+-  char *user, *host, *t_uh;
++  char *nick, *user, *host, *t_uh;
+ 
+   if (flags & (GLINE_BADCHAN | GLINE_ANY)) {
+     gliter(BadChanGlineList, gline, sgline) {
+@@ -969,7 +1018,7 @@
+     return 0;
+ 
+   DupString(t_uh, userhost);
+-  canon_userhost(t_uh, &user, &host, "*");
++  canon_userhost(t_uh, &nick, &user, &host, "*");
+ 
+   gliter(GlobalGlineList, gline, sgline) {
+     if ((flags & (GlineIsLocal(gline) ? GLINE_GLOBAL : GLINE_LOCAL)) ||
+@@ -978,12 +1027,18 @@
+     else if (flags & GLINE_EXACT) {
+       if (((gline->gl_host && host && ircd_strcmp(gline->gl_host, host) == 0)
+            || (!gline->gl_host && !host)) &&
+-          (ircd_strcmp(gline->gl_user, user) == 0))
++            ((!user && ircd_strcmp(gline->gl_user, "*") == 0) ||
++            (user && ircd_strcmp(gline->gl_user, user) == 0)) &&
++            ((!nick && gline->gl_nick && ircd_strcmp(gline->gl_nick, "*") == 0) ||
++            (nick && gline->gl_nick && ircd_strcmp(gline->gl_nick, nick) == 0) || (!gline->gl_nick && !nick)))
+ 	break;
+     } else {
+       if (((gline->gl_host && host && match(gline->gl_host, host) == 0)
+            || (!gline->gl_host && !host)) &&
+-	  (match(gline->gl_user, user) == 0))
++            ((!user && ircd_strcmp(gline->gl_user, "*") == 0) ||
++            (user && match(gline->gl_user, user) == 0)) &&
++            ((!nick && gline->gl_nick && ircd_strcmp(gline->gl_nick, "*") == 0) ||
++            (nick && gline->gl_nick && (match(gline->gl_nick, nick) == 0)) || (!gline->gl_nick && !nick)))
+ 	break;
+     }
+   }
+@@ -1039,7 +1094,9 @@
+         continue;
+     }
+     else {
+-      if (match(gline->gl_user, (cli_user(cptr))->username) != 0)
++      if (match(gline->gl_nick, cli_name(cptr)) != 0)
++        continue;
++      if (match(gline->gl_user, (cli_user(cptr))->realusername) != 0)
+         continue;
+ 
+       if (GlineIsIpMask(gline)) {
+@@ -1090,8 +1147,11 @@
+ 
+   gliter(GlobalGlineList, gline, sgline) {
+     if (!GlineIsLocal(gline) && gline->gl_lastmod)
+-      sendcmdto_one(&me, CMD_GLINE, cptr, "* %c%s%s%s %Tu %Tu %Tu :%s",
+-		    GlineIsRemActive(gline) ? '+' : '-', gline->gl_user,
++      sendcmdto_one(&me, CMD_GLINE, cptr, "* %c%s%s%s%s%s %Tu %Tu %Tu :%s",
++		    GlineIsRemActive(gline) ? '+' : '-', 
++                    gline->gl_nick ? gline->gl_nick : "",
++                    gline->gl_nick ? "!" : "",
++                    gline->gl_user,
+                     gline->gl_host ? "@" : "",
+                     gline->gl_host ? gline->gl_host : "",
+ 		    gline->gl_expire - TStime(), gline->gl_lastmod,
+@@ -1118,8 +1178,11 @@
+   if (GlineIsLocal(gline) || !gline->gl_lastmod)
+     return 0;
+ 
+-  sendcmdto_one(&me, CMD_GLINE, cptr, "* %c%s%s%s %Tu %Tu %Tu :%s",
+-		GlineIsRemActive(gline) ? '+' : '-', gline->gl_user,
++  sendcmdto_one(&me, CMD_GLINE, cptr, "* %c%s%s%s%s%s %Tu %Tu %Tu :%s",
++		GlineIsRemActive(gline) ? '+' : '-', 
++                GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : gline->gl_nick,
++                GlineIsBadChan(gline)|GlineIsRealName(gline) ? "" : "!",
++                gline->gl_user,
+ 		gline->gl_host ? "@" : "",
+                 gline->gl_host ? gline->gl_host : "",
+ 		gline->gl_expire - TStime(), gline->gl_lastmod,
+@@ -1146,8 +1209,10 @@
+       return send_reply(sptr, ERR_NOSUCHGLINE, userhost);
+ 
+     /* send gline information along */
+-    send_reply(sptr, RPL_GLIST, gline->gl_user,
+-               gline->gl_host ? "@" : "",
++    send_reply(sptr, RPL_GLIST,
++               GlineIsBadChan(gline) | GlineIsRealName(gline) ? "" : gline->gl_nick,
++               GlineIsBadChan(gline) | GlineIsRealName(gline) ? "" : "!",
++               gline->gl_user, GlineIsBadChan(gline) || GlineIsRealName(gline) ? "" : "@",
+                gline->gl_host ? gline->gl_host : "",
+ 	       gline->gl_expire, gline->gl_lastmod,
+ 	       gline->gl_lifetime,
+@@ -1157,7 +1222,10 @@
+ 	       GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
+   } else {
+     gliter(GlobalGlineList, gline, sgline) {
+-      send_reply(sptr, RPL_GLIST, gline->gl_user,
++      send_reply(sptr, RPL_GLIST,
++                 gline->gl_nick ? gline->gl_nick : "",
++                 gline->gl_nick ? "!" : "",
++                 gline->gl_user,
+ 		 gline->gl_host ? "@" : "",
+ 		 gline->gl_host ? gline->gl_host : "",
+ 		 gline->gl_expire, gline->gl_lastmod,
+@@ -1169,7 +1237,7 @@
+     }
+ 
+     gliter(BadChanGlineList, gline, sgline) {
+-      send_reply(sptr, RPL_GLIST, gline->gl_user, "", "",
++      send_reply(sptr, RPL_GLIST, gline->gl_user, "", "", "", "",
+ 		 gline->gl_expire, gline->gl_lastmod,
+ 		 gline->gl_lifetime,
+ 		 GlineIsLocal(gline) ? cli_name(&me) : "*",
+@@ -1196,7 +1264,10 @@
+   struct Gline *sgline;
+ 
+   gliter(GlobalGlineList, gline, sgline) {
+-    send_reply(sptr, RPL_STATSGLINE, 'G', gline->gl_user,
++    send_reply(sptr, RPL_STATSGLINE, 'G',
++               gline->gl_nick ? gline->gl_nick : "",
++               gline->gl_nick ? "!" : "",
++               gline->gl_user,
+ 	       gline->gl_host ? "@" : "",
+ 	       gline->gl_host ? gline->gl_host : "",
+ 	       gline->gl_expire, gline->gl_lastmod,
+@@ -1231,6 +1302,7 @@
+   for (gline = GlobalGlineList; gline; gline = gline->gl_next) {
+     gl++;
+     *gl_size += sizeof(struct Gline);
++    *gl_size += gline->gl_nick ? (strlen(gline->gl_nick) +1) : 0;
+     *gl_size += gline->gl_user ? (strlen(gline->gl_user) + 1) : 0;
+     *gl_size += gline->gl_host ? (strlen(gline->gl_host) + 1) : 0;
+     *gl_size += gline->gl_reason ? (strlen(gline->gl_reason) + 1) : 0;
+@@ -1246,3 +1318,46 @@
+ 
+   return gl;
+ }
++
++struct Gline *
++IsNickGlined(struct Client *cptr, char *nick)
++{
++  struct Gline *gline;
++  struct Gline *sgline;
++
++  for (gline = GlobalGlineList; gline; gline = sgline) {
++    sgline = gline->gl_next;
++
++    if (gline->gl_expire <= CurrentTime) {
++      gline_free(gline);
++      continue;
++    }
++
++    if (GlineIsRealName(gline)) /* skip realname glines */
++      continue;
++
++    if (!ircd_strcmp(gline->gl_nick, "*"))     /* skip glines w. wildcarded nick */
++      continue;
++
++    if (match(gline->gl_nick, nick) != 0)
++      continue;
++
++    if (match(gline->gl_user, (cli_user(cptr))->username) != 0)
++      continue;
++
++    if (GlineIsIpMask(gline)) {
++      if (!ipmask_check(&(cli_ip(cptr)), &gline->gl_addr, gline->gl_bits))
++        continue;
++    }
++    else {
++      if (match(gline->gl_host, (cli_user(cptr))->realhost) != 0)
++        continue;
++    }
++    return gline;
++  }
++  /*
++   * No Glines matched
++   */
++  return 0;
++}
++
+diff -r 1ce0d004b836 ircd/m_nick.c
+--- a/ircd/m_nick.c	Tue Jul 16 22:24:30 2013 +0100
++++ b/ircd/m_nick.c	Tue Jul 16 22:31:38 2013 +0100
+@@ -98,6 +98,7 @@
+ #include "s_user.h"
+ #include "send.h"
+ #include "sys.h"
++#include "gline.h"
+ 
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+ #include <stdlib.h>
+@@ -185,6 +186,11 @@
+     return 0;
+   }
+ 
++  if (IsRegistered(sptr) && !IsAnOper(sptr) && IsNickGlined(sptr, nick)) {
++    send_reply(sptr, ERR_ERRONEUSNICKNAME, nick);
++    return 0;
++  }
++  
+   /* 
+    * Check if this is a LOCAL user trying to use a reserved (Juped)
+    * nick, if so tell him that it's a nick in use...
+diff -r 1ce0d004b836 ircd/s_err.c
+--- a/ircd/s_err.c	Tue Jul 16 22:24:30 2013 +0100
++++ b/ircd/s_err.c	Tue Jul 16 22:31:38 2013 +0100
+@@ -526,7 +526,7 @@
+ /* 246 */
+   { RPL_STATSTLINE, "%c %s %s", "246" },
+ /* 247 */
+-  { RPL_STATSGLINE, "%c %s%s%s %Tu %Tu %Tu %s%c :%s", "247" },
++  { RPL_STATSGLINE, "%c %s%s%s%s%s %Tu %Tu %Tu %s%c :%s", "247" },
+ /* 248 */
+   { RPL_STATSULINE, "U %s", "248" },
+ /* 249 */
+@@ -592,7 +592,7 @@
+ /* 279 */
+   { 0 },
+ /* 280 */
+-  { RPL_GLIST, "%s%s%s %Tu %Tu %Tu %s %s%c :%s", "280" },
++  { RPL_GLIST, "%s%s%s%s%s %Tu %Tu %Tu %s %s%c :%s", "280" },
+ /* 281 */
+   { RPL_ENDOFGLIST, ":End of G-line List", "281" },
+ /* 282 */

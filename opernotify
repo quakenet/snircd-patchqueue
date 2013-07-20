@@ -1,0 +1,52 @@
+# HG changeset patch
+# Parent 0461630a25fa999a81a3177c31fde85bae33b5ee
+
+diff -r 0461630a25fa ircd/s_user.c
+--- a/ircd/s_user.c	Tue Jul 16 22:51:43 2013 +0100
++++ b/ircd/s_user.c	Tue Jul 16 22:53:03 2013 +0100
+@@ -1318,6 +1318,12 @@
+           {
+             tmpmask = cli_snomask(sptr) & ~SNO_OPER;
+             cli_handler(sptr) = CLIENT_HANDLER;
++            
++            /* notify my operators a local operator has deOPERed - wiebe */
++            sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (o) as %s",
++            cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++            cli_user(sptr)->opername);
++            
+           }
+         }
+         break;
+@@ -1479,6 +1485,14 @@
+       /* user now oper */
+       ++UserStats.opers;
+       client_set_privs(sptr, NULL); /* may set propagate privilege */
++
++      /* notify my operators a user has OPERed on a remote server - wiebe */
++      if (!MyConnect(sptr)) {
++         sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now operator (O) as %s on %s",
++         cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
++         cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>", cli_name(cli_user(sptr)->server));
++      }
++			 
+     }
+     /* remember propagate privilege setting */
+     if (HasPriv(sptr, PRIV_PROPAGATE)) {
+@@ -1489,17 +1503,6 @@
+       assert(UserStats.opers > 0);
+       --UserStats.opers;
+ 
+-      /* notify my operators an operator has deOPERed on the network - wiebe */
+-      if (MyConnect(sptr)) {
+-        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s",
+-        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
+-        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>");
+-      } else {
+-        sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is no longer operator (O) as %s on %s",
+-        cli_name(sptr), cli_user(sptr)->realusername, cli_user(sptr)->realhost,
+-        cli_user(sptr)->opername ? cli_user(sptr)->opername : "<unknown>", cli_name(cli_user(sptr)->server));
+-      }
+-     
+       client_set_privs(sptr, NULL); /* will clear propagate privilege */
+       if (cli_user(sptr)->opername) {
+         MyFree(cli_user(sptr)->opername);

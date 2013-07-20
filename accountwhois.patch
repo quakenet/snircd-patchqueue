@@ -1,0 +1,15 @@
+# HG changeset patch
+# Parent 8aebdf810e04365cf6ff4fcdc41f721d6467829c
+
+diff -r 8aebdf810e04 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jun 29 14:42:27 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 13 23:18:33 2013 +0100
+@@ -692,7 +692,7 @@
+ /* 329 */
+   { RPL_CREATIONTIME, "%s %Tu", "329" },
+ /* 330 */
+-  { RPL_WHOISACCOUNT, "%s %s :is logged in as", "330" },
++  { RPL_WHOISACCOUNT, "%s %s :is authed as", "330" },
+ /* 331 */
+   { RPL_NOTOPIC, "%s :No topic is set.", "331" },
+ /* 332 */

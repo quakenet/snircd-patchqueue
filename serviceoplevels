@@ -1,0 +1,40 @@
+# HG changeset patch
+# Parent 98171823d5d6a18c0dad624998d353d9f2a4f45f
+
+diff -r 98171823d5d6 include/channel.h
+--- a/include/channel.h	Fri Jul 19 22:12:44 2013 +0100
++++ b/include/channel.h	Fri Jul 19 22:13:32 2013 +0100
+@@ -208,6 +208,7 @@
+ 
+ #define MAXOPLEVELDIGITS    3
+ #define MAXOPLEVEL          999
++#define MINOPLEVEL          100 /* minimum oplevel that ordinary users can set */
+ 
+ #define IsZombie(x)         ((x)->status & CHFL_ZOMBIE) /**< see \ref zombie */
+ #define IsDeopped(x)        ((x)->status & CHFL_DEOPPED)
+diff -r 98171823d5d6 ircd/channel.c
+--- a/ircd/channel.c	Fri Jul 19 22:12:44 2013 +0100
++++ b/ircd/channel.c	Fri Jul 19 22:13:32 2013 +0100
+@@ -3226,14 +3226,19 @@
+        *   MAXOPLEVEL, get oplevel MAXOPLEVEL.
+        * Otherwise, get state->member's oplevel+1.
+        */
+-      if (state->cli_change[i].oplevel <= MAXOPLEVEL)
+-        SetOpLevel(member, state->cli_change[i].oplevel);
++      if (state->cli_change[i].oplevel <= MAXOPLEVEL) {
++        if ((IsChannelService(state->sptr) && IsService(cli_user(state->sptr)->server)) || (IsService(state->sptr))) {
++          SetOpLevel(member, state->cli_change[i].oplevel);
++        } else {
++          SetOpLevel(member, state->cli_change[i].oplevel > MINOPLEVEL ? state->cli_change[i].oplevel : MINOPLEVEL);
++        }
++      }
+       else if (!state->member)
+         SetOpLevel(member, MAXOPLEVEL);
+       else if (OpLevel(state->member) >= MAXOPLEVEL)
+           SetOpLevel(member, OpLevel(state->member));
+       else
+-        SetOpLevel(member, OpLevel(state->member) + 1);
++        SetOpLevel(member, OpLevel(state->member) >= MINOPLEVEL ? OpLevel(state->member) + 1 : MINOPLEVEL);
+     }
+ 
+     /* actually effect the change */

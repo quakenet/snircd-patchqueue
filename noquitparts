@@ -1,0 +1,126 @@
+# HG changeset patch
+# Parent c58e84d80db66615ad384337b948077c934f002c
+
+diff -r c58e84d80db6 include/channel.h
+--- a/include/channel.h	Sat Jul 13 23:40:05 2013 +0100
++++ b/include/channel.h	Sun Jul 14 00:16:14 2013 +0100
+@@ -112,6 +112,8 @@
+ #define MODE_APASS	0x200000
+ #define MODE_WASDELJOINS 0x400000 	/**< Not DELJOINS, but some joins 
+ 					 * pending */
++#define MODE_NOQUITPARTS 0x800000
++
+ /** mode flags which take another parameter (With PARAmeterS)
+  */
+ #define MODE_WPARAS     (MODE_CHANOP|MODE_VOICE|MODE_BAN|MODE_KEY|MODE_LIMIT|MODE_APASS|MODE_UPASS)
+diff -r c58e84d80db6 include/supported.h
+--- a/include/supported.h	Sat Jul 13 23:40:05 2013 +0100
++++ b/include/supported.h	Sun Jul 14 00:16:14 2013 +0100
+@@ -65,7 +65,7 @@
+ #define FEATURESVALUES2 NICKLEN, TOPICLEN, AWAYLEN, TOPICLEN, \
+                         feature_int(FEAT_CHANNELLEN), CHANNELLEN, \
+                         (feature_bool(FEAT_LOCAL_CHANNELS) ? "#&" : "#"), "(ov)@+", "@+", \
+-                        (feature_bool(FEAT_OPLEVELS) ? "b,AkU,l,imnpstrDdR" : "b,k,l,imnpstrDdR"), \
++                        (feature_bool(FEAT_OPLEVELS) ? "b,AkU,l,imnpstrDdRu" : "b,k,l,imnpstrDdRu"), \
+                         "rfc1459", feature_str(FEAT_NETWORK)
+ 
+ #endif /* INCLUDED_supported_h */
+diff -r c58e84d80db6 ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 13 23:40:05 2013 +0100
++++ b/ircd/channel.c	Sun Jul 14 00:16:14 2013 +0100
+@@ -828,6 +828,8 @@
+     *mbuf++ = 'n';
+   if (chptr->mode.mode & MODE_REGONLY)
+     *mbuf++ = 'r';
++  if (chptr->mode.mode & MODE_NOQUITPARTS)
++    *mbuf++ = 'u';
+   if (chptr->mode.mode & MODE_DELJOINS)
+     *mbuf++ = 'D';
+   else if (MyUser(cptr) && (chptr->mode.mode & MODE_WASDELJOINS))
+@@ -844,7 +846,7 @@
+     *mbuf++ = 'k';
+     if (previous_parameter)
+       strcat(pbuf, " ");
+-    if (is_chan_op(cptr, chptr) || IsServer(cptr)) {
++    if (is_chan_op(cptr, chptr) || IsServer(cptr) || IsOper(cptr)) {
+       strcat(pbuf, chptr->mode.key);
+     } else
+       strcat(pbuf, "*");
+@@ -1534,6 +1536,7 @@
+     MODE_LIMIT,		'l',
+ /*  MODE_APASS,		'A', */
+ /*  MODE_UPASS,		'U', */
++    MODE_NOQUITPARTS,   'u',
+     0x0, 0x0
+   };
+   static int local_flags[] = {
+@@ -1959,7 +1962,7 @@
+ 
+   mode &= (MODE_ADD | MODE_DEL | MODE_PRIVATE | MODE_SECRET | MODE_MODERATED |
+ 	   MODE_TOPICLIMIT | MODE_INVITEONLY | MODE_NOPRIVMSGS | MODE_REGONLY |
+-           MODE_DELJOINS | MODE_WASDELJOINS | MODE_REGISTERED);
++           MODE_DELJOINS | MODE_WASDELJOINS | MODE_REGISTERED | MODE_NOQUITPARTS);
+ 
+   if (!(mode & ~(MODE_ADD | MODE_DEL))) /* don't add empty modes... */
+     return;
+@@ -2092,6 +2095,7 @@
+     MODE_LIMIT,		'l',
+     MODE_REGONLY,	'r',
+     MODE_DELJOINS,      'D',
++    MODE_NOQUITPARTS,   'u',
+     0x0, 0x0
+   };
+   unsigned int add;
+@@ -3232,6 +3236,7 @@
+     MODE_LIMIT,		'l',
+     MODE_REGONLY,	'r',
+     MODE_DELJOINS,      'D',
++    MODE_NOQUITPARTS,   'u',
+     MODE_ADD,		'+',
+     MODE_DEL,		'-',
+     0x0, 0x0
+@@ -3498,11 +3503,13 @@
+     /* Send notification to channel */
+     if (!(flags & (CHFL_ZOMBIE | CHFL_DELAYED)))
+       sendcmdto_channel_butserv_butone(jbuf->jb_source, CMD_PART, chan, NULL, 0,
+-				(flags & CHFL_BANNED || !jbuf->jb_comment) ?
+-				":%H" : "%H :%s", chan, jbuf->jb_comment);
++		    ((flags & CHFL_BANNED) || ((chan->mode.mode & MODE_NOQUITPARTS)
++		     && !IsChannelService(member->user)) || !jbuf->jb_comment) ?
++		    "%H" : "%H :%s", chan, jbuf->jb_comment);
+     else if (MyUser(jbuf->jb_source))
+       sendcmdto_one(jbuf->jb_source, CMD_PART, jbuf->jb_source,
+-		    (flags & CHFL_BANNED || !jbuf->jb_comment) ?
++		    ((flags & CHFL_BANNED) || (chan->mode.mode & MODE_NOQUITPARTS)
++		     || !jbuf->jb_comment) ?
+ 		    ":%H" : "%H :%s", chan, jbuf->jb_comment);
+     /* XXX: Shouldn't we send a PART here anyway? */
+     /* to users on the channel?  Why?  From their POV, the user isn't on
+diff -r c58e84d80db6 ircd/m_clearmode.c
+--- a/ircd/m_clearmode.c	Sat Jul 13 23:40:05 2013 +0100
++++ b/ircd/m_clearmode.c	Sun Jul 14 00:16:14 2013 +0100
+@@ -124,6 +124,7 @@
+     MODE_LIMIT,		'l',
+     MODE_REGONLY,	'r',
+     MODE_DELJOINS,      'D',
++    MODE_NOQUITPARTS,   'u',
+     0x0, 0x0
+   };
+   int *flag_p;
+diff -r c58e84d80db6 ircd/m_quit.c
+--- a/ircd/m_quit.c	Sat Jul 13 23:40:05 2013 +0100
++++ b/ircd/m_quit.c	Sun Jul 14 00:16:14 2013 +0100
+@@ -107,9 +107,11 @@
+ 
+   if (cli_user(sptr)) {
+     struct Membership* chan;
++    /* (slug for +u) removed !IsDelayedJoin(chan) as splidge said to */
+     for (chan = cli_user(sptr)->channel; chan; chan = chan->next_channel) {
+-        if (!IsZombie(chan) && !IsDelayedJoin(chan) && !member_can_send_to_channel(chan, 0))
+-        return exit_client(cptr, sptr, sptr, "Signed off");
++        if (!IsZombie(chan) && (!member_can_send_to_channel(chan, 0)
++           || (chan->channel->mode.mode & MODE_NOQUITPARTS)))
++          return exit_client(cptr, sptr, sptr, "Signed off");
+     }
+   }
+   if (parc > 1 && !BadPtr(parv[parc - 1]))

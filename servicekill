@@ -1,0 +1,70 @@
+# HG changeset patch
+# Parent 02f673eaa2a8db9ed42727adcbaf53c0ef5c64fe
+
+diff -r 02f673eaa2a8 include/client.h
+--- a/include/client.h	Sun Jul 14 18:36:31 2013 +0100
++++ b/include/client.h	Sun Jul 14 18:38:58 2013 +0100
+@@ -733,7 +733,7 @@
+ #define SNO_GLINE       0x200   /**< glines */
+ #define SNO_NETWORK     0x400   /**< net join/break, etc */
+ #define SNO_IPMISMATCH  0x800   /**< IP mismatches */
+-#define SNO_THROTTLE    0x1000  /**< host throttle add/remove notices */
++#define SNO_SERVICEKILL 0x1000  /**< service kills (kills by service servers or clients on them) */
+ #define SNO_OLDREALOP   0x2000  /**< old oper-only messages */
+ #define SNO_CONNEXIT    0x4000  /**< client connect/exit (ugh) */
+ #define SNO_AUTO        0x8000  /**< AUTO G-Lines */
+@@ -753,7 +753,7 @@
+ /** Server notice bits enabled by default for normal users. */
+ #define SNO_DEFAULT (SNO_NETWORK|SNO_OPERKILL|SNO_GLINE)
+ /** Server notice bits enabled by default for IRC operators. */
+-#define SNO_OPERDEFAULT (SNO_DEFAULT|SNO_HACK2|SNO_HACK4|SNO_THROTTLE|SNO_OLDSNO)
++#define SNO_OPERDEFAULT (SNO_DEFAULT|SNO_HACK2|SNO_HACK4|SNO_OLDSNO)
+ /** Server notice bits reserved to IRC operators. */
+ #define SNO_OPER (SNO_CONNEXIT|SNO_OLDREALOP|SNO_AUTH)
+ /** Noisy server notice bits that cause other bits to be cleared during connect. */
+diff -r 02f673eaa2a8 ircd/ircd_log.c
+--- a/ircd/ircd_log.c	Sun Jul 14 18:36:31 2013 +0100
++++ b/ircd/ircd_log.c	Sun Jul 14 18:38:58 2013 +0100
+@@ -123,9 +123,9 @@
+   unsigned int snomask; /**< Bitmask corresponding to name. */
+ } masks[] = {
+ #define M(mask) { #mask, SNO_ ## mask }
+-  M(NONE),       M(OLDSNO),     M(SERVKILL),   M(OPERKILL),   M(HACK2),
+-  M(HACK3),      M(UNAUTH),     M(TCPCOMMON),  M(TOOMANY),    M(HACK4),
+-  M(GLINE),      M(NETWORK),    M(IPMISMATCH), M(THROTTLE),   M(OLDREALOP),
++  M(NONE),       M(OLDSNO),     M(SERVKILL),   M(OPERKILL),    M(HACK2),
++  M(HACK3),      M(UNAUTH),     M(TCPCOMMON),  M(TOOMANY),     M(HACK4),
++  M(GLINE),      M(NETWORK),    M(IPMISMATCH), M(SERVICEKILL), M(OLDREALOP),
+   M(CONNEXIT),   M(DEBUG),      M(AUTH),
+ #undef M
+   { 0, 0 }
+diff -r 02f673eaa2a8 ircd/m_kill.c
+--- a/ircd/m_kill.c	Sun Jul 14 18:36:31 2013 +0100
++++ b/ircd/m_kill.c	Sun Jul 14 18:38:58 2013 +0100
+@@ -106,10 +106,17 @@
+ static int do_kill(struct Client* cptr, struct Client* sptr,
+ 		   struct Client* victim, char* inpath, char* path, char* msg)
+ {
++  int snomask;
++
+   assert(0 != cptr);
+   assert(0 != sptr);
+   assert(!IsServer(victim));
+ 
++  /* determine what snomask the KILL should go to */
++  if (IsServer(sptr))
++    snomask = IsService(sptr) ? SNO_SERVICEKILL : SNO_SERVKILL;
++  else
++    snomask = IsService(cli_user(sptr)->server) ? SNO_SERVICEKILL : SNO_OPERKILL;
+   /*
+    * Notify all *local* opers about the KILL (this includes the one
+    * originating the kill, if from this server--the special numeric
+@@ -118,7 +125,7 @@
+    * Note: "victim->name" is used instead of "user" because we may
+    *       have changed the target because of the nickname change.
+    */
+-  sendto_opmask_butone(0, IsServer(sptr) ? SNO_SERVKILL : SNO_OPERKILL,
++  sendto_opmask_butone(0, snomask,
+                        "Received KILL message for %s from %s Path: %s!%s %s",
+                        get_client_name(victim, SHOW_IP), cli_name(sptr),
+                        inpath, path, msg);

@@ -1,0 +1,136 @@
+# HG changeset patch
+# Parent b88ed6e50cf3d52de15bcd0a827be6cb99218ef2
+
+diff -r b88ed6e50cf3 include/version.h
+--- a/include/version.h	Sun Jul 14 18:57:00 2013 +0100
++++ b/include/version.h	Sun Jul 14 19:13:14 2013 +0100
+@@ -9,6 +9,7 @@
+ extern const char *version;
+ extern const char *creation;
+ extern const char *infotext[];
++extern const char *sourcestext[];
+ extern const char *generation;
+ 
+ #endif /* INCLUDED_version_h */
+diff -r b88ed6e50cf3 ircd/m_info.c
+--- a/ircd/m_info.c	Sun Jul 14 18:57:00 2013 +0100
++++ b/ircd/m_info.c	Sun Jul 14 19:13:14 2013 +0100
+@@ -105,17 +105,15 @@
+  */
+ int m_info(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+-  const char **text = infotext;
++  const char **text;
+ 
+   if (hunt_server_cmd(sptr, CMD_INFO, cptr, 1, ":%C", 1, parc, parv) !=
+       HUNTED_ISME)
+-	return 0;
++    return 0;
+ 
+-  while (text[212])
+-  {
++  for (text=infotext;*text;text++)
+     send_reply(sptr, RPL_INFO, *text);
+-    text++;
+-  }
++
+   send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":Birth Date: %s, compile # %s",
+       creation, generation);
+   send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":On-line since %s",
+@@ -133,26 +131,26 @@
+  */
+ int ms_info(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+-  const char **text = infotext;
++  const char **text;
+ 
+   if (IsServer(sptr))
+     return 0;
+ 
+   if (hunt_server_cmd(sptr, CMD_INFO, cptr, 1, ":%C", 1, parc, parv) !=
+       HUNTED_ISME)
+-	return 0;
+-  while (text[212])
++    return 0;
++
++  if (!IsOper(sptr))
+   {
+-    if (!IsOper(sptr))
++    for (text=infotext;*text;text++)
+       send_reply(sptr, RPL_INFO, *text);
+-    text++;
+   }
+-  if (IsOper(sptr))
++  else
+   {
+-    while (*text)
+-      send_reply(sptr, RPL_INFO, *text++);
+-    send_reply(sptr, RPL_INFO, "");
++    for (text=sourcestext;*text;text++)
++      send_reply(sptr, RPL_INFO, *text);
+   }
++
+   send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":Birth Date: %s, compile # %s",
+       creation, generation);
+   send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":On-line since %s",
+@@ -171,27 +169,27 @@
+ {
+   const char **text = infotext;
+ 
+-  if (hunt_server_cmd(sptr, CMD_INFO, cptr, 1, ":%C", 1, parc, parv) ==
++  if (hunt_server_cmd(sptr, CMD_INFO, cptr, 1, ":%C", 1, parc, parv) !=
+       HUNTED_ISME)
++    return 0;
++
++  if (!IsOper(sptr))
+   {
+-    while (text[212])
+-    {
+-      if (!IsOper(sptr))
+-	send_reply(sptr, RPL_INFO, *text);
+-      text++;
+-    }
+-    if (IsOper(sptr) && (NULL != parv[1]))
+-    {
+-      while (*text)
+-	send_reply(sptr, RPL_INFO, *text++);
+-      send_reply(sptr, RPL_INFO, "");
+-    }
+-    send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":Birth Date: %s, compile # %s",
+-	       creation, generation);
+-    send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":On-line since %s",
+-	       myctime(cli_firsttime(&me)));
+-    send_reply(sptr, RPL_ENDOFINFO);
++    for (text=infotext;*text;text++)
++      send_reply(sptr, RPL_INFO, *text);
+   }
++  else
++  {
++    for (text=sourcestext;*text;text++)
++      send_reply(sptr, RPL_INFO, *text);
++  }
++
++  send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":Birth Date: %s, compile # %s",
++             creation, generation);
++  send_reply(sptr, SND_EXPLICIT | RPL_INFO, ":On-line since %s",
++             myctime(cli_firsttime(&me)));
++  send_reply(sptr, RPL_ENDOFINFO);
++
+   return 0;
+ }
+ 
+diff -r b88ed6e50cf3 ircd/version.c.SH
+--- a/ircd/version.c.SH	Sun Jul 14 18:57:00 2013 +0100
++++ b/ircd/version.c.SH	Sun Jul 14 19:13:14 2013 +0100
+@@ -81,7 +81,10 @@
+     "Thanks goes to all other people who contributed to any version.",
+     "A full listing of all coders can be found in doc/Authors in the",
+     "source.",
+-    "",
++    0,
++};
++
++const char *sourcestext[] = {
+     "Sources:",
+ !SUB!THIS!
+ 

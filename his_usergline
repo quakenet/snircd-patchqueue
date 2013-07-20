@@ -1,0 +1,38 @@
+# HG changeset patch
+# Parent 13c871d63f60d0f4f865bea0cfdee4cf1073617b
+
+diff -r 13c871d63f60 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jul 14 00:19:58 2013 +0100
++++ b/include/ircd_features.h	Sun Jul 14 00:21:32 2013 +0100
+@@ -154,6 +154,7 @@
+   FEAT_HIS_SERVERNAME,
+   FEAT_HIS_SERVERINFO,
+   FEAT_HIS_URLSERVERS,
++  FEAT_HIS_USERGLINE,
+ 
+   /* Misc. random stuff */
+   FEAT_NETWORK,
+diff -r 13c871d63f60 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jul 14 00:19:58 2013 +0100
++++ b/ircd/ircd_features.c	Sun Jul 14 00:21:32 2013 +0100
+@@ -419,6 +419,7 @@
+   F_S(HIS_SERVERNAME, 0, "*.undernet.org", feature_notify_servername),
+   F_S(HIS_SERVERINFO, 0, "The Undernet Underworld", feature_notify_serverinfo),
+   F_S(HIS_URLSERVERS, 0, "http://www.undernet.org/servers.php", 0),
++  F_B(HIS_USERGLINE, 0, 1, 0),
+ 
+   /* Misc. random stuff */
+   F_S(NETWORK, 0, "UnderNet", 0),
+diff -r 13c871d63f60 ircd/m_gline.c
+--- a/ircd/m_gline.c	Sun Jul 14 00:19:58 2013 +0100
++++ b/ircd/m_gline.c	Sun Jul 14 00:21:32 2013 +0100
+@@ -645,6 +645,9 @@
+ int
+ m_gline(struct Client *cptr, struct Client *sptr, int parc, char *parv[])
+ {
++  if (feature_bool(FEAT_HIS_USERGLINE))
++    return send_reply(sptr, ERR_DISABLED, "GLINE");
++
+   if (parc < 2)
+     return send_reply(sptr, ERR_NOSUCHGLINE, "");
+ 

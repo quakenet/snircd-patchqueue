@@ -1,0 +1,40 @@
+# HG changeset patch
+# Parent aaa3a5dc576b78c7da4518c794f81a738fb0edd0
+
+diff -r aaa3a5dc576b ircd/channel.c
+--- a/ircd/channel.c	Wed Jul 17 21:18:06 2013 +0100
++++ b/ircd/channel.c	Wed Jul 17 21:20:09 2013 +0100
+@@ -691,6 +691,13 @@
+       RevealDelayedJoin(member);
+     return 1;
+   }
++  
++  /* +X user can always speak on the channel */
++  if (IsXtraOp(member->user)) {
++    if (IsDelayedJoin(member) && reveal)
++      RevealDelayedJoin(member);
++    return 1;
++  }
+ 
+   /* Discourage using the Apass to get op.  They should use the Upass. */
+   if (IsChannelManager(member) && member->channel->mode.apass[0])
+@@ -743,7 +750,7 @@
+   /*
+    * Servers can always speak on channels.
+    */
+-  if (IsServer(cptr) || IsXtraOp(cptr))
++  if (IsServer(cptr))
+     return 1;
+ 
+   member = find_channel_member(cptr, chptr);
+@@ -753,7 +760,9 @@
+    * or +m (moderated).
+    */
+   if (!member) {
+-    if ((chptr->mode.mode & (MODE_NOPRIVMSGS|MODE_MODERATED)) ||
++    if (IsXtraOp(cptr))
++      return 1;
++    else if ((chptr->mode.mode & (MODE_NOPRIVMSGS|MODE_MODERATED)) ||
+ 	((chptr->mode.mode & (MODE_REGONLY|MODE_MODERATENOREG)) && !IsAccount(cptr)))
+       return 0;
+     else

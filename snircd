@@ -1,0 +1,761 @@
+# HG changeset patch
+# Parent ad0877db8e57ab00cefbcfc139dc6374461b3ba8
+
+diff -r ad0877db8e57 doc/quakenet.conf
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/doc/quakenet.conf	Fri Jul 19 21:22:02 2013 +0100
+@@ -0,0 +1,357 @@
++#
++#                            Q U A K E N E T   I R C   S E R V E R
++#                               S E R V E R   C O N F I G  F I L E
++#
++# -----------------------------------------------------------------------------
++#  v.12 config file, last edited 08.12.2007/paul
++# -----------------------------------------------------------------------------
++
++General {
++  name = "@@@.@@@.quakenet.org";
++  description = "@@@";
++  numeric = @@@;
++  vhost = "@@@";
++  dns vhost  = "@@@";
++  dns server = "@@@";
++  dns server = "@@@";
++};
++
++Admin {
++  Location = "@@@";
++  Location = "QuakeNet IRC server";
++  Contact  = "@@@";
++};
++
++# -----------------------------------------------------------------------------
++# Classes (aka Ylines)
++# -----------------------------------------------------------------------------
++# name     = "<class>";      pingfreq = time;  connectfreq = time;
++# maxlinks = number 0 or 1;  sendq    = size;     usermode = "+i";
++#
++# Uplinks
++Class {
++ name = "Server";
++ pingfreq = 3 minutes;
++ connectfreq = 5 minutes;
++ maxlinks = 1;
++ sendq = 40000000;
++};
++
++# All the leaf servers you hub for.
++Class {
++ name = "LeafServer";
++ pingfreq = 3 minutes;
++ connectfreq = 5 minutes;
++ maxlinks = 0;
++ sendq = 40000000;
++};
++
++# Client class (i.e. everyone)
++Class {
++ name = "Users";
++ pingfreq = 3 minutes;
++ sendq = 300000;
++ maxlinks = 30000;
++ usermode = "+i";
++};
++
++# VIP user class (aka locals, opers etc..)
++Class {
++ name = "Local";
++ pingfreq = 3 minutes;
++ sendq = 600000;
++ maxlinks = 100;
++ usermode = "+iw";
++};
++
++# Oper class (global)
++Class {
++ name = "Opers";
++ pingfreq = 3 minutes;
++ sendq = 10240000;
++ maxlinks = 10;
++ local = no;
++ # privs
++ die = no;
++ restart = no;
++ rehash = no;
++ jupe = no;
++ local_jupe = no;
++ freeform = yes; # change this if you want to disable freeform sethost for your opers 
++};
++
++# Oper class (global)
++Class {
++ name = "Admin";
++ pingfreq = 3 minutes;
++ sendq = 10240000;
++ maxlinks = 10;
++ local = no;
++};
++
++# -----------------------------------------------------------------------------
++# Client lines (aka Ilines)
++# -----------------------------------------------------------------------------
++# username = "ident";       host = "host";              ip = "127.0.0.0/8";
++# password = "password";   class = "classname";   maxlinks = 3;
++
++# Fall back entries (we let everyone in)
++Client { class = "Users"; ip = "*@*"; };
++Client { class = "Users"; host = "*@*"; };
++
++# Providers that we've decided to restrict due to abuse mainly.
++Client { class = "Users"; maxlinks = 2; host = "*@*.t-dialin.net"; };
++Client { class = "Users"; maxlinks = 1; host = "*@*.proxad.net"; };
++Client { class = "Users"; maxlinks = 1; host = "*@*.bezeqint.net"; };
++Client { class = "Users"; maxlinks = 1; host = "*@*.ono.com"; };
++Client { class = "Users"; maxlinks = 1; host = "*@*.wanadoo.nl"; };
++Client { class = "Users"; maxlinks = 2; host = "*@*.wanadoo.fr"; };
++Client { class = "Users"; maxlinks = 1; host = "*@*.rima-tde.net"; };
++
++# -----------------------------------------------------------------------------
++# UWorld/Jupe (aka ulines)
++# -----------------------------------------------------------------------------
++
++# [UWorld]
++UWorld {
++  name = "CServe.quakenet.org";
++  name = "operserv.quakenet.org";
++  name = "operserv2.quakenet.org";
++  name = "proxyscan.quakenet.org";
++  name = "services4.uk.quakenet.org";
++  name = "services.no.quakenet.org";
++  name = "services.de.quakenet.org";
++  name = "services.se.quakenet.org";
++  name = "services.uk.quakenet.org";
++};
++
++Jupe {
++  nick = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,{,|,},~,-,_,`";
++  nick = "UWorld,NickServ,ChanServ,telnet,backdoor,qauth,auth,admin,support,operserv";
++  nick = "O2";
++  nick = "NO,noperserv";
++  nick = "N2,N3,N4,N5,N6,N7,N8,N9";
++};
++
++# -----------------------------------------------------------------------------
++# Kill (aka klines)
++# -----------------------------------------------------------------------------
++# host     = "user@host";      reason = "The reason the user will see";
++# realname = "realnametoban";    file = "path/to/file/with/reason/to/show";
++
++Kill {
++  username = "*root";
++  reason = "Do not IRC as root";
++};
++
++# -----------------------------------------------------------------------------
++# Connect (aka clines)
++# -----------------------------------------------------------------------------
++# name        = "servername";    host = "hostnameORip";    vhost = "localIP";
++# password    = "passwd";        port = portno;            class = "classname"; 
++# maxhops     = 2;               hub  = "*.eu.undernet.org"; 
++# autoconnect = no; (default = yes!)
++
++# Our primary uplink.
++#
++#
++
++Connect {
++ name = "hub.@@@.quakenet.org";
++ host = "@@@.@@@.@@@.@@@";
++ password = "@@@";
++ port = 4400;
++ class = "Server";
++ hub;
++ autoconnect = yes;
++};
++
++# Our secondary uplink.
++#
++Connect {
++ name = "hub.@@@.quakenet.org";
++ host = "@@@.@@@.@@@.@@@";
++ password = "@@@";
++ port = 4400;
++ class = "Server";
++ hub;
++ autoconnect = yes;
++};
++
++# Our tertiary uplink.
++#
++#
++Connect {
++ name = "hub.@@@.quakenet.org";
++ host = "@@@.@@@.@@@.@@@";
++ password = "@@@";
++ port = 4400;
++ class = "Server";
++ hub;
++ autoconnect = yes;
++};
++
++
++
++# -----------------------------------------------------------------------------
++# CRule (aka dlines)
++# -----------------------------------------------------------------------------
++# server = "servermask";     rule = "connectrule";
++# Setting all to yes makes the rule always apply. Otherwise it only
++# applies to autoconnects.
++# all = yes;
++# The following block is recommended for leaf servers:
++CRULE { server = "*"; rule = "directcon(*)"; };
++
++# -----------------------------------------------------------------------------
++# spoofhosts (aka slines)
++# -----------------------------------------------------------------------------
++# username = "ident"    host = "host"    password = "passwd"
++
++# slines (with pw)
++#Spoofhost "testsline.quakenet.org"  { password = "secret"; };
++# slines (without pw) thats how to define them when having freeform turned off.
++#Spoofhost "testsline2.quakenet.org" { username = "x"; host = "nohost"; };
++
++# -----------------------------------------------------------------------------
++# Operator (aka Olines)
++# -----------------------------------------------------------------------------
++
++#Server Admin
++Operator {  
++  host = "@@@";
++  host = "@@@";
++  password = "@@@";
++  name = "@@@";
++  class = "Admin";
++};
++
++#Server Operators
++Operator {
++  host = "@@@";
++  host = "@@@";
++  password = "@@@";
++  name = "@@@";
++  class = "Opers";
++};
++
++# -----------------------------------------------------------------------------
++# Quarantine (aka qlines)
++# -----------------------------------------------------------------------------
++#Quarantine {
++#  "#shells" = "Thou shalt not support the h4><0rz";
++#  "&kiddies" = "They can take care of themselves";
++#};
++
++# -----------------------------------------------------------------------------
++# Pseudos
++# -----------------------------------------------------------------------------
++# name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
++#Pseudo "CHANSERV" {
++# name = "X";
++# nick = "X@channels.undernet.org";
++#};
++Pseudo "AUTH" {
++  name = "Q";
++  prepend = "AUTH ";
++  nick = "q@cserve.quakenet.org";
++};
++
++# -----------------------------------------------------------------------------
++# Port (aka plines)
++# -----------------------------------------------------------------------------
++# port   = number;      mask   = "ipmask"    vhost = "virtualhostinterfaceip"
++# server = yes;         hidden = yes
++# mask only contains IP addresses or '*'
++# hidden, hides a port from stats
++
++Port {
++  port   = 4400;
++  server = yes;
++  hidden = yes;
++  vhost  = "@@@";
++};
++
++Port {
++  vhost = "@@@" 6660;
++  vhost = "@@@" 6661;
++  vhost = "@@@" 6662;
++  vhost = "@@@" 6663;
++  vhost = "@@@" 6664;
++  vhost = "@@@" 6665;
++  vhost = "@@@" 6666;
++  vhost = "@@@" 6667;
++  vhost = "@@@" 6668;
++  vhost = "@@@" 6669;
++};
++
++# -----------------------------------------------------------------------------
++# Feature (aka F:lines)
++# -----------------------------------------------------------------------------
++# We better doublecheck what we set here!
++
++features {
++  "LOG" = "SYSTEM" "FILE" "ircd.log";
++  "LOG" = "CONFIG" "FILE" "conf.log";
++  "LOG" = "SYSTEM" "LEVEL" "CRIT";
++  "DOMAINNAME"="quakenet.org";
++  "RELIABLE_CLOCK"="FALSE";
++  "BUFFERPOOL"="96000000";
++# "HAS_FERGUSON_FLUSHER"="FALSE";
++# "CLIENT_FLOOD"="1024";
++# "SERVER_PORT"="4400";
++  "NODEFAULTMOTD"="FALSE";
++# "MOTD_BANNER"="TRUE";
++# "KILL_IPMISMATCH"="FALSE";
++# "IDLE_FROM_MSG"="TRUE";
++  "HUB"="FALSE";
++# "WALLOPS_OPER_ONLY"="FALSE";
++# "NODNS"="FALSE";
++  "RANDOM_SEED"="@@@@@@@@@@@@@@@@";
++# "DEFAULT_LIST_PARAM"="TRUE";
++# "NICKNAMEHISTORYLENGTH"="800";
++  "NETWORK"="QuakeNet";
++  "HOST_HIDING"="TRUE";
++  "SETHOST" = "TRUE";
++  "SETHOST_USER" = "TRUE";
++  "SETHOST_AUTO" = "TRUE";
++  "HIDDEN_HOST"="users.quakenet.org";
++  "HIDDEN_IP"="127.0.0.1";
++  "URLREG"="http://www.quakenet.org/getauthed";
++# "KILLCHASETIMELIMIT"="30";
++  "MAXCHANNELSPERUSER"="20";
++  "NICKLEN" = "15";
++# "AVBANLEN"="40";
++# "MAXBANS"="45";
++# "MAXSILES"="15";
++# "HANGONGOODLINK"="300";
++# "HANGONRETRYDELAY" = "10";
++# "CONNECTTIMEOUT" = "90";
++# "MAXIMUM_LINKS" = "1";
++# "PINGFREQUENCY" = "120";
++# "CONNECTFREQUENCY" = "600";
++# "DEFAULTMAXSENDQLENGTH" = "40000";
++# "GLINEMAXUSERCOUNT" = "20";
++# "MPATH" = "ircd.motd";
++# "RPATH" = "remote.motd";
++# "PPATH" = "ircd.pid";
++# "TOS_SERVER" = "0x08";
++# "TOS_CLIENT" = "0x08";
++# "POLLS_PER_LOOP" = "200";
++# "IRCD_RES_TIMEOUT" = "4";
++# "IRCD_RES_RETRIES" = "2";
++# "AUTH_TIMEOUT" = "9";
++# "IPCHECK_CLONE_LIMIT" = "4";
++# "IPCHECK_CLONE_PERIOD" = "40";
++# "IPCHECK_CLONE_DELAY" = "600";
++# "CHANNELLEN" = "200";
++  "CONFIG_OPERCMDS" = "TRUE";
++  "OPLEVELS" = "FALSE";
++  "ZANNELS" = "FALSE";
++# "LOCAL_CHANNELS" = "TRUE";
++# "ANNOUNCE_INVITES" = "FALSE";
++  "HIS_SERVERNAME" = "*.quakenet.org";
++  "HIS_SERVERINFO" = "QuakeNet IRC Server";
++  "HIS_URLSERVERS" = "http://www.quakenet.org/serverlist.php";
++};
++
+diff -r ad0877db8e57 doc/readme.snircd
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/doc/readme.snircd	Fri Jul 19 21:22:02 2013 +0100
+@@ -0,0 +1,302 @@
++- SNIRCD ----------------------------------------------------------------------
++
++Snircd is a collection of modifications to the Undernet IRC server known as
++ircu. This version is based on version 2.10.12 released by Undernet's
++Coder Committee. The original code can be obtained from their webpage,
++http://coder-com.undernet.org and the latest release of Snircd can be obtained
++from QuakeNet's Development Team webpage, http://development.quakenet.org.
++
++- version history ------------------------------------------------------------
++
++v1.3.0,   SVN  upstream patches/migration to u2.10.12.10
++               Port of 'asuka' extensions for ircu 2.10.11 to 2.10.12
++               Development moved to SVN from CVS
++               chanmode +M, chanmode +T, ACcount token changes, Oper ID, 
++               /check updated, other fixes/updates
++v1.2.3,   SVN, bug fixes, not released
++v1.2.2,   SVN, not released
++v1.2.1,   CVS, bug fixes
++          WWW, 20/02/2005
++v1.2,     CVS, upstream patches for u2.10.11.07, bug fixes, added CIDR support
++               for O:lines, I:lines and bans, added AUTOCHANMODES, added ability
++               to disable /USERIP, added timestamped invites, added new /CHECK
++               flags, improved behaviour of chanmodes +c/+N and usermode +R,
++               enhanced /check server output, added more friendly error messages
++               when trying to join channels
++          WWW, 09/02/2005
++v1.1,     CVS, upstream patches for u2.10.11.06, bug fixes, added HIS_USERGLINE,
++               added AUTOINVISIBLE, added ability to restart resolver (never released)
++v1.0.6,   CVS, bug fixes, chanmode +N, added USER_HIDECHANS
++          WWW, 18/09/2003
++v1.0.5,   CVS, bug fixes
++          WWW, 03/09/2003
++v1.0.4,   CVS, bug fixes
++          WWW, 28/06/2003
++v1.0.3,   CVS, bug fixes
++          WWW, 31/05/2003
++v1.0.2,   CVS, bug fixes, dropped dlmalloc
++          WWW, 22/04/2003
++v1.0.1,   CVS, minor conf/code fixes
++          WWW, 11/04/2003
++v1.0,     CVS, 1.0 release, misc. fixes
++          WWW, 09/04/2003
++v0.7.0,   CVS, sethost, chanmode +u, misc. fixes
++          WWW, 15/02/2003
++v0.5.1.4, CVS, upstream patches for u2.10.11.04, +R fix
++v0.5.1.3, CVS, gline_find fix
++v0.5.1.2, CVS, upstream patches
++v0.5.1.1, CVS, upstream patches
++v0.5.1.0, CVS, added user mode +R
++v0.5.0.1, CVS, upstream patches
++v0.5.0.0, CVS, updated patches for u2.10.11.03.(dev).5ish, added showing of
++               full details of /stats C|H to opers
++v0.4.7.1, CVS, revert default NETWORK to 'UnderNet'
++v0.4.7.0, CVS, removing netrideprot diff, updated patches for u2.10.11.02
++          WWW, 18/10/2002
++v0.4.6.0, CVS, badchans now allow wildcards, 'auditorium' mode added
++v0.4.5.6, CVS, bugfixes in kX, add +I
++v0.4.5.5, CVS, cC support and crunch warnings in check
++v0.4.5.4, CVS, small bugfix in kX
++v0.4.5.3, CVS, nick glines check on /nick
++v0.4.5.2, CVS, updated patches for u2.10.11.01
++v0.4.5.1, CVS, added beta NICK Glines
++v0.4.5.0, CVS
++
++- contributors ---------------------------------------------------------------
++
++Project Manager:        Joe Cise   <pilsner@quakenet.org>
++Developers:          Rasmus Have   <bigfoot@quakenet.org>
++                 Gregory Bristol   <qoreq@quakenet.org>
++                    Darren Smith   <data@quakenet.org>
++                   David Mansell   <splidge@quakenet.org> 
++               Fredrik Söderblom    <froo@quakenet.org>
++                    Chris Porter   <slug@quakenet.org>
++                   Iain Sheppard   <magpie@quakenet.org>
++                 Mike Cartwright   <mike@quakenet.org>
++                   Paul Richards   <paul@quakenet.org>
++                         Cruicky   <cruicky@quakenet.org
++Thanks To:            Reed Loden   <reed@reedloden.com>
++                      Alex Badea   <vampire@p16.pub.ro>
++                    Perry Lorier   <isomer@coders.net>
++               Kevin L. Mitchell   <klmitch@mit.edu>
++Special Thanks To:  Tero Nybacka   <sivis@sivis.org>
++                  Darren Coleman   <durzel@quakenet.org>
++  For their contributions to Lain (http://dev-com.b2irc.net) and therefore
++  the basis for most of the ideas in Asuka. Thanks Guys.
++
++- features ------------------------------------------------------------------
++
++ * Oper mode +X
++     Allows opers to:
++       - Join invite only (+i) channels
++       - Join keyed (+k) channels
++       - Join channels if banned
++       - Join full channels
++       - Override user mode +k
++
++ * Oper mode +k
++     Allows opers to set user mode +k, network service, which prohibits
++     kicks, deops and kills.
++
++ * Oper mode +n
++     Allows opers to hide the channels they are in.
++
++ * Oper mode +I
++     Allows opers to hide their idle time.
++
++ * User mode +R
++     Allows users to only accept privmsg/notice/invite from authed users.
++
++ * Channel mode +c
++     Prohibits mIRC & ANSI colour codes as well as other control codes from
++     being sent to a channel.
++
++ * Channel mode +C
++     Prohibits CTCPs from being sent to a channel.
++
++ * Channel mode +N
++     Prohibits channel notices from being sent to a channel.
++
++ * Channel mode +D and +d
++     'Delayed join' mode, when set on a channel joins and parts for that
++     channel are squelched. A user will be 'invisible' in the channel
++     from other users until they speak, are opped/voiced or change the
++     topic. When the +D mode is cleared, 'invisible' users will not be
++     revealed, instead the +d mode will automatically be set by the ircd
++     if invisible users remain in the channel. +d will be automatically
++     removed when the last 'invisible' user either becomes visible or
++     leaves the channel. It is possible to see the 'invisible' users
++     on a channel by doing /NAMES -d.
++
++ * Channel mode +u
++     Hides your quit and part messages from channels with +u set. If a user
++     is in any +u channel, then their quit message is removed.
++
++ * Channel mode +M
++     Disallows unauthed users to speak or change nick in a channel when they 
++     are not voiced or opped in a channel
++
++ * Channel mode +T 
++    Blocks multi-target messages to a channel
++
++ * Command /check
++     Allows opers to see information about a channel, user or server.
++     Syntax: Check Channel: /check <#channel> [-i|-o|-u]
++             Check Server:  /check <server>
++             Check User:    /check <nick|hostmask|CIDR> [-c]
++
++     Performing a /check on a server returns its status:
++       *  bursting
++       !  awaiting burst acknowledgement
++       =  network service
++       +  network hub
++
++ * Sethost allows opers (and users w/ passwords) to set their hostname,
++   also known as spoofing. Sethost is configured from the config file via
++   S: lines and several F: lines. Sethost is done through the /sethost
++   command or by setting user mode +h. Available Sethosts are visible by
++   using the /stats s command.
++   Syntax: Oper Sethost: /sethost <new ident> <new hostname>
++                         /mode <nick> +h <new ident>@<new hostname>
++           User Sethost: /sethost <new hostname> <password>
++                         /mode <nick> +h <new hostname> <password>
++
++ * Single letter nicks are protected for use by network services only.
++
++ * Protection from net rider's joining +i/+k channels after a net.join.
++
++ * Topics can by sent during bursts to keep them synced throughout a network.
++
++ * Ability to Gline a nick, new format now nick!ident@host.
++
++ * /stats C & H show full details for Opers.
++
++ * Ability to restart the resolver via /rehash and /DNS r.
++
++ * Ability for services to send BURST outside of net.burst.
++
++- configuration file options ------------------------------------------------
++
++S: Sethost Lines 
++ Syntax:  S:<spoof host>:<password>:<*.host.cc|a.b.c.*|CIDR>:<ident>
++ Example: S:moo.fish.moo:elitepassword:host.example.com:user
++
++ This adds the sethost 'moo.fish.moo' that can be activated by a user by using
++ the password 'elitepassword' and will automatically be applied to anyone
++ connecting from 'host.example.com' with the ident 'user'.
++
++ More Examples:
++   Oper sethost for 'moo.fish.moo'
++          S:moo.fish.moo:::
++   User & Oper sethost for 'moo.fish.moo'
++          S:moo.fish.moo:elitepassword::
++   Oper sethost for 'moo.fish.moo' with auto on 'ident@*.example.com"
++          S:moo.fish.moo::*.example.com:ident
++
++F:SETHOST
++ * Type: boolean
++ * Default: FALSE
++
++ This enables the /sethost command and user mode +h for opers activating Sethosts.
++
++F:SETHOST_USER
++ * Type: boolean
++ * Default: FALSE
++
++ This enabled the /sethost command and user mode +h for users activating Sethosts
++ with passwords.
++
++F:SETHOST_AUTO
++ * Type: boolean
++ * Default: FALSE
++
++ This enables the automatic application of Sethosts on matching idents and hosts.
++
++F:SETHOST_FREEFORM
++ * Type: boolean
++ * Default: FALSE
++
++ This enables opers to set new hostnames that do not have a corresponding S: line
++ in the configuration file, as long as the hostname supplied is reasonably valid.
++ The usage if this is logged via SNOTICE.
++
++F:HIS_STATS_s
++ * Type: boolean
++ * Default: TRUE
++
++ As per QuakeNet Security, this removes the /stats s from users.
++
++F:TOPIC_BURST
++ * Type: boolean
++ * Default: FALSE
++
++ This selects whether topics are *sent* to other servers during a burst.
++ Note that receiving topics from servers is always enabled.
++
++F:HIS_GLINE
++ * Type: boolean
++ * Default: TRUE
++
++ As per QuakeNet Security, this removes the reason for GLINE from quit messages.
++
++F:SOCKSENDBUF
++ * Type: integer
++ * Default: 61440
++
++ Sets the socket buffer for sending. Advanced feature, do not change unless you
++ known what you are doing.
++
++F:SOCKRECVBUF
++ * Type: integer
++ * Default: 61440
++
++ Sets the socket buffer for recieving. Advanced feature, do not change unless you
++ known what you are doing.
++
++F:USER_HIDECHANS
++ * Type: boolean
++ * Default: FALSE
++
++ This allows normal users to set the +n usermode (hide channels from whois/who),
++ this is only recommended in special circumstances.
++
++F:HIS_USERGLINE
++ * Type: boolean
++ * Default: TRUE
++
++ This enables / disables the ability for users to use the /GLINE command for
++ listing active glines. It's turned on by default, which is the opposite
++ behaviour of vanilla ircu.
++
++F:AUTOINVISIBLE
++ * Type: boolean
++ * Default: TRUE
++
++ As per QuakeNet Security, this option sets user mode +i on all connecting clients
++ automatically.
++
++F:HIS_USERIP
++ * Type: boolean
++ * Default: TRUE
++
++ As per QuakeNet Security, add the ability to disable the /USERIP command for users.
++
++F:AUTOCHANMODES
++ * Type: boolean
++ * Default: TRUE
++
++ Enable or disable auto (default) channel modes for new channels.
++
++F:AUTOCHANMODES_LIST
++ * Type: string
++ * Default: "ntCN"
++
++ AUTOCHANMODES_LIST should contain the default channelmodes (e.g. "ntCN") which will 
++ be set by default on new channels.
++
++- disclaimer ----------------------------------------------------------------
++
++This software is provided "as is" with absolutely no warranties, either express
++or implied. It's use is done so totally at the user's own risk.
++
++------------------------ 11.03.2007 -----------------------------------------
+diff -r ad0877db8e57 include/ircd_features.h
+--- a/include/ircd_features.h	Fri Jul 19 21:19:51 2013 +0100
++++ b/include/ircd_features.h	Fri Jul 19 21:22:02 2013 +0100
+@@ -166,6 +166,7 @@
+   FEAT_HIS_URLSERVERS,
+   FEAT_HIS_USERGLINE,
+   FEAT_HIS_LUSERS_ME,
++  FEAT_HIS_USERIP,
+ 
+   /* Misc. random stuff */
+   FEAT_NETWORK,
+diff -r ad0877db8e57 include/patchlevel.h
+--- a/include/patchlevel.h	Fri Jul 19 21:19:51 2013 +0100
++++ b/include/patchlevel.h	Fri Jul 19 21:22:02 2013 +0100
+@@ -18,7 +18,7 @@
+  * $Id$
+  *
+  */
+-#define PATCHLEVEL "14"
++#define PATCHLEVEL "14+snircd(1.4.0)"
+ 
+ #define RELEASE ".12."
+ 
+diff -r ad0877db8e57 ircd/Makefile.in
+--- a/ircd/Makefile.in	Fri Jul 19 21:19:51 2013 +0100
++++ b/ircd/Makefile.in	Fri Jul 19 21:22:02 2013 +0100
+@@ -293,7 +293,7 @@
+ 	@${RM} /tmp/ircd.tag
+ 	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} umkpasswd ${BINDIR}
+ 	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} convert-conf ${BINDIR}
+-	${INSTALL} -m 600 -o ${IRCDOWN} -g ${IRCDGRP} ${top_srcdir}/doc/example.conf ${DPATH}
++	${INSTALL} -m 600 -o ${IRCDOWN} -g ${IRCDGRP} ${top_srcdir}/doc/quakenet.conf ${DPATH}
+ 
+ install-no-symlink: build mkbindir
+ 	@if [ ! -d ${DPATH} -a ! -f ${DPATH} ]; then \
+@@ -307,7 +307,7 @@
+ 	${INSTALL} -m ${IRCDMODE} -o ${IRCDOWN} -g ${IRCDGRP} ircd ${BINDIR}/ircd
+ 	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} umkpasswd ${BINDIR}
+ 	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} convert-conf ${BINDIR}
+-	${INSTALL} -m 600 -o ${IRCDOWN} -g ${IRCDGRP} ${top_srcdir}/doc/example.conf ${DPATH}
++	${INSTALL} -m 600 -o ${IRCDOWN} -g ${IRCDGRP} ${top_srcdir}/doc/quakenet.conf ${DPATH}
+ 
+ uninstall:
+ 	@if [ "${BINDIR}" != "${DPATH}" ]; then \
+diff -r ad0877db8e57 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Fri Jul 19 21:19:51 2013 +0100
++++ b/ircd/ircd_features.c	Fri Jul 19 21:22:02 2013 +0100
+@@ -431,6 +431,7 @@
+   F_S(HIS_URLSERVERS, 0, "http://www.undernet.org/servers.php", 0),
+   F_B(HIS_USERGLINE, 0, 1, 0),
+   F_B(HIS_LUSERS_ME, 0, 0, 0),
++  F_B(HIS_USERIP, 0, 1, 0),
+ 
+   /* Misc. random stuff */
+   F_S(NETWORK, 0, "UnderNet", 0),
+diff -r ad0877db8e57 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Fri Jul 19 21:19:51 2013 +0100
++++ b/ircd/ircd_relay.c	Fri Jul 19 21:22:02 2013 +0100
+@@ -389,7 +389,7 @@
+    */
+ 
+   if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr)) {
+-    send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr));
++    send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr), feature_str(FEAT_URLREG));
+     return;
+   }
+ 
+diff -r ad0877db8e57 ircd/m_invite.c
+--- a/ircd/m_invite.c	Fri Jul 19 21:19:51 2013 +0100
++++ b/ircd/m_invite.c	Fri Jul 19 21:22:02 2013 +0100
+@@ -167,7 +167,7 @@
+   /* If we get here, it was a VALID and meaningful INVITE */
+ 
+   if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr)) {
+-    send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr));
++    send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr), feature_str(FEAT_URLREG));
+     return 0;
+   }
+   
+diff -r ad0877db8e57 ircd/s_err.c
+--- a/ircd/s_err.c	Fri Jul 19 21:19:51 2013 +0100
++++ b/ircd/s_err.c	Fri Jul 19 21:22:02 2013 +0100
+@@ -1004,7 +1004,7 @@
+ /* 485 */
+   { ERR_ISREALSERVICE, "%s %s :Cannot kill, kick or deop a network service", "485" },
+ /* 486 */
+-  { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user", "486" },
++  { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user -- For details of how to obtain an account visit %s", "486" },
+ /* 487 */
+   { 0 },
+ /* 488 */

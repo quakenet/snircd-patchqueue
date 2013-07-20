@@ -1,0 +1,224 @@
+# HG changeset patch
+# Parent f49987f27c65a72ee0611e57c25a0c5309e5cec1
+
+diff -r f49987f27c65 include/gline.h
+--- a/include/gline.h	Sun Jul 14 18:24:36 2013 +0100
++++ b/include/gline.h	Sun Jul 14 18:25:15 2013 +0100
+@@ -136,6 +136,7 @@
+ 			 struct Gline *gline);
+ extern struct Gline *gline_find(char *userhost, unsigned int flags);
+ extern struct Gline *gline_lookup(struct Client *cptr, unsigned int flags);
++extern struct Gline *gline_lookup_badchan(char *userhost, unsigned int flags);
+ extern void gline_free(struct Gline *gline);
+ extern void gline_burst(struct Client *cptr);
+ extern int gline_resend(struct Client *cptr, struct Gline *gline);
+diff -r f49987f27c65 ircd/gline.c
+--- a/ircd/gline.c	Sun Jul 14 18:24:36 2013 +0100
++++ b/ircd/gline.c	Sun Jul 14 18:25:15 2013 +0100
+@@ -24,7 +24,9 @@
+ #include "config.h"
+ 
+ #include "gline.h"
++#include "channel.h"
+ #include "client.h"
++#include "hash.h"
+ #include "ircd.h"
+ #include "ircd_alloc.h"
+ #include "ircd_features.h"
+@@ -184,8 +186,8 @@
+ }
+ 
+ /** Check local clients against a new G-line.
+- * If the G-line is inactive or a badchan, return immediately.
+- * Otherwise, if any users match it, disconnect them.
++ * If the G-line is inactive, return immediately.
++ * Otherwise, if any users match it, disconnect them or kick them if the G-line is a BADCHAN.
+  * @param[in] cptr Peer connect that sent the G-line.
+  * @param[in] sptr Client that originated the G-line.
+  * @param[in] gline New G-line to check.
+@@ -200,53 +202,72 @@
+   if (feature_bool(FEAT_DISABLE_GLINES))
+     return 0; /* G-lines are disabled */
+ 
+-  if (GlineIsBadChan(gline)) /* no action taken on badchan glines */
+-    return 0;
+   if (!GlineIsActive(gline)) /* no action taken on inactive glines */
+     return 0;
+ 
+-  for (fd = HighestFd; fd >= 0; --fd) {
+-    /*
+-     * get the users!
+-     */
+-    if ((acptr = LocalClientArray[fd])) {
+-      if (!cli_user(acptr))
+-	continue;
++  if (GlineIsBadChan(gline)) {
++    /* Handle BADCHAN gline */
++    struct Channel *chptr,*nchptr;
++    struct Membership *member,*nmember;
+ 
+-      if (GlineIsRealName(gline)) { /* Realname Gline */
+-	Debug((DEBUG_DEBUG,"Realname Gline: %s %s",(cli_info(acptr)),
+-					gline->gl_user+2));
+-        if (match(gline->gl_user+2, cli_info(acptr)) != 0)
+-            continue;
+-        Debug((DEBUG_DEBUG,"Matched!"));
+-      } else { /* Host/IP gline */
+-        if (cli_user(acptr)->username &&
+-            match(gline->gl_user, (cli_user(acptr))->realusername) != 0)
++    for(chptr=GlobalChannelList;chptr;chptr=nchptr) {
++      nchptr=chptr->next;
++      if (match(gline->gl_user, chptr->chname))
++        continue;
++      for (member=chptr->members;member;member=nmember) {
++        nmember=member->next_member;
++        if (!MyUser(member->user) || IsZombie(member) || IsAnOper(member->user))
++          continue;
++        sendcmdto_serv_butone(&me, CMD_KICK, NULL, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
++        sendcmdto_channel_butserv_butone(&his, CMD_KICK, chptr, NULL, 0, "%H %C :Badchanneled (%s)", chptr, member->user, gline->gl_reason);
++        make_zombie(member, member->user, &me, &me, chptr);
++        retval=1;
++      }
++    }
++  } else {
++    for (fd = HighestFd; fd >= 0; --fd) {
++      /*
++       * get the users!
++       */
++      if ((acptr = LocalClientArray[fd])) {
++        if (!cli_user(acptr))
+           continue;
+ 
+-        if (GlineIsIpMask(gline)) {
+-          if (!ipmask_check(&cli_ip(acptr), &gline->gl_addr, gline->gl_bits))
++        if (GlineIsRealName(gline)) { /* Realname Gline */
++          Debug((DEBUG_DEBUG,"Realname Gline: %s %s",(cli_info(acptr)),
++					  gline->gl_user+2));
++          if (match(gline->gl_user+2, cli_info(acptr)) != 0)
++              continue;
++          Debug((DEBUG_DEBUG,"Matched!"));
++        } else { /* Host/IP gline */
++          if (cli_user(acptr)->username &&
++              match(gline->gl_user, (cli_user(acptr))->realusername) != 0)
+             continue;
++
++          if (GlineIsIpMask(gline)) {
++            if (!ipmask_check(&cli_ip(acptr), &gline->gl_addr, gline->gl_bits))
++              continue;
++          }
++          else {
++            if (match(gline->gl_host, cli_sockhost(acptr)) != 0)
++              continue;
++          }
+         }
+-        else {
+-          if (match(gline->gl_host, cli_sockhost(acptr)) != 0)
+-            continue;
+-        }
++
++        /* ok, here's one that got G-lined */
++        send_reply(acptr, SND_EXPLICIT | ERR_YOUREBANNEDCREEP, ":%s",
++        	   gline->gl_reason);
++
++        /* let the ops know about it */
++        sendto_opmask_butone(0, SNO_GLINE, "G-line active for %s",
++                             get_client_name(acptr, SHOW_IP));
++
++        /* and get rid of him */
++        /* Asuka - Reimplement HEAD_IN_SAND_GLINE from Lain */
++        if ((tval = exit_client_msg(cptr, acptr, &me, 
++            feature_bool(FEAT_HIS_GLINE) ? "G-lined" : "G-lined (%s)", gline->gl_reason)))
++        retval = tval; /* retain killed status */
+       }
+-
+-      /* ok, here's one that got G-lined */
+-      send_reply(acptr, SND_EXPLICIT | ERR_YOUREBANNEDCREEP, ":%s",
+-      	   gline->gl_reason);
+-
+-      /* let the ops know about it */
+-      sendto_opmask_butone(0, SNO_GLINE, "G-line active for %s",
+-                           get_client_name(acptr, SHOW_IP));
+-
+-      /* and get rid of him */
+-      /* Asuka - Reimplement HEAD_IN_SAND_GLINE from Lain */
+-      if ((tval = exit_client_msg(cptr, acptr, &me, 
+-          feature_bool(FEAT_HIS_GLINE) ? "G-lined" : "G-lined (%s)", gline->gl_reason)))
+-      retval = tval; /* retain killed status */
+     }
+   }
+   return retval;
+@@ -972,6 +993,29 @@
+   return gline;
+ }
+ 
++struct Gline *
++gline_lookup_badchan(char *userhost, unsigned int flags)
++{
++  struct Gline *gline;
++  struct Gline *sgline;
++
++  if (flags & (GLINE_BADCHAN | GLINE_ANY)) {
++    gliter(BadChanGlineList, gline, sgline) {
++      if ((flags & GLINE_GLOBAL && gline->gl_flags & GLINE_LOCAL) ||
++               (flags & GLINE_LASTMOD && !gline->gl_lastmod))
++          continue;
++
++      if ((flags & GLINE_EXACT ? ircd_strcmp(gline->gl_user, userhost) :
++              match(gline->gl_user, userhost)) == 0) {
++        if (GlineIsActive(gline))
++          return gline;
++      }
++    }
++  }
++
++  return 0;
++}
++
+ /** Find a matching G-line for a user.
+  * @param[in] cptr Client to compare against.
+  * @param[in] flags Bitwise combination of GLINE_GLOBAL and/or
+@@ -1162,6 +1206,16 @@
+ 	       GlineIsRemActive(gline) ? '+' : '-',
+ 	       gline->gl_reason);
+   }
++
++  gliter(BadChanGlineList, gline, sgline) {
++    send_reply(sptr, RPL_STATSGLINE, 'G', gline->gl_user, "", "", "", "",
++               gline->gl_expire + TSoffset, gline->gl_lastmod,
++               gline->gl_lifetime + TSoffset,
++               gline->gl_state == GLOCAL_ACTIVATED ? ">" :
++               (gline->gl_state == GLOCAL_DEACTIVATED ? "<" : ""),
++               GlineIsRemActive(gline) ? '+' : '-', gline->gl_reason);
++  }
++
+ }
+ 
+ /** Calculate memory used by G-lines.
+diff -r f49987f27c65 ircd/m_join.c
+--- a/ircd/m_join.c	Sun Jul 14 18:24:36 2013 +0100
++++ b/ircd/m_join.c	Sun Jul 14 18:25:15 2013 +0100
+@@ -150,9 +150,9 @@
+     }
+ 
+     /* BADCHANed channel */
+-    if ((gline = gline_find(name, GLINE_BADCHAN | GLINE_EXACT)) &&
+-	GlineIsActive(gline) && !IsAnOper(sptr)) {
+-      send_reply(sptr, ERR_BANNEDFROMCHAN, name);
++    if (!IsAnOper(sptr) 
++        && (gline = gline_lookup_badchan(name, GLINE_BADCHAN))) {
++      send_reply(sptr, ERR_BADCHANNAME, name, gline->gl_reason);
+       continue;
+     }
+ 
+diff -r f49987f27c65 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jul 14 18:24:36 2013 +0100
++++ b/ircd/s_err.c	Sun Jul 14 18:25:15 2013 +0100
+@@ -990,7 +990,7 @@
+ /* 478 */
+   { ERR_BANLISTFULL, "%s %s :Channel ban/ignore list is full", "478" },
+ /* 479 */
+-  { ERR_BADCHANNAME, "%s :Cannot join channel (access denied on this server)", "479" },
++  { ERR_BADCHANNAME, "%s :Cannot join channel (G-lined: %s)", "479" },
+ /* 480 */
+   { 0 },
+ /* 481 */

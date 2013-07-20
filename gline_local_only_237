@@ -1,0 +1,19 @@
+# HG changeset patch
+# Parent d851ff6bf30fce2780b4a6067a956a4e233f852d
+
+diff -r d851ff6bf30f ircd/m_gline.c
+--- a/ircd/m_gline.c	Fri Jul 19 22:26:20 2013 +0100
++++ b/ircd/m_gline.c	Fri Jul 19 22:32:03 2013 +0100
+@@ -525,12 +525,6 @@
+   if (flags & GLINE_LOCAL) {
+     assert(acptr);
+ 
+-    /* normalize the action, first */
+-    if (action == GLINE_LOCAL_ACTIVATE || action == GLINE_MODIFY)
+-      action = GLINE_ACTIVATE;
+-    else if (action == GLINE_LOCAL_DEACTIVATE)
+-      action = GLINE_DEACTIVATE;
+-
+     /* If it's not for us, forward */
+     /* UPDATE NOTE: Once all servers are updated to u2.10.12.11, the
+      * format string in this sendcmdto_one() may be updated to omit

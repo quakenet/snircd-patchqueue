@@ -1,0 +1,183 @@
+# HG changeset patch
+# Parent 4b1f7600b285020a1407751d8c50dfd3da5fc9b3
+
+diff -r 4b1f7600b285 include/client.h
+--- a/include/client.h	Sun Jul 14 00:17:45 2013 +0100
++++ b/include/client.h	Sun Jul 14 00:18:56 2013 +0100
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioswkgx"
++#define infousermodes "dioswkgxR"
+ 
+ /** Operator privileges. */
+ enum Priv
+@@ -165,6 +165,8 @@
+                                        don't display channels in /whois */
+     FLAG_DEBUG,                     /**< send global debug/anti-hack info */
+     FLAG_ACCOUNT,                   /**< account name has been set */
++    FLAG_ACCOUNTONLY,               /**< ASUKA_R: hide privmsgs/notices if
++				      user is not authed or opered */
+     FLAG_HIDDENHOST,                /**< user's host is hidden */
+     FLAG_LAST_FLAG,                 /**< number of flags */
+     FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
+@@ -581,6 +583,9 @@
+ #define IsHiddenHost(x)         HasFlag(x, FLAG_HIDDENHOST)
+ /** Return non-zero if the client has an active PING request. */
+ #define IsPingSent(x)           HasFlag(x, FLAG_PINGSENT)
++/** Return non-zero if the client should not receive privmsgs/notices
++ * from unauthed users */
++#define IsAccountOnly(x)        HasFlag(x, FLAG_ACCOUNTONLY)
+ 
+ /** Return non-zero if the client has operator or server privileges. */
+ #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
+@@ -627,6 +632,8 @@
+ #define SetHiddenHost(x)        SetFlag(x, FLAG_HIDDENHOST)
+ /** Mark a client as having a pending PING. */
+ #define SetPingSent(x)          SetFlag(x, FLAG_PINGSENT)
++/** Mark a client as having mode +R (account only). */
++#define SetAccountOnly(x)       SetFlag(x, FLAG_ACCOUNTONLY)
+ 
+ /** Return non-zero if \a sptr sees \a acptr as an operator. */
+ #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
+@@ -662,6 +669,8 @@
+ #define ClearPingSent(x)        ClrFlag(x, FLAG_PINGSENT)
+ /** Clear the client's HUB flag. */
+ #define ClearHub(x)             ClrFlag(x, FLAG_HUB)
++/** Remove mode +R (account only) from a client */
++#define ClearAccountOnly(x)     ClrFlag(x, FLAG_ACCOUNTONLY)
+ 
+ /* free flags */
+ #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
+diff -r 4b1f7600b285 include/numeric.h
+--- a/include/numeric.h	Sun Jul 14 00:17:45 2013 +0100
++++ b/include/numeric.h	Sun Jul 14 00:18:56 2013 +0100
+@@ -181,14 +181,14 @@
+ #define RPL_ENDOFGLIST       281        /* Undernet extension */
+ #define RPL_JUPELIST         282        /* Undernet extension - jupe -Kev */
+ #define RPL_ENDOFJUPELIST    283        /* Undernet extension - jupe -Kev */
+-#define RPL_FEATURE	     284	/* Undernet extension - features */
+-/*      RPL_CHANINFO_HANDLE  285           aircd */
+-/*      RPL_CHANINFO_USERS   286           aircd */
+-/*      RPL_CHANINFO_CHOPS   287           aircd */
+-/*      RPL_CHANINFO_VOICES  288           aircd */
+-/*      RPL_CHANINFO_AWAY    289           aircd */
+-/*      RPL_CHANINFO_OPERS   290           aircd */
+-/*	RPL_HELPHDR	     290	Numeric List: Dalnet */
++#define RPL_FEATURE          284        /* QuakeNet - Asuka */
++#define RPL_NEWHOSTIS        285        /* QuakeNet - Asuka */
++#define RPL_CHKHEAD          286        /* QuakeNet - Asuka */
++#define RPL_CHANUSER         287        /* QuakeNet - Asuka */
++#define RPL_PATCHHEAD        288        /* QuakeNet - Asuka */
++#define RPL_PATCHCON         289        /* QuakeNet - Asuka */
++#define RPL_DATASTR          290        /* QuakeNet - Asuka */
++#define RPL_ENDOFCHECK	      291        /* QuakeNet - Asuka */
+ /*      RPL_CHANINFO_BANNED  291           aircd */
+ /*	RPL_HELPOP	     291	Numeric List: Dalnet */
+ /*      RPL_CHANINFO_BANS    292           aircd */
+@@ -325,6 +325,7 @@
+ #define ERR_TOOMANYCHANNELS  405
+ #define ERR_WASNOSUCHNICK    406
+ #define ERR_TOOMANYTARGETS   407
++#define ERR_SEARCHNOMATCH    408		 /* QuakeNet - Asuka */
+ /*      ERR_NOSUCHSERVICE    408  IRCnet */
+ /*	ERR_NOCOLORSONCHAN   408  Dalnet */
+ #define ERR_NOORIGIN         409
+@@ -413,6 +414,7 @@
+ /*	ERR_KILLDENY         485	   unreal */
+ /*	ERR_CANTKICKADMIN    485	   PTlink */
+ /*	ERR_HTMDISABLED      486	   unreal */
++#define ERR_ACCOUNTONLY      486	/* QuakeNet/ASUKA extension */
+ /*      ERR_CHANTOORECENT    487           IRCnet extension (?) */
+ /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
+ #define ERR_VOICENEEDED      489        /* Undernet extension */
+diff -r 4b1f7600b285 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sun Jul 14 00:17:45 2013 +0100
++++ b/ircd/ircd_relay.c	Sun Jul 14 00:18:56 2013 +0100
+@@ -340,6 +340,16 @@
+       is_silenced(sptr, acptr))
+     return;
+ 
++  /* ASUKA -- slug
++   * +R check, if target is +R and we're not +r (or opered) then
++   * deny the message
++   */
++
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr)) {
++    send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr));
++    return;
++  }
++
+   /*
+    * send away message if user away
+    */
+@@ -375,6 +385,15 @@
+        check_target_limit(sptr, acptr, cli_name(acptr), 0)) ||
+       is_silenced(sptr, acptr))
+     return;
++
++  /* ASUKA -- slug
++   * +R check, if target is +R and we're not +r (or opered) then
++   * deny the message
++   */
++
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr))
++    return;
++
+   /*
+    * deliver the message
+    */
+diff -r 4b1f7600b285 ircd/m_invite.c
+--- a/ircd/m_invite.c	Sun Jul 14 00:17:45 2013 +0100
++++ b/ircd/m_invite.c	Sun Jul 14 00:18:56 2013 +0100
+@@ -166,6 +166,11 @@
+ 
+   /* If we get here, it was a VALID and meaningful INVITE */
+ 
++  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsOper(sptr)) {
++    send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr));
++    return 0;
++  }
++  
+   if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
+     return 0;
+ 
+diff -r 4b1f7600b285 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jul 14 00:17:45 2013 +0100
++++ b/ircd/s_err.c	Sun Jul 14 00:18:56 2013 +0100
+@@ -1004,7 +1004,7 @@
+ /* 485 */
+   { 0 },
+ /* 486 */
+-  { 0 },
++  { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user", "486" },
+ /* 487 */
+   { 0 },
+ /* 488 */
+diff -r 4b1f7600b285 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 14 00:17:45 2013 +0100
++++ b/ircd/s_user.c	Sun Jul 14 00:18:56 2013 +0100
+@@ -502,7 +502,8 @@
+   { FLAG_CHSERV,      'k' },
+   { FLAG_DEBUG,       'g' },
+   { FLAG_ACCOUNT,     'r' },
+-  { FLAG_HIDDENHOST,  'x' }
++  { FLAG_HIDDENHOST,  'x' },
++  { FLAG_ACCOUNTONLY, 'R' }
+ };
+ 
+ /** Length of #userModeList. */
+@@ -1088,6 +1089,12 @@
+ 	}
+ 	/* There is no -r */
+ 	break;
++      case 'R':
++        if (what == MODE_ADD)
++          SetAccountOnly(sptr);
++        else
++          ClearAccountOnly(sptr);
++        break;
+       default:
+         send_reply(sptr, ERR_UMODEUNKNOWNFLAG, *m);
+         break;

@@ -1,0 +1,67 @@
+# HG changeset patch
+# Parent a8a86296d9e4fcda52b9e30a7ee275c8045444c6
+
+diff -r a8a86296d9e4 include/s_conf.h
+--- a/include/s_conf.h	Sat Jul 13 23:26:11 2013 +0100
++++ b/include/s_conf.h	Sat Jul 13 23:40:05 2013 +0100
+@@ -181,7 +181,7 @@
+ extern enum AuthorizationCheckResult conf_check_client(struct Client *cptr);
+ extern int  conf_check_server(struct Client *cptr);
+ extern int rehash(struct Client *cptr, int sig);
+-extern int find_kill(struct Client *cptr);
++extern int find_kill(struct Client *cptr, int glinecheck);
+ extern const char *find_quarantine(const char* chname);
+ extern void lookup_confhost(struct ConfItem *aconf);
+ extern void conf_parse_userhost(struct ConfItem *aconf, char *host);
+diff -r a8a86296d9e4 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 13 23:26:11 2013 +0100
++++ b/ircd/s_auth.c	Sat Jul 13 23:40:05 2013 +0100
+@@ -267,7 +267,7 @@
+     return exit_client(sptr, sptr, &me, "USER: Bogus userid.");
+ 
+   /* Check for K- or G-line. */
+-  killreason = find_kill(sptr);
++  killreason = find_kill(sptr, 1);
+   if (killreason) {
+     ServerStats->is_ref++;
+     return exit_client(sptr, sptr, &me,
+diff -r a8a86296d9e4 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sat Jul 13 23:26:11 2013 +0100
++++ b/ircd/s_conf.c	Sat Jul 13 23:40:05 2013 +0100
+@@ -983,7 +983,7 @@
+        * get past K/G's etc, we'll "fix" the bug by actually explaining
+        * whats going on.
+        */
+-      if ((found_g = find_kill(acptr))) {
++      if ((found_g = find_kill(acptr, 0))) {
+         sendto_opmask_butone(0, found_g == -2 ? SNO_GLINE : SNO_OPERKILL,
+                              found_g == -2 ? "G-line active for %s%s" :
+                              "K-line active for %s%s",
+@@ -1034,10 +1034,11 @@
+ /** Searches for a K/G-line for a client.  If one is found, notify the
+  * user and disconnect them.
+  * @param cptr Client to search for.
++ * @param glinecheck Whether we check for glines.
+  * @return 0 if client is accepted; -1 if client was locally denied
+  * (K-line); -2 if client was globally denied (G-line).
+  */
+-int find_kill(struct Client *cptr)
++int find_kill(struct Client *cptr, int glinecheck)
+ {
+   const char*      host;
+   const char*      name;
+@@ -1084,7 +1085,13 @@
+     return -1;
+   }
+ 
+-  if (!feature_bool(FEAT_DISABLE_GLINES) && (agline = gline_lookup(cptr, 0))) {
++  /* added glinecheck to define if we check for glines too, shouldn't happen
++   * when rehashing as it is causing problems with big servers and lots of glines.
++   * Think of a 18000 user leaf with 18000 glines present, this will probably
++   * cause the server to split from the net.
++   * -skater_x
++   */
++  if (glinecheck && !feature_bool(FEAT_DISABLE_GLINES) && (agline = gline_lookup(cptr, 0))) {
+     /*
+      * find active glines
+      * added a check against the user's IP address to find_gline() -Kev

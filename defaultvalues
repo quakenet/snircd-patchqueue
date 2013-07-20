@@ -1,0 +1,45 @@
+# HG changeset patch
+# Parent ef3a29fdec12f0904e29d5c3cc87f279ab11ea8d
+
+diff -r ef3a29fdec12 include/ircd_defs.h
+--- a/include/ircd_defs.h	Sat Jul 13 23:18:33 2013 +0100
++++ b/include/ircd_defs.h	Sun Jul 14 13:01:14 2013 +0100
+@@ -68,7 +68,7 @@
+  * with the ACCOUNT (AC) command.  This is used for keeping track of who's
+  * logged into which account, for the benefit of irc services.
+  */
+-#define ACCOUNTLEN      12
++#define ACCOUNTLEN      15
+ /** Maximum length for user supplied information about a client
+  * connection (gcos). This information is set at client/server registration
+  * time.
+@@ -83,7 +83,7 @@
+ #define SOCKIPLEN 45
+ /** Maximum length for channel topics and kill comments.
+  */
+-#define TOPICLEN        160
++#define TOPICLEN        250
+ /** Maximum length for away messages.
+  */
+ #define AWAYLEN		160
+@@ -95,7 +95,7 @@
+ /** Maximum available targets for a user. */
+ #define MAXTARGETS      20
+ /** Starting free targets for a user. */
+-#define STARTTARGETS    10
++#define STARTTARGETS    20
+ /** Target number to start assigning new targets. */
+ #define RESERVEDTARGETS 12
+ 
+diff -r ef3a29fdec12 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sat Jul 13 23:18:33 2013 +0100
++++ b/ircd/ircd_features.c	Sun Jul 14 13:01:14 2013 +0100
+@@ -329,7 +329,7 @@
+   /* features that probably should not be touched */
+   F_I(KILLCHASETIMELIMIT, 0, 30, 0),
+   F_I(MAXCHANNELSPERUSER, 0, 10, 0),
+-  F_I(NICKLEN, 0, 12, 0),
++  F_I(NICKLEN, 0, 15, 0),
+   F_I(AVBANLEN, 0, 40, 0),
+   F_I(MAXBANS, 0, 50, 0),
+   F_I(MAXSILES, 0, 25, 0),

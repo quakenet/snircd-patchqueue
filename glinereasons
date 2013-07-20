@@ -1,0 +1,188 @@
+# HG changeset patch
+# Parent 00dd98db050614640ffaf02955cb83f24b70e41b
+
+diff -r 00dd98db0506 include/s_conf.h
+--- a/include/s_conf.h	Sun Jul 14 22:01:19 2013 +0100
++++ b/include/s_conf.h	Sun Jul 14 22:20:53 2013 +0100
+@@ -196,7 +196,7 @@
+ extern enum AuthorizationCheckResult conf_check_client(struct Client *cptr);
+ extern int  conf_check_server(struct Client *cptr);
+ extern int rehash(struct Client *cptr, int sig);
+-extern int find_kill(struct Client *cptr, int glinecheck);
++extern int find_kill(struct Client *cptr, int glinecheck, char **reason);
+ extern const char *find_quarantine(const char* chname);
+ extern void lookup_confhost(struct ConfItem *aconf);
+ extern void conf_parse_userhost(struct ConfItem *aconf, char *host);
+diff -r 00dd98db0506 ircd/channel.c
+--- a/ircd/channel.c	Sun Jul 14 22:01:19 2013 +0100
++++ b/ircd/channel.c	Sun Jul 14 22:20:53 2013 +0100
+@@ -2921,7 +2921,16 @@
+   newban->flags = ((state->dir == MODE_ADD) ? BAN_ADD : BAN_DEL)
+       | (*flag_p == MODE_BAN ? 0 : BAN_EXCEPTION);
+   set_ban_mask(newban, collapse(pretty_mask(t_str)));
+-  ircd_strncpy(newban->who, IsUser(state->sptr) ? cli_name(state->sptr) : "*", NICKLEN);
++
++  /* source not a user OR feat HIS_MODEWHO enabled and ban set with /OPMODE
++    so hide the source in banlist - wiebe */
++  if (!IsUser(state->sptr) || 
++    (feature_bool(FEAT_HIS_MODEWHO) && state->mbuf != NULL && (state->mbuf->mb_dest & MODEBUF_DEST_OPMODE))) {
++    ircd_strncpy(newban->who, "*", NICKLEN);
++  } else {
++    ircd_strncpy(newban->who, cli_name(state->sptr), NICKLEN);
++  }
++
+   newban->when = TStime();
+   apply_ban(&state->chptr->banlist, newban, 0);
+ }
+diff -r 00dd98db0506 ircd/gline.c
+--- a/ircd/gline.c	Sun Jul 14 22:01:19 2013 +0100
++++ b/ircd/gline.c	Sun Jul 14 22:20:53 2013 +0100
+@@ -282,6 +282,9 @@
+                              get_client_name(acptr, SHOW_IP));
+ 
+         /* and get rid of him */
++        /* WARNING: code in exit_client() relies on the quit message starting with
++         * G-lined or K-lined for HIS purposes
++         */
+         if ((tval = exit_client_msg(cptr, acptr, &me, "G-lined (%s)", gline->gl_reason))) 
+         retval = tval; /* retain killed status */
+       }
+diff -r 00dd98db0506 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sun Jul 14 22:01:19 2013 +0100
++++ b/ircd/s_auth.c	Sun Jul 14 22:20:53 2013 +0100
+@@ -233,6 +233,7 @@
+   short digitgroups = 0;
+   char  ch;
+   char  last;
++  char *reason;
+ 
+   if (FlagHas(&auth->flags, AR_IAUTH_USERNAME))
+   {
+@@ -267,11 +268,14 @@
+     return exit_client(sptr, sptr, &me, "USER: Bogus userid.");
+ 
+   /* Check for K- or G-line. */
+-  killreason = find_kill(sptr, 1);
++  killreason = find_kill(sptr, 1, &reason);
+   if (killreason) {
+     ServerStats->is_ref++;
+-    return exit_client(sptr, sptr, &me,
+-                       (killreason == -1 ? "K-lined" : "G-lined"));
++   /* WARNING: code in exit_client() relies on the quit message starting with
++    * G-lined or K-lined for HIS purposes
++    */
++    return exit_client_msg(sptr, sptr, &me, "%s (%s)",
++                       (killreason == -1 ? "K-lined" : "G-lined"), reason);
+   }
+ 
+   if (!FlagHas(&auth->flags, AR_IAUTH_FUSERNAME))
+diff -r 00dd98db0506 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sun Jul 14 22:01:19 2013 +0100
++++ b/ircd/s_conf.c	Sun Jul 14 22:20:53 2013 +0100
+@@ -909,6 +909,7 @@
+   int               i;
+   int               ret = 0;
+   int               found_g = 0;
++  char *reason;
+ 
+   if (1 == sig)
+     sendto_opmask_butone(0, SNO_OLDSNO,
+@@ -986,14 +987,17 @@
+        * get past K/G's etc, we'll "fix" the bug by actually explaining
+        * whats going on.
+        */
+-      if ((found_g = find_kill(acptr, 0))) {
++      if ((found_g = find_kill(acptr, 0, &reason))) {
+         sendto_opmask_butone(0, found_g == -2 ? SNO_GLINE : SNO_OPERKILL,
+                              found_g == -2 ? "G-line active for %s%s" :
+                              "K-line active for %s%s",
+                              IsUnknown(acptr) ? "Unregistered Client ":"",
+                              get_client_name(acptr, SHOW_IP));
+-        if (exit_client(cptr, acptr, &me, found_g == -2 ? "G-lined" :
+-            "K-lined") == CPTR_KILLED)
++      /* WARNING: code in exit_client() relies on the quit message starting with
++       * G-lined or K-lined for HIS purposes
++       */
++        if (exit_client_msg(cptr, acptr, &me, "%s (%s)", found_g == -2 ? "G-lined" :
++            "K-lined", reason) == CPTR_KILLED)
+           ret = CPTR_KILLED;
+       }
+     }
+@@ -1038,10 +1042,11 @@
+  * user and disconnect them.
+  * @param cptr Client to search for.
+  * @param glinecheck Whether we check for glines.
++ * @param reason Where the reason is stored 
+  * @return 0 if client is accepted; -1 if client was locally denied
+  * (K-line); -2 if client was globally denied (G-line).
+  */
+-int find_kill(struct Client *cptr, int glinecheck)
++int find_kill(struct Client *cptr, int glinecheck, char **reason)
+ {
+   const char*      host;
+   const char*      name;
+@@ -1076,14 +1081,18 @@
+     } else if (deny->hostmask && match(deny->hostmask, host))
+       continue;
+ 
+-    if (EmptyString(deny->message))
++    if (EmptyString(deny->message)) {
+       send_reply(cptr, SND_EXPLICIT | ERR_YOUREBANNEDCREEP,
+                  ":Connection from your host is refused on this server.");
+-    else {
+-      if (deny->flags & DENY_FLAGS_FILE)
++      *reason = "Connection from your host is refused on this server.";
++    } else {
++      if (deny->flags & DENY_FLAGS_FILE) {
+         killcomment(cptr, deny->message);
+-      else
+-        send_reply(cptr, SND_EXPLICIT | ERR_YOUREBANNEDCREEP, ":%s.", deny->message);
++        *reason = "Connection from your host is refused on this server.";
++      } else {
++        send_reply(cptr, SND_EXPLICIT | ERR_YOUREBANNEDCREEP, ":%s", deny->message);
++        *reason = deny->message;
++      }        
+     }
+     return -1;
+   }
+@@ -1099,7 +1108,8 @@
+      * find active glines
+      * added a check against the user's IP address to find_gline() -Kev
+      */
+-    send_reply(cptr, SND_EXPLICIT | ERR_YOUREBANNEDCREEP, ":%s.", GlineReason(agline));
++    send_reply(cptr, SND_EXPLICIT | ERR_YOUREBANNEDCREEP, ":%s", GlineReason(agline));
++    *reason = GlineReason(agline);
+     return -2;
+   }
+ 
+diff -r 00dd98db0506 ircd/s_misc.c
+--- a/ircd/s_misc.c	Sun Jul 14 22:01:19 2013 +0100
++++ b/ircd/s_misc.c	Sun Jul 14 22:20:53 2013 +0100
+@@ -495,18 +495,20 @@
+       if (IsServer(victim))
+ 	sendcmdto_one(killer, CMD_SQUIT, dlp->value.cptr, "%s %Tu :%s",
+ 		      cli_name(victim), cli_serv(victim)->timestamp, comment);
+-      else if (IsUser(victim) && !HasFlag(victim, FLAG_KILLED))
+-	sendcmdto_one(victim, CMD_QUIT, dlp->value.cptr, ":%s", comment);
++      else if (IsUser(victim) && !HasFlag(victim, FLAG_KILLED)) {
++        /* do not show G-line or K-line reasons to other users, so remove them - wiebe */
++        if (!strncmp(comment, "G-lined", 7))
++          comment = "G-lined";
++        else if (!strncmp(comment, "K-lined", 7))
++          comment = "K-lined";
++  sendcmdto_one(victim, CMD_QUIT, dlp->value.cptr, ":%s", comment);
++      }
+     }
+   }
+   /* Then remove the client structures */
+   if (IsServer(victim))
+     exit_downlinks(victim, killer, comment1);
+-
+-  if (strncmp(comment, "G-lined", 7))  
+-    exit_one_client(victim, comment); 
+-  else 
+-    exit_one_client(victim, "G-lined");
++  exit_one_client(victim, comment); 
+ 
+   /*
+    *  cptr can only have been killed if it was cptr itself that got killed here,

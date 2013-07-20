@@ -1,0 +1,73 @@
+# HG changeset patch
+# Parent d7905eb87f42cac8a0ca4281ec96e2a8c767ef4b
+
+diff -r d7905eb87f42 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sun Jul 14 23:14:33 2013 +0100
++++ b/ircd/s_auth.c	Sun Jul 14 23:16:55 2013 +0100
+@@ -224,13 +224,10 @@
+   char *s;
+   int   rlen = USERLEN;
+   int   killreason;
+-  short upper = 0;
+-  short lower = 0;
++  short character = 0;
+   short pos = 0;
+-  short leadcaps = 0;
+   short other = 0;
+   short digits = 0;
+-  short digitgroups = 0;
+   char  ch;
+   char  last;
+   char *reason;
+@@ -288,27 +285,13 @@
+          (ch = *d++) != '\0';
+          pos++, last = ch)
+     {
+-      if (IsLower(ch))
++      if (IsLower(ch) || IsUpper(ch))
+       {
+-        lower++;
+-      }
+-      else if (IsUpper(ch))
+-      {
+-        upper++;
+-        /* Accept caps as leading if we haven't seen lower case or digits yet. */
+-        if ((leadcaps || pos == 0) && !lower && !digits)
+-          leadcaps++;
++        character++;
+       }
+       else if (IsDigit(ch))
+       {
+         digits++;
+-        if (pos == 0 || !IsDigit(last))
+-        {
+-          digitgroups++;
+-          /* If more than two groups of digits, reject. */
+-          if (digitgroups > 2)
+-            goto badid;
+-        }
+       }
+       else if (ch == '-' || ch == '_' || ch == '.')
+       {
+@@ -321,20 +304,8 @@
+         goto badid;
+     }
+ 
+-    /* If mixed case, first must be capital, but no more than three;
+-     * but if three capitals, they must all be leading. */
+-    if (lower && upper && (!leadcaps || leadcaps > 3 ||
+-                           (upper > 2 && upper > leadcaps)))
+-      goto badid;
+-    /* If two different groups of digits, one must be either at the
+-     * start or end. */
+-    if (digitgroups == 2 && !(IsDigit(s[0]) || IsDigit(ch)))
+-      goto badid;
+     /* Must have at least one letter. */
+-    if (!lower && !upper)
+-      goto badid;
+-    /* Final character must not be punctuation. */
+-    if (!IsAlnum(last))
++    if (!character)
+       goto badid;
+   }
+ 

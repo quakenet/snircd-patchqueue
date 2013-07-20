@@ -1,0 +1,98 @@
+# HG changeset patch
+# Parent d5b15de617d54c694b84bd32b96cdb5e88491a9f
+
+diff -r d5b15de617d5 include/client.h
+--- a/include/client.h	Sun Jul 14 17:56:54 2013 +0100
++++ b/include/client.h	Sun Jul 14 18:05:01 2013 +0100
+@@ -257,7 +257,7 @@
+                                      server, XXX if this is a user */
+   time_t         cli_firsttime;   /**< time client was created */
+   time_t         cli_lastnick;    /**< TimeStamp on nick */
+-  int            cli_marker;      /**< /who processing marker */
++  unsigned int   cli_marker;      /**< processing marker */
+   struct Flags   cli_flags;       /**< client flags */
+   unsigned int   cli_hopcount;    /**< number of servers to this 0 = local */
+   struct irc_in_addr cli_ip;      /**< Real IP of client */
+@@ -774,6 +774,7 @@
+ 			     struct Connection** con_p);
+ extern void client_set_privs(struct Client *client, struct ConfItem *oper);
+ extern int client_report_privs(struct Client* to, struct Client* client);
++extern unsigned int get_client_marker(void);
+ 
+ #endif /* INCLUDED_client_h */
+ 
+diff -r d5b15de617d5 ircd/client.c
+--- a/ircd/client.c	Sun Jul 14 17:56:54 2013 +0100
++++ b/ircd/client.c	Sun Jul 14 18:05:01 2013 +0100
+@@ -264,3 +264,24 @@
+ 
+   return 0;
+ }
++
++/*
++ * A little spin-marking utility to tell us which clients we have already
++ * processed and which not
++ */
++unsigned int get_client_marker(void)
++{
++  static unsigned int marker = 0;
++
++  if (!++marker)
++  {
++    struct Client *cptr;
++    for (cptr=GlobalClientList;cptr;cptr=cli_next(cptr))
++    {
++      cli_marker(cptr) = 0;
++    }
++    marker++;
++  }
++
++  return marker;
++}
+diff -r d5b15de617d5 ircd/m_who.c
+--- a/ircd/m_who.c	Sun Jul 14 17:56:54 2013 +0100
++++ b/ircd/m_who.c	Sun Jul 14 18:05:01 2013 +0100
+@@ -99,26 +99,6 @@
+ /* #include <assert.h> -- Now using assert in ircd_log.h */
+ #include <string.h>
+ 
+-
+-/*
+- * A little spin-marking utility to tell us which clients we have already
+- * processed and which not
+- */
+-static int who_marker = 0;
+-static void move_marker(void)
+-{
+-  if (!++who_marker)
+-  {
+-    struct Client *cptr = GlobalClientList;
+-    while (cptr)
+-    {
+-      cli_marker(cptr) = 0;
+-      cptr = cli_next(cptr);
+-    }
+-    who_marker++;
+-  }
+-}
+-
+ #define CheckMark(x, y) ((x == y) ? 0 : (x = y))
+ #define Process(cptr) CheckMark(cli_marker(cptr), who_marker)
+ 
+@@ -155,6 +135,7 @@
+   char *p;                      /* Scratch char pointer                     */
+   char *qrt;                    /* Pointer to the query type                */
+   static char mymask[512];      /* To save the mask before corrupting it    */
++  unsigned int who_marker;      /* Used to mark clients we've touched       */
+ 
+   /* Let's find where is our mask, and if actually contains something */
+   mask = ((parc > 1) ? parv[1] : 0);
+@@ -309,7 +290,7 @@
+   counter = (2048 / (counter + 4));
+   if (mask && (strlen(mask) > 510))
+     mask[510] = '\0';
+-  move_marker();
++  who_marker = get_client_marker();
+   commas = (mask && strchr(mask, ','));
+ 
+   /* First treat mask as a list of plain nicks/channels */

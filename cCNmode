@@ -1,0 +1,292 @@
+# HG changeset patch
+# Parent 83c47745bd7655fa087616d2a8a7c3a02b299854
+
+diff -r 83c47745bd76 include/channel.h
+--- a/include/channel.h	Fri Jul 19 22:32:32 2013 +0100
++++ b/include/channel.h	Fri Jul 19 22:49:07 2013 +0100
+@@ -101,8 +101,12 @@
+ #define MODE_LIMIT      0x0400		/**< +l Limit */
+ #define MODE_REGONLY    0x0800  	/**< Only +r users may join */
+ #define MODE_DELJOINS   0x1000  	/**< New join messages are delayed */
+-#define MODE_REGISTERED 0x2000  	/**< Channel marked as registered
+-					 * (for future semantic expansion) */
++#define MODE_REGISTERED 0x2000          /**< Channel marked as registered
++                                         * (for future semantic expansion) */
++#define MODE_NOCOLOUR   0x4000          /**< No mIRC/ANSI colors/bold */
++#define MODE_NOCTCP     0x8000          /**< No channel CTCPs */
++#define MODE_NONOTICE   0x10000          /**< No channel notices */
++
+ #define MODE_SAVE	0x20000		/**< save this mode-with-arg 'til 
+ 					 * later */
+ #define MODE_FREE	0x40000 	/**< string needs to be passed to 
+@@ -119,7 +123,7 @@
+ #define MODE_WPARAS     (MODE_CHANOP|MODE_VOICE|MODE_BAN|MODE_KEY|MODE_LIMIT|MODE_APASS|MODE_UPASS)
+ 
+ /** Available Channel modes */
+-#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDR" : "biklmnopstvrDR"
++#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDRcCNu" : "biklmnopstvrDRcCNu"
+ /** Available Channel modes that take parameters */
+ #define infochanmodeswithparams feature_bool(FEAT_OPLEVELS) ? "AbkloUv" : "bklov"
+ 
+diff -r 83c47745bd76 include/supported.h
+--- a/include/supported.h	Fri Jul 19 22:32:32 2013 +0100
++++ b/include/supported.h	Fri Jul 19 22:49:07 2013 +0100
+@@ -65,7 +65,7 @@
+ #define FEATURESVALUES2 NICKLEN, TOPICLEN, AWAYLEN, TOPICLEN, \
+                         feature_int(FEAT_CHANNELLEN), CHANNELLEN, \
+                         (feature_bool(FEAT_LOCAL_CHANNELS) ? "#&" : "#"), "(ov)@+", "@+", \
+-                        (feature_bool(FEAT_OPLEVELS) ? "b,AkU,l,imnpstrDdRu" : "b,k,l,imnpstrDdRu"), \
++                        (feature_bool(FEAT_OPLEVELS) ? "b,AkU,l,imnpstrDdRucCN" : "b,k,l,imnpstrDdRucCN"), \
+                         "rfc1459", feature_str(FEAT_NETWORK)
+ 
+ #endif /* INCLUDED_supported_h */
+diff -r 83c47745bd76 ircd/channel.c
+--- a/ircd/channel.c	Fri Jul 19 22:32:32 2013 +0100
++++ b/ircd/channel.c	Fri Jul 19 22:49:07 2013 +0100
+@@ -835,6 +835,12 @@
+     *mbuf++ = 'n';
+   if (chptr->mode.mode & MODE_REGONLY)
+     *mbuf++ = 'r';
++  if (chptr->mode.mode & MODE_NOCOLOUR)
++    *mbuf++ = 'c';
++  if (chptr->mode.mode & MODE_NOCTCP)
++    *mbuf++ = 'C';
++  if (chptr->mode.mode & MODE_NONOTICE)
++    *mbuf++ = 'N';
+   if (chptr->mode.mode & MODE_NOQUITPARTS)
+     *mbuf++ = 'u';
+   if (chptr->mode.mode & MODE_DELJOINS)
+@@ -1289,9 +1295,9 @@
+     MODE_INVITEONLY,    'i',
+     MODE_NOPRIVMSGS,    'n',
+     MODE_REGONLY,       'r',
+-/*    MODE_NOCOLOUR,      'c',
++    MODE_NOCOLOUR,      'c',
+     MODE_NOCTCP,        'C',
+-    MODE_NONOTICE,      'N',*/
++    MODE_NONOTICE,      'N',
+     MODE_DELJOINS,      'D',
+     MODE_NOQUITPARTS,   'u'
+   };
+@@ -1591,6 +1597,9 @@
+ /*  MODE_APASS,		'A', */
+ /*  MODE_UPASS,		'U', */
+     MODE_NOQUITPARTS,   'u',
++    MODE_NOCOLOUR,      'c',
++    MODE_NOCTCP,        'C',
++    MODE_NONOTICE,	'N',
+     0x0, 0x0
+   };
+   static int local_flags[] = {
+@@ -2016,7 +2025,8 @@
+ 
+   mode &= (MODE_ADD | MODE_DEL | MODE_PRIVATE | MODE_SECRET | MODE_MODERATED |
+ 	   MODE_TOPICLIMIT | MODE_INVITEONLY | MODE_NOPRIVMSGS | MODE_REGONLY |
+-           MODE_DELJOINS | MODE_WASDELJOINS | MODE_REGISTERED | MODE_NOQUITPARTS);
++           MODE_DELJOINS | MODE_WASDELJOINS | MODE_REGISTERED | MODE_NOQUITPARTS |
++           MODE_NOCOLOUR | MODE_NOCTCP | MODE_NONOTICE);
+ 
+   if (!(mode & ~(MODE_ADD | MODE_DEL))) /* don't add empty modes... */
+     return;
+@@ -2150,6 +2160,9 @@
+     MODE_REGONLY,	'r',
+     MODE_DELJOINS,      'D',
+     MODE_NOQUITPARTS,   'u',
++    MODE_NOCOLOUR,      'c',
++    MODE_NOCTCP,        'C',
++    MODE_NONOTICE,      'N',
+     0x0, 0x0
+   };
+   unsigned int add;
+@@ -3303,6 +3316,9 @@
+     MODE_REGONLY,	'r',
+     MODE_DELJOINS,      'D',
+     MODE_NOQUITPARTS,   'u',
++    MODE_NOCOLOUR,      'c',
++    MODE_NOCTCP,        'C',
++    MODE_NONOTICE,      'N',
+     MODE_ADD,		'+',
+     MODE_DEL,		'-',
+     0x0, 0x0
+diff -r 83c47745bd76 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Fri Jul 19 22:32:32 2013 +0100
++++ b/ircd/ircd_relay.c	Fri Jul 19 22:49:07 2013 +0100
+@@ -86,6 +86,7 @@
+ void relay_channel_message(struct Client* sptr, const char* name, const char* text)
+ {
+   struct Channel* chptr;
++  const char *ch;
+   assert(0 != sptr);
+   assert(0 != name);
+   assert(0 != text);
+@@ -105,6 +106,21 @@
+       check_target_limit(sptr, chptr, chptr->chname, 0))
+     return;
+ 
++  /* +cC checks */
++  if (chptr->mode.mode & MODE_NOCOLOUR)
++    for (ch=text;*ch;ch++)
++      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
++        send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
++        return;
++      }
++
++  if ((chptr->mode.mode & MODE_NOCTCP) && ircd_strncmp(text,"\001ACTION ",8))
++    for (ch=text;*ch;)
++      if (*ch++==1) {
++        send_reply(sptr, ERR_CANNOTSENDTOCHAN, chptr->chname);
++        return;
++      }
++
+   RevealDelayedJoinIfNeeded(sptr, chptr);
+   sendcmdto_channel_butone(sptr, CMD_PRIVATE, chptr, cli_from(sptr),
+ 			   SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
+@@ -119,6 +135,7 @@
+ void relay_channel_notice(struct Client* sptr, const char* name, const char* text)
+ {
+   struct Channel* chptr;
++  const char *ch;
+   assert(0 != sptr);
+   assert(0 != name);
+   assert(0 != text);
+@@ -135,6 +152,20 @@
+       check_target_limit(sptr, chptr, chptr->chname, 0))
+     return;
+ 
++  if ((chptr->mode.mode & MODE_NONOTICE))
++    return;
++
++  /* +cC checks */
++  if (chptr->mode.mode & MODE_NOCOLOUR)
++    for (ch=text;*ch;ch++)
++      if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31)
++        return;
++
++  if (chptr->mode.mode & MODE_NOCTCP)
++    for (ch=text;*ch;)
++      if (*ch++==1)
++        return;
++
+   RevealDelayedJoinIfNeeded(sptr, chptr);
+   sendcmdto_channel_butone(sptr, CMD_NOTICE, chptr, cli_from(sptr),
+ 			   SKIP_DEAF | SKIP_BURST, "%H :%s", chptr, text);
+diff -r 83c47745bd76 ircd/m_clearmode.c
+--- a/ircd/m_clearmode.c	Fri Jul 19 22:32:32 2013 +0100
++++ b/ircd/m_clearmode.c	Fri Jul 19 22:49:07 2013 +0100
+@@ -125,6 +125,9 @@
+     MODE_REGONLY,	'r',
+     MODE_DELJOINS,      'D',
+     MODE_NOQUITPARTS,   'u',
++    MODE_NOCOLOUR,      'c',
++    MODE_NOCTCP,        'C',
++    MODE_NONOTICE,      'N',
+     0x0, 0x0
+   };
+   int *flag_p;
+diff -r 83c47745bd76 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c	Fri Jul 19 22:32:32 2013 +0100
++++ b/ircd/m_wallchops.c	Fri Jul 19 22:49:07 2013 +0100
+@@ -102,6 +102,7 @@
+ int m_wallchops(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+   struct Channel *chptr;
++  struct Membership* member;
+ 
+   assert(0 != cptr);
+   assert(cptr == sptr);
+@@ -115,10 +116,24 @@
+     return send_reply(sptr, ERR_NOTEXTTOSEND);
+ 
+   if (IsChannelName(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0)) {
++    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
+       if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
+           check_target_limit(sptr, chptr, chptr->chname, 0))
+         return 0;
++
++      /* +cC checks */
++      if (chptr->mode.mode & MODE_NOCOLOUR)
++        for (ch=parv[parc - 1];*ch;ch++)
++          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
++            return 0;
++          }
++
++      if ((chptr->mode.mode & MODE_NOCTCP) && ircd_strncmp(parv[parc - 1],"\001ACTION ",8))
++        for (ch=parv[parc - 1];*ch;)
++          if (*ch++==1) {
++            return 0;
++          }
++
+       RevealDelayedJoinIfNeeded(sptr, chptr);
+       sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
+@@ -146,7 +161,8 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 1)) {
++    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
++      RevealDelayedJoinIfNeeded(sptr, chptr);
+       sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
+ 			       "%H :%s", chptr, parv[parc - 1]);
+diff -r 83c47745bd76 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c	Fri Jul 19 22:32:32 2013 +0100
++++ b/ircd/m_wallvoices.c	Fri Jul 19 22:49:07 2013 +0100
+@@ -101,6 +101,7 @@
+ int m_wallvoices(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
+ {
+   struct Channel *chptr;
++  struct Membership* member;
+ 
+   assert(0 != cptr);
+   assert(cptr == sptr);
+@@ -114,10 +115,24 @@
+     return send_reply(sptr, ERR_NOTEXTTOSEND);
+ 
+   if (IsChannelName(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 0)) {
++    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
+       if ((chptr->mode.mode & MODE_NOPRIVMSGS) &&
+           check_target_limit(sptr, chptr, chptr->chname, 0))
+         return 0;
++
++      /* +cC checks */
++      if (chptr->mode.mode & MODE_NOCOLOUR)
++        for (ch=parv[parc - 1];*ch;ch++)
++          if (*ch==2 || *ch==3 || *ch==22 || *ch==27 || *ch==31) {
++            return 0;
++          }
++
++      if ((chptr->mode.mode & MODE_NOCTCP) && ircd_strncmp(parv[parc - 1],"\001ACTION ",8))
++        for (ch=parv[parc - 1];*ch;)
++          if (*ch++==1) {
++            return 0;
++          }
++
+       RevealDelayedJoinIfNeeded(sptr, chptr);
+       sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
+@@ -145,7 +160,8 @@
+     return 0;
+ 
+   if (!IsLocalChannel(parv[1]) && (chptr = FindChannel(parv[1]))) {
+-    if (client_can_send_to_channel(sptr, chptr, 1)) {
++    if (client_can_send_to_channel(sptr, chptr, 0) && !(chptr->mode.mode & MODE_NONOTICE)) {
++      RevealDelayedJoinIfNeeded(sptr, chptr);
+       sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
+ 			       SKIP_DEAF | SKIP_BURST | SKIP_NONVOICES, 
+ 			       "%H :%s", chptr, parv[parc - 1]);
+diff -r 83c47745bd76 ircd/s_auth.c
+--- a/ircd/s_auth.c	Fri Jul 19 22:32:32 2013 +0100
++++ b/ircd/s_auth.c	Fri Jul 19 22:49:07 2013 +0100
+@@ -266,6 +266,9 @@
+       || ((user->username[0] == '~') && (user->username[1] == '\0')))
+     return exit_client(sptr, sptr, &me, "USER: Bogus userid.");
+ 
++  /* Have to set up "realusername" before doing the gline check below */
++  ircd_strncpy(user->realusername, user->username, USERLEN);
++
+   /* Check for K- or G-line. */
+   killreason = find_kill(sptr, 1);
+   if (killreason) {

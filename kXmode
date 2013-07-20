@@ -1,0 +1,321 @@
+# HG changeset patch
+# Parent 6b2367e1e71232271c13775630b9f7e24a71734f
+
+diff -r 6b2367e1e712 include/client.h
+--- a/include/client.h	Sun Jul 14 00:23:44 2013 +0100
++++ b/include/client.h	Sun Jul 14 00:25:56 2013 +0100
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioswkgxR"
++#define infousermodes "dioswkgxRXIn"
+ 
+ /** Operator privileges. */
+ enum Priv
+@@ -168,6 +168,10 @@
+     FLAG_ACCOUNTONLY,               /**< ASUKA_R: hide privmsgs/notices if
+ 				      user is not authed or opered */
+     FLAG_HIDDENHOST,                /**< user's host is hidden */
++    FLAG_NOCHAN,                    /**< user's channels are hidden */
++    FLAG_NOIDLE,                    /**< user's idletime is hidden */
++    FLAG_XTRAOP,                    /**< oper has special powers */
++
+     FLAG_LAST_FLAG,                 /**< number of flags */
+     FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
+     FLAG_GLOBAL_UMODES = FLAG_OPER  /**< First global mode flag */
+@@ -581,6 +585,12 @@
+ #define IsAccount(x)            HasFlag(x, FLAG_ACCOUNT)
+ /** Return non-zero if the client has set mode +x (hidden host). */
+ #define IsHiddenHost(x)         HasFlag(x, FLAG_HIDDENHOST)
++/** Return non-zero if the client has set mode +X (xtraop) */
++#define IsXtraOp(x)             HasFlag(x, FLAG_XTRAOP)
++/** Return non-zero if the client has set mode +n (hide channels) */
++#define IsNoChan(x)             HasFlag(x, FLAG_NOCHAN)
++/** Return non-zero if the client has set mode +I (hide idletime) */
++#define IsNoIdle(x)             HasFlag(x, FLAG_NOIDLE)
+ /** Return non-zero if the client has an active PING request. */
+ #define IsPingSent(x)           HasFlag(x, FLAG_PINGSENT)
+ /** Return non-zero if the client should not receive privmsgs/notices
+@@ -630,6 +640,12 @@
+ #define SetAccount(x)           SetFlag(x, FLAG_ACCOUNT)
+ /** Mark a client as having mode +x (hidden host). */
+ #define SetHiddenHost(x)        SetFlag(x, FLAG_HIDDENHOST)
++/** Mark a client as having mode +X (xtraop). */
++#define SetXtraOp(x)            SetFlag(x, FLAG_XTRAOP)
++/** Mark a client as having mode +n (hide channels). */
++#define SetNoChan(x)            SetFlag(x, FLAG_NOCHAN)
++/** Mark a client as having mode +I (hide idletime). */
++#define SetNoIdle(x)            SetFlag(x, FLAG_NOIDLE)
+ /** Mark a client as having a pending PING. */
+ #define SetPingSent(x)          SetFlag(x, FLAG_PINGSENT)
+ /** Mark a client as having mode +R (account only). */
+@@ -665,6 +681,12 @@
+ #define ClearServNotice(x)      ClrFlag(x, FLAG_SERVNOTICE)
+ /** Remove mode +x (hidden host) from the client. */
+ #define ClearHiddenHost(x)      ClrFlag(x, FLAG_HIDDENHOST)
++/** Remove mode +X (xtraop) from a client. */
++#define ClearXtraOp(x)          ClrFlag(x, FLAG_XTRAOP)
++/** Remove mode +n (hide channels) from a client. */
++#define ClearNoChan(x)          ClrFlag(x, FLAG_NOCHAN)
++/** Remove mode +I (hide idletime) from a client. */
++#define ClearNoIdle(x)          ClrFlag(x, FLAG_NOIDLE)
+ /** Clear the client's pending PING flag. */
+ #define ClearPingSent(x)        ClrFlag(x, FLAG_PINGSENT)
+ /** Clear the client's HUB flag. */
+diff -r 6b2367e1e712 include/ircd_features.h
+--- a/include/ircd_features.h	Sun Jul 14 00:23:44 2013 +0100
++++ b/include/ircd_features.h	Sun Jul 14 00:25:56 2013 +0100
+@@ -56,6 +56,7 @@
+   FEAT_HIDDEN_IP,
+   FEAT_AUTOINVISIBLE,
+   FEAT_CONNEXIT_NOTICES,
++  FEAT_USER_HIDECHANS,
+   FEAT_OPLEVELS,
+   FEAT_ZANNELS,
+   FEAT_LOCAL_CHANNELS,
+diff -r 6b2367e1e712 include/numeric.h
+--- a/include/numeric.h	Sun Jul 14 00:23:44 2013 +0100
++++ b/include/numeric.h	Sun Jul 14 00:25:56 2013 +0100
+@@ -410,6 +410,7 @@
+ /*	ERR_DESYNC	     484	 Dalnet,PTlink */
+ /*	ERR_ATTACKDENY	     484	 unreal */
+ /*	ERR_RESTRICTED	     484	   IRCnet extension */
++#define ERR_ISREALSERVICE    485        /* QuakeNet/ASUKA extension */
+ /*      ERR_UNIQOPRIVSNEEDED 485           IRCnet extension */
+ /*	ERR_KILLDENY         485	   unreal */
+ /*	ERR_CANTKICKADMIN    485	   PTlink */
+diff -r 6b2367e1e712 ircd/channel.c
+--- a/ircd/channel.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/channel.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -743,7 +743,7 @@
+   /*
+    * Servers can always speak on channels.
+    */
+-  if (IsServer(cptr))
++  if (IsServer(cptr) || IsXtraOp(cptr))
+     return 1;
+ 
+   member = find_channel_member(cptr, chptr);
+@@ -3119,17 +3119,29 @@
+     if ((state->cli_change[i].flag & (MODE_DEL | MODE_CHANOP)) ==
+ 	(MODE_DEL | MODE_CHANOP)) {
+       /* prevent +k users from being deopped */
+-      if (IsChannelService(state->cli_change[i].client)) {
++      /*
++       * ASUKA_X:
++       * Allow +X'ed users to mess with +k'ed.
++       * --Bigfoot
++       */
++      if ((IsChannelService(state->cli_change[i].client) && IsService(cli_user(state->cli_change[i].client)->server)) || (IsChannelService(state->cli_change[i].client) && !IsXtraOp(state->sptr))) {
+ 	if (state->flags & MODE_PARSE_FORCE) /* it was forced */
+ 	  sendto_opmask_butone(0, SNO_HACK4, "Deop of +k user on %H by %s",
+ 			       state->chptr,
+ 			       (IsServer(state->sptr) ? cli_name(state->sptr) :
+ 				cli_name((cli_user(state->sptr))->server)));
+ 
+-	else if (MyUser(state->sptr) && state->flags & MODE_PARSE_SET) {
+-	  send_reply(state->sptr, ERR_ISCHANSERVICE,
+-		     cli_name(state->cli_change[i].client),
+-		     state->chptr->chname);
++        else if (MyUser(state->sptr) && state->flags & MODE_PARSE_SET && (state->sptr != state->cli_change[i].client)) {
++          if(IsService(cli_user(state->cli_change[i].client)->server) && IsChannelService(state->cli_change[i].client)){
++            send_reply(state->sptr, ERR_ISREALSERVICE,
++                     cli_name(state->cli_change[i].client),
++                     state->chptr->chname);
++          }else{
++            send_reply(state->sptr, ERR_ISCHANSERVICE,
++                     cli_name(state->cli_change[i].client),
++                     state->chptr->chname);
++          }
++
+ 	  continue;
+ 	}
+       }
+diff -r 6b2367e1e712 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/ircd_features.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -321,6 +321,7 @@
+   F_S(HIDDEN_IP, 0, "127.0.0.1", 0),
+   F_B(AUTOINVISIBLE, 0, 1, 0),
+   F_B(CONNEXIT_NOTICES, 0, 0, 0),
++  F_B(USER_HIDECHANS, 0, 0, 0),
+   F_B(OPLEVELS, 0, 1, 0),
+   F_B(ZANNELS, 0, 1, 0),
+   F_B(LOCAL_CHANNELS, 0, 1, 0),
+diff -r 6b2367e1e712 ircd/m_join.c
+--- a/ircd/m_join.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/m_join.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -207,6 +207,14 @@
+       else if (*chptr->mode.key && (!key || strcmp(key, chptr->mode.key)))
+         err = ERR_BADCHANNELKEY;
+ 
++      /*
++       * ASUKA_X:
++       * Allow XtraOpers to join all channels.
++       * --Bigfoot
++       */
++      if (IsXtraOp(sptr))
++        err = 0;
++      
+       /* An oper with WALK_LCHAN privilege can join a local channel
+        * he otherwise could not join by using "OVERRIDE" as the key.
+        * This will generate a HACK(4) notice, but fails if the oper
+diff -r 6b2367e1e712 ircd/m_kick.c
+--- a/ircd/m_kick.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/m_kick.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -131,7 +131,15 @@
+     return 0; /* find_chasing sends the reply for us */
+ 
+   /* Don't allow the channel service to be kicked */
+-  if (IsChannelService(who))
++  /*
++   * ASUKA_X:
++   * Allow +X'ed users to kick +k'ed, but not U-lined services.
++   * --Bigfoot
++   */
++  if (IsChannelService(who) && IsService(cli_user(who)->server))
++    return send_reply(sptr, ERR_ISREALSERVICE, cli_name(who), chptr->chname);
++
++  if (IsChannelService(who) && !IsXtraOp(sptr) && (who!=sptr))
+     return send_reply(sptr, ERR_ISCHANSERVICE, cli_name(who), chptr->chname);
+ 
+   /* Prevent kicking opers from local channels -DM- */
+diff -r 6b2367e1e712 ircd/m_kill.c
+--- a/ircd/m_kill.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/m_kill.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -277,7 +277,15 @@
+   /*
+    * if the user is +k, prevent a kill from local user
+    */
+-  if (IsChannelService(victim))
++  /*
++   * ASUKA_X:
++   * Allow +X'ed users to kill +k'ed, but not U-lined services.
++   * --Bigfoot
++   */
++  if (IsChannelService(victim) && IsService(cli_user(victim)->server))
++    return send_reply(sptr, ERR_ISREALSERVICE, "KILL", cli_name(victim));
++
++  if (IsChannelService(victim) && !IsXtraOp(sptr) && !(victim==sptr))
+     return send_reply(sptr, ERR_ISCHANSERVICE, "KILL", cli_name(victim));
+ 
+ 
+diff -r 6b2367e1e712 ircd/m_whois.c
+--- a/ircd/m_whois.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/m_whois.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -144,7 +144,7 @@
+ 		   cli_info(acptr));
+ 
+   /* Display the channels this user is on. */
+-  if (!IsChannelService(acptr))
++  if ((!IsChannelService(acptr) && !IsNoChan(acptr)) || (acptr==sptr))
+   {
+     struct Membership* chan;
+     mlen = strlen(cli_name(&me)) + strlen(cli_name(sptr)) + 12 + strlen(name);
+@@ -219,8 +219,10 @@
+      *       probably a good place to add them :)
+      */
+ 
+-    if (MyConnect(acptr) && (!feature_bool(FEAT_HIS_WHOIS_IDLETIME) ||
+-                             (sptr == acptr || IsAnOper(sptr) || parc >= 3)))
++    if (MyConnect(acptr) &&
++        (IsAnOper(sptr) ||
++         (!IsNoIdle(acptr) && (!feature_bool(FEAT_HIS_WHOIS_IDLETIME) ||
++                              sptr == acptr || parc >= 3))))
+        send_reply(sptr, RPL_WHOISIDLE, name, CurrentTime - user->last,
+                   cli_firsttime(acptr));
+   }
+diff -r 6b2367e1e712 ircd/s_err.c
+--- a/ircd/s_err.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/s_err.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -1000,9 +1000,9 @@
+ /* 483 */
+   { ERR_CANTKILLSERVER, ":You cant kill a server!", "483" },
+ /* 484 */
+-  { ERR_ISCHANSERVICE, "%s %s :Cannot kill, kick or deop a network service", "484" },
++  { ERR_ISCHANSERVICE, "%s %s :Cannot kill, kick or deop an IRC operator", "484" },
+ /* 485 */
+-  { 0 },
++  { ERR_ISREALSERVICE, "%s %s :Cannot kill, kick or deop a network service", "485" },
+ /* 486 */
+   { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user", "486" },
+ /* 487 */
+diff -r 6b2367e1e712 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/s_user.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -503,7 +503,10 @@
+   { FLAG_DEBUG,       'g' },
+   { FLAG_ACCOUNT,     'r' },
+   { FLAG_HIDDENHOST,  'x' },
+-  { FLAG_ACCOUNTONLY, 'R' }
++  { FLAG_ACCOUNTONLY, 'R' },
++  { FLAG_XTRAOP,      'X' },
++  { FLAG_NOCHAN,      'n' },
++  { FLAG_NOIDLE,      'I' }
+ };
+ 
+ /** Length of #userModeList. */
+@@ -580,7 +583,7 @@
+     if (MyUser(sptr)) {
+       const char* channel_name;
+       struct Membership *member;
+-      if ((channel_name = find_no_nickchange_channel(sptr))) {
++      if ((channel_name = find_no_nickchange_channel(sptr)) && !IsXtraOp(sptr)) {
+         return send_reply(cptr, ERR_BANNICKCHANGE, channel_name);
+       }
+       /*
+@@ -1072,6 +1075,24 @@
+         else
+           ClearChannelService(sptr);
+         break;
++      case 'X':
++        if (what == MODE_ADD)
++          SetXtraOp(sptr);
++        else
++          ClearXtraOp(sptr);
++        break;
++      case 'n':
++        if (what == MODE_ADD)
++          SetNoChan(sptr);
++        else
++          ClearNoChan(sptr);
++        break;
++      case 'I':
++        if (what == MODE_ADD)
++          SetNoIdle(sptr);
++        else
++          ClearNoIdle(sptr);
++        break;
+       case 'g':
+         if (what == MODE_ADD)
+           SetDebug(sptr);
+@@ -1117,8 +1138,15 @@
+      * new umode; servers can set it, local users cannot;
+      * prevents users from /kick'ing or /mode -o'ing
+      */
+-    if (!FlagHas(&setflags, FLAG_CHSERV))
++    if (!FlagHas(&setflags, FLAG_CHSERV) && !IsOper(sptr))
+       ClearChannelService(sptr);
++    if (!FlagHas(&setflags, FLAG_XTRAOP) && !IsOper(sptr))
++      ClearXtraOp(sptr);
++    if (!FlagHas(&setflags, FLAG_NOCHAN) && !(IsOper(sptr) || feature_bool(FEAT_USER_HIDECHANS)))
++      ClearNoChan(sptr);
++    if (!FlagHas(&setflags, FLAG_NOIDLE) && !IsOper(sptr))
++      ClearNoIdle(sptr);
++
+     /*
+      * only send wallops to opers
+      */
+diff -r 6b2367e1e712 ircd/whocmds.c
+--- a/ircd/whocmds.c	Sun Jul 14 00:23:44 2013 +0100
++++ b/ircd/whocmds.c	Sun Jul 14 00:25:56 2013 +0100
+@@ -90,7 +90,7 @@
+     chan = find_channel_member(acptr, repchan);
+   }
+   else if ((!fields || (fields & (WHO_FIELD_CHA | WHO_FIELD_FLA)))
+-           && !IsChannelService(acptr))
++           && !IsChannelService(acptr) && !IsNoChan(acptr)) 
+   {
+     for (chan = cli_user(acptr)->channel; chan; chan = chan->next_channel)
+       if (PubChannel(chan->channel) &&
