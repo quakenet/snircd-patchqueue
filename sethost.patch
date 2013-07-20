@@ -45,9 +45,9 @@ show if spoofhost is valid or not (S = valid, s = invalid)
 removed numbering (not required anymore?)
 merged showing of user@host
 
-diff -r c6f3803ee169 include/client.h
---- a/include/client.h
-+++ b/include/client.h
+diff -r 103be431b156 include/client.h
+--- a/include/client.h	Sat Jul 20 12:01:10 2013 +0100
++++ b/include/client.h	Sat Jul 20 13:18:35 2013 +0100
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -93,9 +93,9 @@ diff -r c6f3803ee169 include/client.h
  /** Remove mode +X (xtraop) from a client. */
  #define ClearXtraOp(x)          ClrFlag(x, FLAG_XTRAOP)
  /** Remove mode +n (hide channels) from a client. */
-diff -r c6f3803ee169 include/ircd_chattr.h
---- a/include/ircd_chattr.h
-+++ b/include/ircd_chattr.h
+diff -r 103be431b156 include/ircd_chattr.h
+--- a/include/ircd_chattr.h	Sat Jul 20 12:01:10 2013 +0100
++++ b/include/ircd_chattr.h	Sat Jul 20 13:18:35 2013 +0100
 @@ -117,6 +117,8 @@
  #define IsUserChar(c)      (IRCD_CharAttrTab[(c) - CHAR_MIN] & NTL_IRCUI)
  /** Test whether a character is valid in a hostname. */
@@ -111,9 +111,9 @@ diff -r c6f3803ee169 include/ircd_chattr.h
  
 +
  #endif /* INCLUDED_ircd_chattr_h */
-diff -r c6f3803ee169 include/numeric.h
---- a/include/numeric.h
-+++ b/include/numeric.h
+diff -r 103be431b156 include/numeric.h
+--- a/include/numeric.h	Sat Jul 20 12:01:10 2013 +0100
++++ b/include/numeric.h	Sat Jul 20 13:18:35 2013 +0100
 @@ -314,7 +314,7 @@
  /*      RPL_NOUSERS          395        Dalnet/EFnet/IRCnet */
  #define RPL_HOSTHIDDEN       396	/* UMODE +x completed succesfuly */
@@ -123,9 +123,9 @@ diff -r c6f3803ee169 include/numeric.h
  
  /*
   * Errors are in the range from 400-599 currently and are grouped by what
-diff -r c6f3803ee169 include/s_conf.h
---- a/include/s_conf.h
-+++ b/include/s_conf.h
+diff -r 103be431b156 include/s_conf.h
+--- a/include/s_conf.h	Sat Jul 20 12:01:10 2013 +0100
++++ b/include/s_conf.h	Sat Jul 20 13:18:35 2013 +0100
 @@ -205,7 +205,8 @@
  
  extern void conf_add_sline(const char* const* fields, int count);
@@ -136,9 +136,9 @@ diff -r c6f3803ee169 include/s_conf.h
  extern void free_spoofhost(struct sline *spoof);
  
  extern void yyerror(const char *msg);
-diff -r c6f3803ee169 include/s_user.h
---- a/include/s_user.h
-+++ b/include/s_user.h
+diff -r 103be431b156 include/s_user.h
+--- a/include/s_user.h	Sat Jul 20 12:01:10 2013 +0100
++++ b/include/s_user.h	Sat Jul 20 13:18:35 2013 +0100
 @@ -79,15 +79,15 @@
  extern int set_nick_name(struct Client* cptr, struct Client* sptr,
                           const char* nick, int parc, char* parv[]);
@@ -167,9 +167,9 @@ diff -r c6f3803ee169 include/s_user.h
  extern void set_snomask(struct Client *, unsigned int, int);
  extern int is_snomask(char *);
  extern int check_target_limit(struct Client *sptr, void *target, const char *name,
-diff -r c6f3803ee169 ircd/channel.c
---- a/ircd/channel.c
-+++ b/ircd/channel.c
+diff -r 103be431b156 ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/channel.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -384,12 +384,12 @@
    ircd_ntoa_r(iphost, &cli_ip(cptr));
  
@@ -185,9 +185,9 @@ diff -r c6f3803ee169 ircd/channel.c
        sa = cli_user(cptr)->realhost;
      } else {
        ircd_snprintf(0, tmphost, HOSTLEN, "%s.%s",
-diff -r c6f3803ee169 ircd/m_oper.c
---- a/ircd/m_oper.c
-+++ b/ircd/m_oper.c
+diff -r 103be431b156 ircd/m_oper.c
+--- a/ircd/m_oper.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/m_oper.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -189,7 +189,7 @@
      
      set_snomask(sptr, SNO_OPERDEFAULT, SNO_ADD);
@@ -197,10 +197,74 @@ diff -r c6f3803ee169 ircd/m_oper.c
      send_reply(sptr, RPL_YOUREOPER);
  
      sendto_opmask_butone(0, SNO_OLDSNO, "%s (%s@%s) is now operator (%c) as %s",
-diff -r c6f3803ee169 ircd/m_sethost.c
---- a/ircd/m_sethost.c
-+++ b/ircd/m_sethost.c
-@@ -82,174 +82,232 @@
+diff -r 103be431b156 ircd/m_remotemode.c
+--- a/ircd/m_remotemode.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/m_remotemode.c	Sat Jul 20 13:18:35 2013 +0100
+@@ -126,6 +126,7 @@
+   int what = MODE_ADD;
+   int do_host_hiding = 0;
+   int do_set_host = 0;
++  int alreadyh = 0;
+ 
+   /* not from a server */
+   if (!IsServer(sptr))
+@@ -216,17 +217,15 @@
+           break;
+         case 'h':
+           if (what == MODE_ADD) {
+-            if (*(p + 1) && is_hostmask(*(p + 1))) {
+-              do_set_host = 1;
+-              hostmask = *++p;
+-            } else {
+-              if (!*(p+1))
+-                protocol_violation(sptr, "Received REMOTEMODE +h without host parameter for user %C", acptr);
+-              else {
+-                protocol_violation(sptr, "Received REMOTEMODE +h with invalid host parameter %s for user %C", *(p+1), acptr);
+-                p++; /* Swallow the arg anyway */
+-              }
+-            }
++           /* TODO: */
++           if (IsServer(cptr)) {
++             if (!*(p + 1))
++               protocol_violation(cptr, "Received MODE +h for %C without sethost parameter", sptr);
++             else {
++               hostmask = *++p;
++               do_set_host = 1;
++             }
++           }
+           } else { /* MODE_DEL */
+             do_set_host = 1;
+             hostmask = NULL;
+@@ -275,10 +274,12 @@
+       host = hostmask;
+ 
+     /* check if new sethost is different from before */
+-    if (IsSetHost(acptr) && 
+-       (!user || strcmp(cli_user(acptr)->username, user) == 0) &&
+-        strcmp(cli_user(acptr)->host, host) == 0)
+-      do_set_host = 0;
++    if (IsSetHost(acptr)) {
++      alreadyh = 1;
++      if ((!user || strcmp(cli_user(acptr)->username, user) == 0) &&
++          strcmp(cli_user(acptr)->host, host) == 0)
++        do_set_host = 0;
++    }
+   }
+ 
+   /* do host hiding for +h/-h */
+@@ -353,7 +354,7 @@
+   assert(UserStats.inv_clients <= UserStats.clients + UserStats.unknowns);
+ 
+   /* send out the mode */
+-  send_umode_out(acptr, acptr, &setflags, 0);
++  send_umode_out(acptr, acptr, &setflags, 0, alreadyh);
+ 
+   return 0;
+ }
+diff -r 103be431b156 ircd/m_sethost.c
+--- a/ircd/m_sethost.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/m_sethost.c	Sat Jul 20 13:18:35 2013 +0100
+@@ -82,175 +82,233 @@
  #include "config.h"
  
  #include "client.h"
@@ -548,9 +612,10 @@ diff -r c6f3803ee169 ircd/m_sethost.c
 +
    return 0;
  }
-diff -r c6f3803ee169 ircd/m_userhost.c
---- a/ircd/m_userhost.c
-+++ b/ircd/m_userhost.c
+ 
+diff -r 103be431b156 ircd/m_userhost.c
+--- a/ircd/m_userhost.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/m_userhost.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -104,7 +104,7 @@
  	       * of +x.  If an oper wants the real host, he should go to
  	       * /whois to get it.
@@ -560,9 +625,9 @@ diff -r c6f3803ee169 ircd/m_userhost.c
  	      cli_user(cptr)->host : cli_user(cptr)->realhost);
  }
  
-diff -r c6f3803ee169 ircd/m_userip.c
---- a/ircd/m_userip.c
-+++ b/ircd/m_userip.c
+diff -r 103be431b156 ircd/m_userip.c
+--- a/ircd/m_userip.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/m_userip.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -106,7 +106,7 @@
  	       * of +x.  If an oper wants the real IP, he should go to
  	       * /whois to get it.
@@ -572,9 +637,9 @@ diff -r c6f3803ee169 ircd/m_userip.c
  	      feature_str(FEAT_HIDDEN_IP) :
  	      ircd_ntoa(&cli_ip(cptr)));
  }
-diff -r c6f3803ee169 ircd/m_who.c
---- a/ircd/m_who.c
-+++ b/ircd/m_who.c
+diff -r 103be431b156 ircd/m_who.c
+--- a/ircd/m_who.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/m_who.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -394,14 +394,14 @@
                && ((!(matchsel & WHO_FIELD_HOS))
                || matchexec(cli_user(acptr)->host, mymask, minlen))
@@ -609,9 +674,9 @@ diff -r c6f3803ee169 ircd/m_who.c
              || !ipmask_check(&cli_ip(acptr), &imask, ibits))
              && ((!(matchsel & WHO_FIELD_ACC))
              || matchexec(cli_user(acptr)->account, mymask, minlen)))
-diff -r c6f3803ee169 ircd/m_whois.c
---- a/ircd/m_whois.c
-+++ b/ircd/m_whois.c
+diff -r 103be431b156 ircd/m_whois.c
+--- a/ircd/m_whois.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/m_whois.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -214,7 +214,7 @@
      if (IsAccount(acptr))
        send_reply(sptr, RPL_WHOISACCOUNT, name, user->account);
@@ -621,9 +686,9 @@ diff -r c6f3803ee169 ircd/m_whois.c
        send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
                   user->realhost, ircd_ntoa(&cli_ip(acptr)));
  
-diff -r c6f3803ee169 ircd/s_conf.c
---- a/ircd/s_conf.c
-+++ b/ircd/s_conf.c
+diff -r 103be431b156 ircd/s_conf.c
+--- a/ircd/s_conf.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/s_conf.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -52,6 +52,7 @@
  #include "s_bsd.h"
  #include "s_debug.h"
@@ -841,9 +906,9 @@ diff -r c6f3803ee169 ircd/s_conf.c
  void free_spoofhost(struct sline *spoof) {
  	MyFree(spoof->spoofhost);
  	MyFree(spoof->passwd);
-diff -r c6f3803ee169 ircd/s_err.c
---- a/ircd/s_err.c
-+++ b/ircd/s_err.c
+diff -r 103be431b156 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/s_err.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -824,13 +824,13 @@
  /* 395 */
    { 0 },
@@ -873,9 +938,9 @@ diff -r c6f3803ee169 ircd/s_err.c
  /* 532 */
    { 0 },
  /* 533 */
-diff -r c6f3803ee169 ircd/s_stats.c
---- a/ircd/s_stats.c
-+++ b/ircd/s_stats.c
+diff -r 103be431b156 ircd/s_stats.c
+--- a/ircd/s_stats.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/s_stats.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -400,41 +400,37 @@
    }
  }
@@ -938,9 +1003,9 @@ diff -r c6f3803ee169 ircd/s_stats.c
    }
  }
  
-diff -r c6f3803ee169 ircd/s_user.c
---- a/ircd/s_user.c
-+++ b/ircd/s_user.c
+diff -r 103be431b156 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/s_user.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -73,9 +73,6 @@
  #include <string.h>
  #include <sys/stat.h>
@@ -1653,9 +1718,9 @@ diff -r c6f3803ee169 ircd/s_user.c
  }
  
  /** Update snomask \a oldmask according to \a arg and \a what.
-diff -r c6f3803ee169 ircd/send.c
---- a/ircd/send.c
-+++ b/ircd/send.c
+diff -r 103be431b156 ircd/send.c
+--- a/ircd/send.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/send.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -281,7 +281,7 @@
    {
      case MATCH_HOST:
@@ -1665,9 +1730,9 @@ diff -r c6f3803ee169 ircd/send.c
      case MATCH_SERVER:
      default:
        return (match(mask, cli_name(cli_user(one)->server)) == 0);
-diff -r c6f3803ee169 ircd/whocmds.c
---- a/ircd/whocmds.c
-+++ b/ircd/whocmds.c
+diff -r 103be431b156 ircd/whocmds.c
+--- a/ircd/whocmds.c	Sat Jul 20 12:01:10 2013 +0100
++++ b/ircd/whocmds.c	Sat Jul 20 13:18:35 2013 +0100
 @@ -134,7 +134,7 @@
  
    if (fields & WHO_FIELD_NIP)
