@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 639342abeae0ace46b4aa58ad05fb636a199a21f
+# Parent 911ee97f60c6e2686d82d9117aecb6ea3e5afa3c
 
-diff -r 639342abeae0 include/channel.h
---- a/include/channel.h	Sun Jul 14 00:21:33 2013 +0100
-+++ b/include/channel.h	Sun Jul 14 00:23:44 2013 +0100
+diff -r 911ee97f60c6 include/channel.h
+--- a/include/channel.h	Sat Jul 20 12:01:08 2013 +0100
++++ b/include/channel.h	Sat Jul 20 13:28:59 2013 +0100
 @@ -372,6 +372,7 @@
                               int parc, char *parv[], int badop, int mtype);
  extern struct Channel *get_channel(struct Client *cptr,
@@ -12,9 +12,9 @@ diff -r 639342abeae0 include/channel.h
  extern struct Membership* find_member_link(struct Channel * chptr,
                                             const struct Client* cptr);
  extern int sub1_from_channel(struct Channel* chptr);
-diff -r 639342abeae0 include/ircd_features.h
---- a/include/ircd_features.h	Sun Jul 14 00:21:33 2013 +0100
-+++ b/include/ircd_features.h	Sun Jul 14 00:23:44 2013 +0100
+diff -r 911ee97f60c6 include/ircd_features.h
+--- a/include/ircd_features.h	Sat Jul 20 12:01:08 2013 +0100
++++ b/include/ircd_features.h	Sat Jul 20 13:28:59 2013 +0100
 @@ -61,6 +61,8 @@
    FEAT_LOCAL_CHANNELS,
    FEAT_TOPIC_BURST,
@@ -24,16 +24,16 @@ diff -r 639342abeae0 include/ircd_features.h
  
    /* features that probably should not be touched */
    FEAT_KILLCHASETIMELIMIT,
-diff -r 639342abeae0 ircd/channel.c
---- a/ircd/channel.c	Sun Jul 14 00:21:33 2013 +0100
-+++ b/ircd/channel.c	Sun Jul 14 00:23:44 2013 +0100
+diff -r 911ee97f60c6 ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 12:01:08 2013 +0100
++++ b/ircd/channel.c	Sat Jul 20 13:28:59 2013 +0100
 @@ -1272,6 +1272,53 @@
    return chptr;
  }
  
 +int SetAutoChanModes(struct Channel *chptr)
 +{
-+  static int chan_flags[] = {
++  static unsigned int chan_flags[] = {
 +    MODE_PRIVATE,       'p',
 +    MODE_SECRET,        's',
 +    MODE_MODERATED,     'm',
@@ -97,9 +97,9 @@ diff -r 639342abeae0 ircd/channel.c
      break;
  
    case JOINBUF_TYPE_PART:
-diff -r 639342abeae0 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Sun Jul 14 00:21:33 2013 +0100
-+++ b/ircd/ircd_features.c	Sun Jul 14 00:23:44 2013 +0100
+diff -r 911ee97f60c6 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sat Jul 20 12:01:08 2013 +0100
++++ b/ircd/ircd_features.c	Sat Jul 20 13:28:59 2013 +0100
 @@ -326,6 +326,8 @@
    F_B(LOCAL_CHANNELS, 0, 1, 0),
    F_B(TOPIC_BURST, 0, 0, 0),
@@ -109,9 +109,9 @@ diff -r 639342abeae0 ircd/ircd_features.c
  
    /* features that probably should not be touched */
    F_I(KILLCHASETIMELIMIT, 0, 30, 0),
-diff -r 639342abeae0 ircd/m_join.c
---- a/ircd/m_join.c	Sun Jul 14 00:21:33 2013 +0100
-+++ b/ircd/m_join.c	Sun Jul 14 00:23:44 2013 +0100
+diff -r 911ee97f60c6 ircd/m_join.c
+--- a/ircd/m_join.c	Sat Jul 20 12:01:08 2013 +0100
++++ b/ircd/m_join.c	Sat Jul 20 13:28:59 2013 +0100
 @@ -174,6 +174,8 @@
        }
  
