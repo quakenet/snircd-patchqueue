@@ -1,9 +1,25 @@
 # HG changeset patch
-# Parent 90bc9968ee6aa3b50b233aecf7ae36b42ad4fa25
+# Parent e1de3d14c9df051e11288e8de6181e4989e3b138
 
-diff -r 90bc9968ee6a include/handlers.h
---- a/include/handlers.h	Sun Jul 14 11:30:24 2013 +0200
-+++ b/include/handlers.h	Sun Jul 14 11:32:10 2013 +0200
+diff -r e1de3d14c9df doc/readme.iauth
+--- a/doc/readme.iauth	Sat Jul 20 09:18:24 2013 +0200
++++ b/doc/readme.iauth	Sat Jul 20 09:23:57 2013 +0200
+@@ -235,6 +235,12 @@
+ Compatibility: ircd does not include the <capacity> information.
+   The <id> should be ignored: ircd sends 0 and ircu sends -1.
+ 
++W - WEBIRC
++Syntax: <id> W <password> <username> <hostname> <ip>
++Comments: Indicates the client's webirc information. This is an
++  Undernet extension and ircd does not send it.  It is enabled by the
++  iauth instance requesting the U policy.
++
+ X - Extension Query Reply
+ Syntax: <id> X <servername> <routing> :<reply>
+ Example: -1 X channels.undernet.org 5/127.0.0.1/6667 :OK kev Logged in
+diff -r e1de3d14c9df include/handlers.h
+--- a/include/handlers.h	Sat Jul 20 09:18:24 2013 +0200
++++ b/include/handlers.h	Sat Jul 20 09:23:57 2013 +0200
 @@ -146,6 +146,7 @@
  extern int m_unregistered(struct Client*, struct Client*, int, char*[]);
  extern int m_unsupported(struct Client*, struct Client*, int, char*[]);
@@ -12,9 +28,9 @@ diff -r 90bc9968ee6a include/handlers.h
  extern int m_userhost(struct Client*, struct Client*, int, char*[]);
  extern int m_userip(struct Client*, struct Client*, int, char*[]);
  extern int m_version(struct Client*, struct Client*, int, char*[]);
-diff -r 90bc9968ee6a include/msg.h
---- a/include/msg.h	Sun Jul 14 11:30:24 2013 +0200
-+++ b/include/msg.h	Sun Jul 14 11:32:10 2013 +0200
+diff -r e1de3d14c9df include/msg.h
+--- a/include/msg.h	Sat Jul 20 09:18:24 2013 +0200
++++ b/include/msg.h	Sat Jul 20 09:23:57 2013 +0200
 @@ -68,6 +68,11 @@
  #define TOK_USER                "USER"
  #define CMD_USER		MSG_USER, TOK_USER
@@ -27,9 +43,9 @@ diff -r 90bc9968ee6a include/msg.h
  #define MSG_NICK                "NICK"          /* NICK */
  #define TOK_NICK                "N"
  #define CMD_NICK		MSG_NICK, TOK_NICK
-diff -r 90bc9968ee6a include/s_auth.h
---- a/include/s_auth.h	Sun Jul 14 11:30:24 2013 +0200
-+++ b/include/s_auth.h	Sun Jul 14 11:32:10 2013 +0200
+diff -r e1de3d14c9df include/s_auth.h
+--- a/include/s_auth.h	Sat Jul 20 09:18:24 2013 +0200
++++ b/include/s_auth.h	Sat Jul 20 09:23:57 2013 +0200
 @@ -32,9 +32,11 @@
  struct Client;
  struct AuthRequest;
@@ -42,9 +58,9 @@ diff -r 90bc9968ee6a include/s_auth.h
  extern int auth_set_pong(struct AuthRequest *auth, unsigned int cookie);
  extern int auth_set_user(struct AuthRequest *auth, const char *username, const char *hostname, const char *servername, const char *userinfo);
  extern int auth_set_nick(struct AuthRequest *auth, const char *nickname);
-diff -r 90bc9968ee6a ircd/Makefile.in
---- a/ircd/Makefile.in	Sun Jul 14 11:30:24 2013 +0200
-+++ b/ircd/Makefile.in	Sun Jul 14 11:32:10 2013 +0200
+diff -r e1de3d14c9df ircd/Makefile.in
+--- a/ircd/Makefile.in	Sat Jul 20 09:18:24 2013 +0200
++++ b/ircd/Makefile.in	Sat Jul 20 09:23:57 2013 +0200
 @@ -188,6 +188,7 @@
  	m_wallops.c \
  	m_wallusers.c \
@@ -53,9 +69,9 @@ diff -r 90bc9968ee6a ircd/Makefile.in
  	m_who.c \
  	m_whois.c \
  	m_whowas.c \
-diff -r 90bc9968ee6a ircd/m_webirc.c
+diff -r e1de3d14c9df ircd/m_webirc.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_webirc.c	Sun Jul 14 11:32:10 2013 +0200
++++ b/ircd/m_webirc.c	Sat Jul 20 09:23:57 2013 +0200
 @@ -0,0 +1,125 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_webirc.c
@@ -182,9 +198,9 @@ diff -r 90bc9968ee6a ircd/m_webirc.c
 +
 +  return auth_set_webirc(cli_auth(cptr), parv[1], parv[2], parv[3], &ip);
 +}
-diff -r 90bc9968ee6a ircd/parse.c
---- a/ircd/parse.c	Sun Jul 14 11:30:24 2013 +0200
-+++ b/ircd/parse.c	Sun Jul 14 11:32:10 2013 +0200
+diff -r e1de3d14c9df ircd/parse.c
+--- a/ircd/parse.c	Sat Jul 20 09:18:24 2013 +0200
++++ b/ircd/parse.c	Sat Jul 20 09:23:57 2013 +0200
 @@ -282,6 +282,13 @@
      { m_user, m_registered, m_ignore, m_registered, m_ignore }
    },
@@ -199,9 +215,9 @@ diff -r 90bc9968ee6a ircd/parse.c
      MSG_AWAY,
      TOK_AWAY,
      0, MAXPARA, MFLG_SLOW, 0, NULL,
-diff -r 90bc9968ee6a ircd/s_auth.c
---- a/ircd/s_auth.c	Sun Jul 14 11:30:24 2013 +0200
-+++ b/ircd/s_auth.c	Sun Jul 14 11:32:10 2013 +0200
+diff -r e1de3d14c9df ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 20 09:18:24 2013 +0200
++++ b/ircd/s_auth.c	Sat Jul 20 09:23:57 2013 +0200
 @@ -1041,6 +1041,23 @@
    return check_auth_finished(auth);
  }
