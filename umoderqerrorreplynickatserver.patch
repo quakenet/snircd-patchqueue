@@ -1,16 +1,16 @@
 throw error when user attempts to msg nick@server but is stopped by usermode +R or +q
 
-diff -r 8e6a04a8cd81 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Wed Mar 24 12:59:31 2010 +0100
-+++ b/ircd/ircd_relay.c	Wed Mar 24 13:07:16 2010 +0100
+diff -r be4495caa99e ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jul 20 11:50:47 2013 +0100
++++ b/ircd/ircd_relay.c	Sat Jul 20 11:58:58 2013 +0100
 @@ -307,12 +307,16 @@
      *--host = '%';
  
    /* slug: I don't think this is required, but I might have missed something */
 -  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr))
 +  if (IsAccountOnly(acptr) && !IsAccount(sptr) && !IsXtraOp(sptr)) {
-+    send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr), feature_str(FEAT_URLREG));
-     return;
++     send_reply(sptr, ERR_ACCOUNTONLY, cli_name(acptr), feature_str(FEAT_URLREG));
+      return;
 +  }
  
    /* slug: same applies here, since only opers can be +k */
