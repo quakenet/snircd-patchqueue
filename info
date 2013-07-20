@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent b88ed6e50cf3d52de15bcd0a827be6cb99218ef2
+# Parent c79daa66df29a7364a619a77de910104acc6c9a3
 
-diff -r b88ed6e50cf3 include/version.h
---- a/include/version.h	Sun Jul 14 18:57:00 2013 +0100
-+++ b/include/version.h	Sun Jul 14 19:13:14 2013 +0100
+diff -r c79daa66df29 include/version.h
+--- a/include/version.h	Sat Jul 20 13:33:10 2013 +0100
++++ b/include/version.h	Sat Jul 20 13:53:10 2013 +0100
 @@ -9,6 +9,7 @@
  extern const char *version;
  extern const char *creation;
@@ -12,9 +12,9 @@ diff -r b88ed6e50cf3 include/version.h
  extern const char *generation;
  
  #endif /* INCLUDED_version_h */
-diff -r b88ed6e50cf3 ircd/m_info.c
---- a/ircd/m_info.c	Sun Jul 14 18:57:00 2013 +0100
-+++ b/ircd/m_info.c	Sun Jul 14 19:13:14 2013 +0100
+diff -r c79daa66df29 ircd/m_info.c
+--- a/ircd/m_info.c	Sat Jul 20 13:33:10 2013 +0100
++++ b/ircd/m_info.c	Sat Jul 20 13:53:10 2013 +0100
 @@ -105,17 +105,15 @@
   */
  int m_info(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
@@ -82,7 +82,7 @@ diff -r b88ed6e50cf3 ircd/m_info.c
        HUNTED_ISME)
 +    return 0;
 +
-+  if (!IsOper(sptr))
++  if (parv[1] == NULL)
    {
 -    while (text[212])
 -    {
@@ -119,9 +119,9 @@ diff -r b88ed6e50cf3 ircd/m_info.c
    return 0;
  }
  
-diff -r b88ed6e50cf3 ircd/version.c.SH
---- a/ircd/version.c.SH	Sun Jul 14 18:57:00 2013 +0100
-+++ b/ircd/version.c.SH	Sun Jul 14 19:13:14 2013 +0100
+diff -r c79daa66df29 ircd/version.c.SH
+--- a/ircd/version.c.SH	Sat Jul 20 13:33:10 2013 +0100
++++ b/ircd/version.c.SH	Sat Jul 20 13:53:10 2013 +0100
 @@ -81,7 +81,10 @@
      "Thanks goes to all other people who contributed to any version.",
      "A full listing of all coders can be found in doc/Authors in the",
