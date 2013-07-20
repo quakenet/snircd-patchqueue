@@ -2,9 +2,9 @@ Add usermode +q which requires users /msg'ing or /notice'ing you to be in at lea
 This is designed to stop the spam bots which sit outside a channel, while a spy sits inside, preventing channel operators dealing with the problem.
 We currently also block invites, this might not be such a good idea, but these days everyone can get Q.
 
-diff -r d8f94a9363ed include/channel.h
---- a/include/channel.h
-+++ b/include/channel.h
+diff -r f0443c491386 include/channel.h
+--- a/include/channel.h	Sat Jul 20 16:28:42 2013 +0200
++++ b/include/channel.h	Sat Jul 20 16:29:41 2013 +0200
 @@ -280,6 +280,7 @@
    struct SLink*      invites;	   /**< List of invites on this channel */
    struct Ban*        banlist;      /**< List of bans on this channel */
@@ -22,9 +22,9 @@ diff -r d8f94a9363ed include/channel.h
 +extern unsigned int get_channel_marker(void);
 +
  #endif /* INCLUDED_channel_h */
-diff -r d8f94a9363ed include/client.h
---- a/include/client.h
-+++ b/include/client.h
+diff -r f0443c491386 include/client.h
+--- a/include/client.h	Sat Jul 20 16:28:42 2013 +0200
++++ b/include/client.h	Sat Jul 20 16:29:41 2013 +0200
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -87,9 +87,9 @@ diff -r d8f94a9363ed include/client.h
  
  #endif /* INCLUDED_client_h */
  
-diff -r d8f94a9363ed include/numeric.h
---- a/include/numeric.h
-+++ b/include/numeric.h
+diff -r f0443c491386 include/numeric.h
+--- a/include/numeric.h	Sat Jul 20 16:28:42 2013 +0200
++++ b/include/numeric.h	Sat Jul 20 16:29:41 2013 +0200
 @@ -420,6 +420,7 @@
  /*	ERR_HTMDISABLED      486	   unreal */
  #define ERR_ACCOUNTONLY      486	/* QuakeNet/ASUKA extension */
@@ -98,9 +98,9 @@ diff -r d8f94a9363ed include/numeric.h
  /*      ERR_TSLESSCHAN       488           IRCnet extension (?) */
  #define ERR_VOICENEEDED      489        /* Undernet extension */
  
-diff -r d8f94a9363ed ircd/channel.c
---- a/ircd/channel.c
-+++ b/ircd/channel.c
+diff -r f0443c491386 ircd/channel.c
+--- a/ircd/channel.c	Sat Jul 20 16:28:42 2013 +0200
++++ b/ircd/channel.c	Sat Jul 20 16:29:41 2013 +0200
 @@ -3850,3 +3850,65 @@
                                       "%H -d", chan);
    }
@@ -167,9 +167,9 @@ diff -r d8f94a9363ed ircd/channel.c
 +
 +  return marker;
 +}
-diff -r d8f94a9363ed ircd/client.c
---- a/ircd/client.c
-+++ b/ircd/client.c
+diff -r f0443c491386 ircd/client.c
+--- a/ircd/client.c	Sat Jul 20 16:28:42 2013 +0200
++++ b/ircd/client.c	Sat Jul 20 16:29:41 2013 +0200
 @@ -266,3 +266,24 @@
  
    return 0;
@@ -195,9 +195,9 @@ diff -r d8f94a9363ed ircd/client.c
 +
 +  return marker;
 +}
-diff -r d8f94a9363ed ircd/ircd_relay.c
---- a/ircd/ircd_relay.c
-+++ b/ircd/ircd_relay.c
+diff -r f0443c491386 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sat Jul 20 16:28:42 2013 +0200
++++ b/ircd/ircd_relay.c	Sat Jul 20 16:29:41 2013 +0200
 @@ -304,6 +304,10 @@
    if (host)
      *--host = '%';
@@ -241,22 +241,24 @@ diff -r d8f94a9363ed ircd/ircd_relay.c
    /*
     * deliver the message
     */
-diff -r d8f94a9363ed ircd/m_invite.c
---- a/ircd/m_invite.c
-+++ b/ircd/m_invite.c
-@@ -171,6 +171,9 @@
+diff -r f0443c491386 ircd/m_invite.c
+--- a/ircd/m_invite.c	Sat Jul 20 16:28:42 2013 +0200
++++ b/ircd/m_invite.c	Sat Jul 20 16:29:41 2013 +0200
+@@ -171,6 +171,11 @@
      return 0;
    }
    
-+  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
++  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1)) {
++    send_reply(sptr, ERR_COMMONCHANSONLY, cli_name(acptr));
 +    return 0;
++  }
 +
    if (check_target_limit(sptr, acptr, cli_name(acptr), 0))
      return 0;
  
-diff -r d8f94a9363ed ircd/m_who.c
---- a/ircd/m_who.c
-+++ b/ircd/m_who.c
+diff -r f0443c491386 ircd/m_who.c
+--- a/ircd/m_who.c	Sat Jul 20 16:28:42 2013 +0200
++++ b/ircd/m_who.c	Sat Jul 20 16:29:41 2013 +0200
 @@ -99,26 +99,6 @@
  /* #include <assert.h> -- Now using assert in ircd_log.h */
  #include <string.h>
@@ -301,9 +303,9 @@ diff -r d8f94a9363ed ircd/m_who.c
    commas = (mask && strchr(mask, ','));
  
    /* First treat mask as a list of plain nicks/channels */
-diff -r d8f94a9363ed ircd/s_err.c
---- a/ircd/s_err.c
-+++ b/ircd/s_err.c
+diff -r f0443c491386 ircd/s_err.c
+--- a/ircd/s_err.c	Sat Jul 20 16:28:42 2013 +0200
++++ b/ircd/s_err.c	Sat Jul 20 16:29:41 2013 +0200
 @@ -1006,7 +1006,7 @@
  /* 486 */
    { ERR_ACCOUNTONLY, "%s :You must be authed in order to message this user -- For details of how to obtain an account visit %s", "486" },
@@ -313,9 +315,9 @@ diff -r d8f94a9363ed ircd/s_err.c
  /* 488 */
    { 0 },
  /* 489 */
-diff -r d8f94a9363ed ircd/s_user.c
---- a/ircd/s_user.c
-+++ b/ircd/s_user.c
+diff -r f0443c491386 ircd/s_user.c
+--- a/ircd/s_user.c	Sat Jul 20 16:28:42 2013 +0200
++++ b/ircd/s_user.c	Sat Jul 20 16:29:41 2013 +0200
 @@ -552,7 +552,8 @@
    { FLAG_NOCHAN,      'n' },
    { FLAG_NOIDLE,      'I' },
