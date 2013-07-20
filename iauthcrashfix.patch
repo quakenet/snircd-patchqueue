@@ -1,0 +1,49 @@
+# HG changeset patch
+# Parent 361add28fb771d38bd2ac10e3d00a3bc313084d8
+diff -r 361add28fb77 -r a0c624d688df ircd/s_auth.c
+--- a/ircd/s_auth.c	Mon Jul 08 12:35:53 2013 +0200
++++ b/ircd/s_auth.c	Mon Jul 08 16:31:30 2013 +0200
+@@ -204,6 +204,8 @@
+ 
+ /** Active instance of IAuth. */
+ static struct IAuth *iauth;
++/** IAuth respawn timer. */
++static struct Timer iauth_spawn_timer;
+ /** Freelist of AuthRequest structures. */
+ static struct AuthRequest *auth_freelist;
+ 
+@@ -2266,6 +2268,18 @@
+   memcpy(iauth->i_buffer, sol, iauth->i_count);
+ }
+ 
++static void iauth_spawn_callback(struct Event *ev)
++{
++  struct IAuth *iauth;
++
++  assert(0 != ev_timer(ev));
++  assert(0 != t_data(ev_timer(ev)));
++
++  iauth = (struct IAuth*) t_data(ev_timer(ev));
++
++  iauth_do_spawn(iauth, 1);
++}
++
+ /** Handle socket activity for an %IAuth connection.
+  * @param[in] ev &Socket event; the IAuth connection is the user data
+  *   pointer for the socket.
+@@ -2281,8 +2295,13 @@
+   switch (ev_type(ev)) {
+   case ET_DESTROY:
+     /* Hm, what happened here? */
+-    if (!IAuthHas(iauth, IAUTH_CLOSING))
+-      iauth_do_spawn(iauth, 1);
++    if (!IAuthHas(iauth, IAUTH_CLOSING)) {
++      /* We must not respawn the IAuth instance right here because this callback
++       * function may have been called by iauth_disconnect() - which would garble our
++       * IAuth sockets once we return from this function. */
++      timer_add(timer_init(&iauth_spawn_timer), iauth_spawn_callback, (void *)iauth,
++        TT_RELATIVE, 1);
++    }
+     break;
+   case ET_READ:
+     iauth_read(iauth);
