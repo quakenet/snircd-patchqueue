@@ -1,3 +1,4 @@
+webirc.patch
 accountwhois.patch
 defaultvalues.patch
 opersendq.patch
@@ -105,5 +106,4 @@ burstwhotopic.patch
 opernowildbadchan.patch
 operglinenick.patch
 welcome.patch
-match.patch
 hginfo.patch

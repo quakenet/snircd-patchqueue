@@ -1,0 +1,244 @@
+# HG changeset patch
+# Parent e1de3d14c9df051e11288e8de6181e4989e3b138
+
+diff -r e1de3d14c9df doc/readme.iauth
+--- a/doc/readme.iauth	Sat Jul 20 09:18:24 2013 +0200
++++ b/doc/readme.iauth	Sat Jul 20 09:23:57 2013 +0200
+@@ -235,6 +235,12 @@
+ Compatibility: ircd does not include the <capacity> information.
+   The <id> should be ignored: ircd sends 0 and ircu sends -1.
+ 
++W - WEBIRC
++Syntax: <id> W <password> <username> <hostname> <ip>
++Comments: Indicates the client's webirc information. This is an
++  Undernet extension and ircd does not send it.  It is enabled by the
++  iauth instance requesting the U policy.
++
+ X - Extension Query Reply
+ Syntax: <id> X <servername> <routing> :<reply>
+ Example: -1 X channels.undernet.org 5/127.0.0.1/6667 :OK kev Logged in
+diff -r e1de3d14c9df include/handlers.h
+--- a/include/handlers.h	Sat Jul 20 09:18:24 2013 +0200
++++ b/include/handlers.h	Sat Jul 20 09:23:57 2013 +0200
+@@ -146,6 +146,7 @@
+ extern int m_unregistered(struct Client*, struct Client*, int, char*[]);
+ extern int m_unsupported(struct Client*, struct Client*, int, char*[]);
+ extern int m_user(struct Client*, struct Client*, int, char*[]);
++extern int m_webirc(struct Client*, struct Client*, int, char*[]);
+ extern int m_userhost(struct Client*, struct Client*, int, char*[]);
+ extern int m_userip(struct Client*, struct Client*, int, char*[]);
+ extern int m_version(struct Client*, struct Client*, int, char*[]);
+diff -r e1de3d14c9df include/msg.h
+--- a/include/msg.h	Sat Jul 20 09:18:24 2013 +0200
++++ b/include/msg.h	Sat Jul 20 09:23:57 2013 +0200
+@@ -68,6 +68,11 @@
+ #define TOK_USER                "USER"
+ #define CMD_USER		MSG_USER, TOK_USER
+ 
++#define MSG_WEBIRC              "WEBIRC"        /* WEBI */
++#define TOK_WEBIRC              "WEBIRC"
++#define CMD_WEBIRC              MSG_WEBIRC, TOK_WEBIRC
++
++
+ #define MSG_NICK                "NICK"          /* NICK */
+ #define TOK_NICK                "N"
+ #define CMD_NICK		MSG_NICK, TOK_NICK
+diff -r e1de3d14c9df include/s_auth.h
+--- a/include/s_auth.h	Sat Jul 20 09:18:24 2013 +0200
++++ b/include/s_auth.h	Sat Jul 20 09:23:57 2013 +0200
+@@ -32,9 +32,11 @@
+ struct Client;
+ struct AuthRequest;
+ struct StatDesc;
++struct irc_in_addr;
+ 
+ extern void start_auth(struct Client *);
+ extern int auth_ping_timeout(struct Client *);
++extern int auth_set_webirc(struct AuthRequest *auth, const char *password, const char *username, const char *hostname, struct irc_in_addr *ip);
+ extern int auth_set_pong(struct AuthRequest *auth, unsigned int cookie);
+ extern int auth_set_user(struct AuthRequest *auth, const char *username, const char *hostname, const char *servername, const char *userinfo);
+ extern int auth_set_nick(struct AuthRequest *auth, const char *nickname);
+diff -r e1de3d14c9df ircd/Makefile.in
+--- a/ircd/Makefile.in	Sat Jul 20 09:18:24 2013 +0200
++++ b/ircd/Makefile.in	Sat Jul 20 09:23:57 2013 +0200
+@@ -188,6 +188,7 @@
+ 	m_wallops.c \
+ 	m_wallusers.c \
+ 	m_wallvoices.c \
++	m_webirc.c \
+ 	m_who.c \
+ 	m_whois.c \
+ 	m_whowas.c \
+diff -r e1de3d14c9df ircd/m_webirc.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ircd/m_webirc.c	Sat Jul 20 09:23:57 2013 +0200
+@@ -0,0 +1,125 @@
++/*
++ * IRC - Internet Relay Chat, ircd/m_webirc.c
++ * Copyright (C) 1990 Jarkko Oikarinen and
++ *                    University of Oulu, Computing Center
++ *
++ * See file AUTHORS in IRC package for additional names of
++ * the programmers.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 1, or (at your option)
++ * any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ *
++ * $Id: m_webirc.c,v 1.25 2005/09/13 15:17:46 entrope Exp $
++ */
++
++/*
++ * m_functions execute protocol messages on this server:
++ *
++ *    cptr    is always NON-NULL, pointing to a *LOCAL* client
++ *            structure (with an open socket connected!). This
++ *            identifies the physical socket where the message
++ *            originated (or which caused the m_function to be
++ *            executed--some m_functions may call others...).
++ *
++ *    sptr    is the source of the message, defined by the
++ *            prefix part of the message if present. If not
++ *            or prefix not found, then sptr==cptr.
++ *
++ *            (!IsServer(cptr)) => (cptr == sptr), because
++ *            prefixes are taken *only* from servers...
++ *
++ *            (IsServer(cptr))
++ *                    (sptr == cptr) => the message didn't
++ *                    have the prefix.
++ *
++ *                    (sptr != cptr && IsServer(sptr) means
++ *                    the prefix specified servername. (?)
++ *
++ *                    (sptr != cptr && !IsServer(sptr) means
++ *                    that message originated from a remote
++ *                    user (not local).
++ *
++ *            combining
++ *
++ *            (!IsServer(sptr)) means that, sptr can safely
++ *            taken as defining the target structure of the
++ *            message in this server.
++ *
++ *    *Always* true (if 'parse' and others are working correct):
++ *
++ *    1)      sptr->from == cptr  (note: cptr->from == cptr)
++ *
++ *    2)      MyConnect(sptr) <=> sptr == cptr (e.g. sptr
++ *            *cannot* be a local connection, unless it's
++ *            actually cptr!). [MyConnect(x) should probably
++ *            be defined as (x == x->from) --msa ]
++ *
++ *    parc    number of variable parameter strings (if zero,
++ *            parv is allowed to be NULL)
++ *
++ *    parv    a NULL terminated list of parameter pointers,
++ *
++ *                    parv[0], sender (prefix string), if not present
++ *                            this points to an empty string.
++ *                    parv[1]...parv[parc-1]
++ *                            pointers to additional parameters
++ *                    parv[parc] == NULL, *always*
++ *
++ *            note:   it is guaranteed that parv[0]..parv[parc-1] are all
++ *                    non-NULL pointers.
++ */
++#include "config.h"
++
++#include "channel.h"
++#include "client.h"
++#include "hash.h"
++#include "ircd.h"
++#include "ircd_features.h"
++#include "ircd_log.h"
++#include "ircd_reply.h"
++#include "ircd_string.h"
++#include "list.h"
++#include "msg.h"
++#include "numeric.h"
++#include "numnicks.h"
++#include "s_user.h"
++#include "s_auth.h"
++#include "s_misc.h"
++#include "send.h"
++#include "struct.h"
++
++/* #include <assert.h> -- Now using assert in ircd_log.h */
++
++/*
++ * ms_webirc - server message handler
++ *
++ *   parv[0] - sender prefix
++ *   parv[1] - password
++ *   parv[2] - fake username
++ *   parv[3] - fake hostname
++ *   parv[4] - fake ip address
++ *
++ */
++int m_webirc(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
++{
++  struct irc_in_addr ip;
++  
++  if (parc < 5 || EmptyString(parv[4]))
++    return need_more_params(sptr,"WEBIRC");
++
++  if (!ircd_aton(&ip, parv[4]))
++    return exit_client(cptr, cptr, &me, "Invalid IP address specified for WEBIRC");
++
++  return auth_set_webirc(cli_auth(cptr), parv[1], parv[2], parv[3], &ip);
++}
+diff -r e1de3d14c9df ircd/parse.c
+--- a/ircd/parse.c	Sat Jul 20 09:18:24 2013 +0200
++++ b/ircd/parse.c	Sat Jul 20 09:23:57 2013 +0200
+@@ -282,6 +282,13 @@
+     { m_user, m_registered, m_ignore, m_registered, m_ignore }
+   },
+   {
++    MSG_WEBIRC,
++    TOK_WEBIRC,
++    0, MAXPARA, MFLG_SLOW, 0, NULL,
++    /* UNREG, CLIENT, SERVER, OPER, SERVICE */
++    { m_webirc, m_registered, m_ignore, m_registered, m_ignore }
++  },
++  {
+     MSG_AWAY,
+     TOK_AWAY,
+     0, MAXPARA, MFLG_SLOW, 0, NULL,
+diff -r e1de3d14c9df ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Jul 20 09:18:24 2013 +0200
++++ b/ircd/s_auth.c	Sat Jul 20 09:23:57 2013 +0200
+@@ -1041,6 +1041,23 @@
+   return check_auth_finished(auth);
+ }
+ 
++int auth_set_webirc(struct AuthRequest *auth, const char *password, const char *username, const char *hostname, struct irc_in_addr *ip)
++{
++  struct Client *cptr;
++
++  assert(auth != NULL);
++
++  cptr = auth->client;
++
++  if (!FlagHas(&auth->flags, AR_NEEDS_NICK) || !FlagHas(&auth->flags, AR_NEEDS_USER))
++    return exit_client(cptr, cptr, &me, "WEBIRC must not be used after USER or NICK");
++
++  if (IAuthHas(iauth, IAUTH_UNDERNET))
++    sendto_iauth(cptr, "W %s %s %s %s", password, username, hostname, ircd_ntoa(ip));
++
++  return 0;
++}
++
+ /** Record a user's claimed username and userinfo.
+  * @param[in] auth Authorization request for client.
+  * @param[in] username Client's asserted username.
