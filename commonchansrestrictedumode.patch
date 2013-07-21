@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent d54a9d476340e2b8076e1cff5e92a88bb2c9023a
+# Parent 98f0f6c104365f61ccfd9f90ff55b2f3facd0803
 
-diff -r d54a9d476340 include/client.h
---- a/include/client.h	Sat Jul 20 16:55:52 2013 +0200
-+++ b/include/client.h	Sat Jul 20 16:56:42 2013 +0200
+diff -r 98f0f6c10436 include/client.h
+--- a/include/client.h	Sun Jul 21 17:38:00 2013 +0200
++++ b/include/client.h	Sun Jul 21 20:39:06 2013 +0200
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -13,7 +13,7 @@ diff -r d54a9d476340 include/client.h
  
  /** Character to indicate no oper name available */
  #define NOOPERNAMECHARACTER '-'
-@@ -186,6 +186,10 @@
+@@ -185,6 +185,10 @@
      FLAG_XTRAOP,                    /**< oper has special powers */
      FLAG_COMMONCHANSONLY,           /**< SNIRCD_q: hide privmsgs/notices if in no
  					 common channels (with +ok exceptions) */
@@ -24,7 +24,7 @@ diff -r d54a9d476340 include/client.h
  
      FLAG_LAST_FLAG,                 /**< number of flags */
      FLAG_LOCAL_UMODES = FLAG_LOCOP, /**< First local mode flag */
-@@ -620,6 +624,8 @@
+@@ -617,6 +621,8 @@
  #define IsSendOperName(x)         HasFlag(x, FLAG_OPERNAME)
  /** Return non-zero if the client has set mode +q (common chans only). */
  #define IsCommonChansOnly(x)    HasFlag(x, FLAG_COMMONCHANSONLY)
@@ -33,7 +33,7 @@ diff -r d54a9d476340 include/client.h
  
  /** Return non-zero if the client has operator or server privileges. */
  #define IsPrivileged(x)         (IsAnOper(x) || IsServer(x))
-@@ -687,6 +693,8 @@
+@@ -682,6 +688,8 @@
  #define SetParanoid(x)          SetFlag(x, FLAG_PARANOID)
  /** Mark a client as having mode +q (common chans only). */
  #define SetCommonChansOnly(x)   SetFlag(x, FLAG_COMMONCHANSONLY)
@@ -42,7 +42,7 @@ diff -r d54a9d476340 include/client.h
  
  /** Return non-zero if \a sptr sees \a acptr as an operator. */
  #define SeeOper(sptr,acptr) (IsAnOper(acptr) && (HasPriv(acptr, PRIV_DISPLAY) \
-@@ -736,6 +744,8 @@
+@@ -729,6 +737,8 @@
  #define ClearParanoid(x)        ClrFlag(x, FLAG_PARANOID)
  /** Remove mode +q (common chans only) from a client */
  #define ClearCommonChansOnly(x) ClrFlag(x, FLAG_COMMONCHANSONLY)
@@ -51,16 +51,16 @@ diff -r d54a9d476340 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r d54a9d476340 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Sat Jul 20 16:55:52 2013 +0200
-+++ b/ircd/ircd_relay.c	Sat Jul 20 16:56:42 2013 +0200
+diff -r 98f0f6c10436 ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Sun Jul 21 17:38:00 2013 +0200
++++ b/ircd/ircd_relay.c	Sun Jul 21 20:39:06 2013 +0200
 @@ -305,7 +305,9 @@
      *--host = '%';
  
    /* slug: same applies here, since only opers can be +k */
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !IsXtraOp(sptr) && !(IsChannelService(acptr) && IsService(cli_user(acptr)->server)))) &&
 +      !common_chan_count(acptr, sptr, 1))
      return;
  
@@ -71,7 +71,7 @@ diff -r d54a9d476340 ircd/ircd_relay.c
  
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !IsXtraOp(sptr) && !(IsChannelService(acptr) && IsService(cli_user(acptr)->server)))) &&
 +      !common_chan_count(acptr, sptr, 1))
      return;
  
@@ -82,7 +82,7 @@ diff -r d54a9d476340 ircd/ircd_relay.c
  
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1)) {
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !IsXtraOp(sptr) && !(IsChannelService(acptr) && IsService(cli_user(acptr)->server)))) &&
 +      !common_chan_count(acptr, sptr, 1)) {
      send_reply(sptr, ERR_COMMONCHANSONLY, cli_name(acptr), "message");
      return;
@@ -93,28 +93,28 @@ diff -r d54a9d476340 ircd/ircd_relay.c
  
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1))
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !IsXtraOp(sptr) && !(IsChannelService(acptr) && IsService(cli_user(acptr)->server)))) &&
 +      !common_chan_count(acptr, sptr, 1))
      return;
  
    /*
-diff -r d54a9d476340 ircd/m_invite.c
---- a/ircd/m_invite.c	Sat Jul 20 16:55:52 2013 +0200
-+++ b/ircd/m_invite.c	Sat Jul 20 16:56:42 2013 +0200
+diff -r 98f0f6c10436 ircd/m_invite.c
+--- a/ircd/m_invite.c	Sun Jul 21 17:38:00 2013 +0200
++++ b/ircd/m_invite.c	Sun Jul 21 20:39:06 2013 +0200
 @@ -171,7 +171,9 @@
      return 0;
    }
    
 -  if (IsCommonChansOnly(acptr) && !IsXtraOp(sptr) && !common_chan_count(acptr, sptr, 1)) {
 +  if (((IsCommonChansOnly(acptr) && !IsXtraOp(sptr)) || (IsCommonChansOnlyRestricted(sptr) &&
-+      !IsXtraOp(sptr) && !IsChannelService(acptr) && !IsService(cli_user(acptr)->server))) &&
++      !IsXtraOp(sptr) && !(IsChannelService(acptr) && IsService(cli_user(acptr)->server)))) &&
 +      !common_chan_count(acptr, sptr, 1)) {
      send_reply(sptr, ERR_COMMONCHANSONLY, cli_name(acptr), "invite");
      return 0;
    }
-diff -r d54a9d476340 ircd/s_user.c
---- a/ircd/s_user.c	Sat Jul 20 16:55:52 2013 +0200
-+++ b/ircd/s_user.c	Sat Jul 20 16:56:42 2013 +0200
+diff -r 98f0f6c10436 ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 21 17:38:00 2013 +0200
++++ b/ircd/s_user.c	Sun Jul 21 20:39:06 2013 +0200
 @@ -553,7 +553,8 @@
    { FLAG_NOIDLE,      'I' },
    { FLAG_SETHOST,     'h' },
