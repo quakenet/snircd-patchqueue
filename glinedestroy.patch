@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 9b7da5e3abf2570f164c718fa1c415fd6c1d2845
+# Parent e5696ca6af7ca3b62663f4891d4f570b3e66356e
 
 Add % prefix for gline allowing a global gline to be destroyed (removed from memory)
 instead of being kept in memory in a deactivated state until it expires.
@@ -19,9 +19,9 @@ P10 (normal gline, lastmod)
 Oper
 "GLINE %-<mask> * <expire> :<reason>"
 
-diff -r 9b7da5e3abf2 include/gline.h
---- a/include/gline.h	Sun Jul 21 09:31:51 2013 +0200
-+++ b/include/gline.h	Sun Jul 21 09:52:38 2013 +0200
+diff -r e5696ca6af7c include/gline.h
+--- a/include/gline.h	Sun Jul 21 09:54:48 2013 +0200
++++ b/include/gline.h	Sun Jul 21 10:10:30 2013 +0200
 @@ -83,6 +83,7 @@
  #define GLINE_LASTMOD	0x0200	/**< Find only G-lines with non-zero lastmod. */
  #define GLINE_OPERFORCE	0x0400	/**< Oper forcing G-line to be set. */
@@ -39,9 +39,9 @@ diff -r 9b7da5e3abf2 include/gline.h
  
  /** Return nick mask of a G-line. */
  #define GlineNick(g)		((g)->gl_nick)
-diff -r 9b7da5e3abf2 ircd/gline.c
---- a/ircd/gline.c	Sun Jul 21 09:31:51 2013 +0200
-+++ b/ircd/gline.c	Sun Jul 21 09:52:38 2013 +0200
+diff -r e5696ca6af7c ircd/gline.c
+--- a/ircd/gline.c	Sun Jul 21 09:54:48 2013 +0200
++++ b/ircd/gline.c	Sun Jul 21 10:10:30 2013 +0200
 @@ -388,7 +388,8 @@
  
    assert(gline->gl_lastmod);
@@ -87,44 +87,46 @@ diff -r 9b7da5e3abf2 ircd/gline.c
      gline_free(gline); /* get rid of it */
  
    return 0;
-diff -r 9b7da5e3abf2 ircd/m_gline.c
---- a/ircd/m_gline.c	Sun Jul 21 09:31:51 2013 +0200
-+++ b/ircd/m_gline.c	Sun Jul 21 09:52:38 2013 +0200
-@@ -144,6 +144,12 @@
+diff -r e5696ca6af7c ircd/m_gline.c
+--- a/ircd/m_gline.c	Sun Jul 21 09:54:48 2013 +0200
++++ b/ircd/m_gline.c	Sun Jul 21 10:10:30 2013 +0200
+@@ -143,6 +143,9 @@
+   if (*mask == '!') {
      mask++;
      flags |= GLINE_OPERFORCE; /* assume oper had WIDE_GLINE */
-   }
-+  /* destroy gline - snircd */
-+  else if (*mask == '%')
-+  {
++  } else if (*mask == '%') { /* destroy gline - snircd */
 +    mask++;
 +    flags |= GLINE_DESTROY;
-+  }
+   }
  
    switch (*mask) { /* handle +, -, <, and > */
-   case '+': /* activate the G-line */
-@@ -170,6 +176,12 @@
-   /* Is there no mask left? */
-   if (mask[0] == '\0')
-     return need_more_params(sptr, "GLINE");
-+  /* manually propagate destroy for a global gline we dont have - snircd */
-+  else if ((flags & GLINE_DESTROY) && !(flags & (GLINE_ACTIVE|GLINE_LOCAL))) {
-+    sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %%-%s %Tu %Tu :%s",
-+                          mask, expire_off, lastmod, reason);
-+    return 0;
-+  }
+@@ -238,8 +241,17 @@
+ 			 lifetime, flags | GLINE_ACTIVE);
+       }
+     } else if (IsMe(acptr)) { /* destroying a local G-line */
+-      if (!agline) /* G-line doesn't exist, so let's complain... */
+-	return send_reply(sptr, ERR_NOSUCHGLINE, mask);
++      if (!agline) {
++        /* manually propagate destroy for a global gline we dont have - snircd */
++        if ((flags & GLINE_DESTROY) && !(flags & (GLINE_ACTIVE|GLINE_LOCAL))) {
++          sendcmdto_serv_butone(sptr, CMD_GLINE, cptr, "* %%-%s %Tu %Tu %Tu :%s",
++                          mask, expire, lastmod, lifetime, reason);
++          return 0;
++        } else {
++           /* G-line doesn't exist, so let's complain... */
++           return send_reply(sptr, ERR_NOSUCHGLINE, mask);
++        }
++      }
  
-   /* Now, let's figure out if it's a local or global G-line */
-   if (action == GLINE_LOCAL_ACTIVATE || action == GLINE_LOCAL_DEACTIVATE ||
-@@ -399,6 +411,11 @@
+       /* Let's now destroy the G-line */;
+       Debug((DEBUG_DEBUG, "I am destroying a local G-line here; target %s, "
+@@ -398,6 +410,9 @@
+ 
      if (HasPriv(sptr, PRIV_WIDE_GLINE))
        flags |= GLINE_OPERFORCE;
-   }
-+  /* destroy gline - snircd */
-+  else if (*mask == '%') {
++  } else if (*mask == '%') { /* destroy gline - snircd */
 +    mask++;
 +    flags |= GLINE_DESTROY;
-+  }
+   }
  
    switch (*mask) { /* handle +, -, <, and > */
-   case '+': /* activate the G-line */
