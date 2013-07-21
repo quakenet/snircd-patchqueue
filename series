@@ -107,3 +107,4 @@ opernowildbadchan.patch
 operglinenick.patch
 welcome.patch
 hginfo.patch
+glinedestroy.patch
