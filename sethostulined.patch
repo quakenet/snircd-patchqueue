@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 93713acffa04f5432d24cc94e9ab0242f00dd980
+# Parent 9410b43f395e32ea3c5b566c4f57ca91287f69e7
 
 Require remote SETHOST to be by a service server with a Uworld block.
 
-diff -r 93713acffa04 ircd/m_sethost.c
+diff -r 9410b43f395e ircd/m_sethost.c
 --- a/ircd/m_sethost.c
 +++ b/ircd/m_sethost.c
 @@ -193,8 +193,12 @@
@@ -13,11 +13,11 @@ diff -r 93713acffa04 ircd/m_sethost.c
 -  if (!find_conf_byhost(cli_confs(sptr), cli_name(sptr), CONF_UWORLD))
 -    return protocol_violation(cptr, "Non-U:lined server %s set fake host on user %s", cli_name(sptr), cli_name(target));
 +  if (!IsService(sptr))
-+    return protocol_violation(sptr, "Received SETHOST from %C but is not a service", sptr);
++    return protocol_violation(cptr, "Received SETHOST from %C but is not a service", sptr);
 +
 +  /* Fake host assignments must be from server with Uworld block */
 +  if (!find_conf_byhost(cli_confs(cptr), cli_name(sptr), CONF_UWORLD))
-+    return protocol_violation(sptr, "Received SETHOST from %C but has no Uworld block", sptr);
++    return protocol_violation(cptr, "Received SETHOST from %C but has no Uworld block", sptr);
  
    if (!MyConnect(target)) {
      sendcmdto_one(sptr, CMD_SETHOST, cli_user(target)->server, "%C %s %s", target,
