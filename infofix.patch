@@ -1,12 +1,12 @@
 # HG changeset patch
-# Parent 059a1d81b9fb4fb9ca5069ebe7677a3e7f07e0fc
+# Parent 43da6be4706ddafe15ad60cabb2753d6553e1d7f
 
 Info fix from snircd 1.4.0.
 
 http://hg.quakenet.org/snircd/rev/5f40b7be63b9
 http://hg.quakenet.org/snircd/rev/c8b7fb9e8fa8
 
-diff -r 059a1d81b9fb include/version.h
+diff -r 43da6be4706d include/version.h
 --- a/include/version.h
 +++ b/include/version.h
 @@ -9,6 +9,7 @@
@@ -17,7 +17,7 @@ diff -r 059a1d81b9fb include/version.h
  extern const char *generation;
  
  #endif /* INCLUDED_version_h */
-diff -r 059a1d81b9fb ircd/m_info.c
+diff -r 43da6be4706d ircd/m_info.c
 --- a/ircd/m_info.c
 +++ b/ircd/m_info.c
 @@ -105,17 +105,15 @@
@@ -90,7 +90,7 @@ diff -r 059a1d81b9fb ircd/m_info.c
        HUNTED_ISME)
 +    return 0;
 +
-+  if (parv[1] == NULL)
++  if (!IsOper(sptr) || parv[1] == NULL)
    {
 -    while (text[212])
 -    {
@@ -125,7 +125,7 @@ diff -r 059a1d81b9fb ircd/m_info.c
    return 0;
  }
  
-diff -r 059a1d81b9fb ircd/version.c.SH
+diff -r 43da6be4706d ircd/version.c.SH
 --- a/ircd/version.c.SH
 +++ b/ircd/version.c.SH
 @@ -79,7 +79,10 @@
