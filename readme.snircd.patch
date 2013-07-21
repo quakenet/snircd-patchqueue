@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent dc8a005f9cf8880b89b3a5c645d848596f60bc47
+# Parent 8da9cea16f7da3638b302e90845e37cd5edd2ade
 
-diff -r dc8a005f9cf8 doc/readme.snircd
---- a/doc/readme.snircd	Sat Jul 20 09:10:16 2013 +0200
-+++ b/doc/readme.snircd	Sat Jul 20 09:17:53 2013 +0200
+diff -r 8da9cea16f7d doc/readme.snircd
+--- a/doc/readme.snircd
++++ b/doc/readme.snircd
 @@ -4,9 +4,10 @@
  ircu. This version is based on version 2.10.12 released by Undernet's
  Coder Committee. The original code can be obtained from their webpage,
@@ -16,7 +16,7 @@ diff -r dc8a005f9cf8 doc/readme.snircd
  v1.3.1,   HG,  bug fixes, warn user if input line is too long.
            WWW, 10/11/2007
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,215 +94,356 @@
+@@ -93,215 +94,359 @@
  
   * Oper mode +X
       Allows opers to:
@@ -166,6 +166,8 @@ diff -r dc8a005f9cf8 doc/readme.snircd
 +          Remotely set local glines are flagged as global,
 +          used by services to sync glines with no lastmod to servers,
 +          as these glines are not part of the netburst.
++          Gline reasons are removed from the quit message shown to other users,
++          including the quit messages by remote users.
  
 - * /stats C & H show full details for Opers.
 + * BADCHAN: Ability to use wildcards in BADCHANs (Glines on a channel)
@@ -367,6 +369,7 @@ diff -r dc8a005f9cf8 doc/readme.snircd
   * Default: TRUE
  
   As per QuakeNet Security, this removes the reason for GLINE from quit messages.
++ The feature setting is implemented but is not used in snircd.
  
 -F:SOCKSENDBUF
 - * Type: integer
