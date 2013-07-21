@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent ff730b1eeb94f522a95dc9a7437fae9230d5b37a
+# Parent ee93616dea87dcfb7f603e2310e7741bc186a2e3
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
 #
@@ -20,7 +20,7 @@
 #
 # part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
 
-diff -r ff730b1eeb94 include/handlers.h
+diff -r ee93616dea87 include/handlers.h
 --- a/include/handlers.h
 +++ b/include/handlers.h
 @@ -224,6 +224,7 @@
@@ -31,7 +31,7 @@ diff -r ff730b1eeb94 include/handlers.h
  extern int ms_rping(struct Client*, struct Client*, int, char*[]);
  extern int ms_rpong(struct Client*, struct Client*, int, char*[]);
  extern int ms_server(struct Client*, struct Client*, int, char*[]);
-diff -r ff730b1eeb94 include/msg.h
+diff -r ee93616dea87 include/msg.h
 --- a/include/msg.h
 +++ b/include/msg.h
 @@ -363,6 +363,10 @@
@@ -45,7 +45,7 @@ diff -r ff730b1eeb94 include/msg.h
  #define MSG_CAP			"CAP"
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
-diff -r ff730b1eeb94 include/s_user.h
+diff -r ee93616dea87 include/s_user.h
 --- a/include/s_user.h
 +++ b/include/s_user.h
 @@ -72,7 +72,7 @@
@@ -57,7 +57,7 @@ diff -r ff730b1eeb94 include/s_user.h
                            struct Flags* old, int prop);
  extern int whisper(struct Client* source, const char* nick,
                     const char* channel, const char* text, int is_notice);
-diff -r ff730b1eeb94 ircd/Makefile.in
+diff -r ee93616dea87 ircd/Makefile.in
 --- a/ircd/Makefile.in
 +++ b/ircd/Makefile.in
 @@ -162,6 +162,7 @@
@@ -68,10 +68,10 @@ diff -r ff730b1eeb94 ircd/Makefile.in
  	m_reset.c \
  	m_restart.c \
  	m_rping.c \
-diff -r ff730b1eeb94 ircd/m_remotemode.c
+diff -r ee93616dea87 ircd/m_remotemode.c
 --- /dev/null
 +++ b/ircd/m_remotemode.c
-@@ -0,0 +1,410 @@
+@@ -0,0 +1,411 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -226,7 +226,11 @@ diff -r ff730b1eeb94 ircd/m_remotemode.c
 +  /* not for my user, pass it along */
 +  if (!MyConnect(acptr)) {
 +
++    if (parc > 9)
++      parc = 9;
++
 +    assert(parc > 2);
++    assert(parc < 10);
 +
 +    switch (parc) {
 +    	case 3:
@@ -248,9 +252,6 @@ diff -r ff730b1eeb94 ircd/m_remotemode.c
 +        pattern = "%C %s %s %s %s %s %s";
 +        break;
 +      case 9:
-+        pattern = "%C %s %s %s %s %s %s %s";
-+        break;
-+      default:
 +        pattern = "%C %s %s %s %s %s %s %s";
 +        break;
 +    }
@@ -482,7 +483,7 @@ diff -r ff730b1eeb94 ircd/m_remotemode.c
 +
 +  return 0;
 +}
-diff -r ff730b1eeb94 ircd/parse.c
+diff -r ee93616dea87 ircd/parse.c
 --- a/ircd/parse.c
 +++ b/ircd/parse.c
 @@ -541,6 +541,13 @@
@@ -499,7 +500,7 @@ diff -r ff730b1eeb94 ircd/parse.c
      MSG_HASH,
      TOK_HASH,
      0, MAXPARA, MFLG_SLOW, 0, NULL,
-diff -r ff730b1eeb94 ircd/s_user.c
+diff -r ee93616dea87 ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
 @@ -886,7 +886,7 @@
