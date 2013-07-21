@@ -213,7 +213,7 @@ diff -r ee93616dea87 ircd/m_remotemode.c
 +
 +  /* check service */
 +  if (!IsService(sptr))
-+    return protocol_violation(sptr, "Received REMOTEMODE from %C but is not a service", sptr);
++    return protocol_violation(cptr, "Received REMOTEMODE from %C but is not a service", sptr);
 +
 +  /* check Uworld block */
 +  if (!find_conf_byhost(cli_confs(cptr), cli_name(sptr), CONF_UWORLD))
