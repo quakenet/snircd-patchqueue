@@ -217,7 +217,7 @@ diff -r ee93616dea87 ircd/m_remotemode.c
 +
 +  /* check Uworld block */
 +  if (!find_conf_byhost(cli_confs(cptr), cli_name(sptr), CONF_UWORLD))
-+    return protocol_violation(sptr, "Received REMOTEMODE from %C but has no Uworld block", sptr);
++    return protocol_violation(cptr, "Received REMOTEMODE from %C but has no Uworld block", sptr);
 +
 +  /* find user */
 +  if (!(acptr = findNUser(parv[1])))
