@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 4a99caecf4d0ac2dccf921617dd974f66f8ad9b4
+# Parent 2d36dfc626ace3cba60f11d9d3d19abfd92a4ad4
 
-diff -r 4a99caecf4d0 include/client.h
---- a/include/client.h	Sat Jul 20 14:46:36 2013 +0100
-+++ b/include/client.h	Sat Jul 20 14:47:02 2013 +0100
+diff -r 2d36dfc626ac include/client.h
+--- a/include/client.h	Sun Jul 21 10:27:50 2013 +0200
++++ b/include/client.h	Sun Jul 21 10:28:31 2013 +0200
 @@ -90,7 +90,7 @@
  #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
  
@@ -49,22 +49,22 @@ diff -r 4a99caecf4d0 include/client.h
  
  /* free flags */
  #define FREEFLAG_SOCKET	0x0001	/**< socket needs to be freed */
-diff -r 4a99caecf4d0 ircd/m_whois.c
---- a/ircd/m_whois.c	Sat Jul 20 14:46:36 2013 +0100
-+++ b/ircd/m_whois.c	Sat Jul 20 14:47:02 2013 +0100
+diff -r 2d36dfc626ac ircd/m_whois.c
+--- a/ircd/m_whois.c	Sun Jul 21 10:27:50 2013 +0200
++++ b/ircd/m_whois.c	Sun Jul 21 10:28:31 2013 +0200
 @@ -215,6 +215,9 @@
        send_reply(sptr, RPL_WHOISACTUALLY, name, user->realusername,
                   user->realhost, ircd_ntoa(&cli_ip(acptr)));
  
-+    if (!IsAnOper(sptr) && IsParanoid(acptr) && IsAnOper(acptr))
++    if (!IsAnOper(sptr) && IsParanoid(acptr) && sptr != acptr)
 +      sendcmdto_one(&me, CMD_NOTICE, acptr, "%C :whois: %s performed a /WHOIS on you.", acptr, cli_name(sptr));
 +    
      /* Hint: if your looking to add more flags to a user, eg +h, here's
       *       probably a good place to add them :)
       */
-diff -r 4a99caecf4d0 ircd/s_user.c
---- a/ircd/s_user.c	Sat Jul 20 14:46:36 2013 +0100
-+++ b/ircd/s_user.c	Sat Jul 20 14:47:02 2013 +0100
+diff -r 2d36dfc626ac ircd/s_user.c
+--- a/ircd/s_user.c	Sun Jul 21 10:27:50 2013 +0200
++++ b/ircd/s_user.c	Sun Jul 21 10:28:31 2013 +0200
 @@ -518,7 +518,8 @@
    { FLAG_XTRAOP,      'X' },
    { FLAG_NOCHAN,      'n' },

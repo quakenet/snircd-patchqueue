@@ -75,7 +75,6 @@ hackdeop.patch
 whonoidle.patch
 whoisnoidle.patch
 localoperkill.patch
-whoisparanoid.patch
 freetargetcheckaftermodechecks.patch
 checkoutput.patch
 checkendof.patch
