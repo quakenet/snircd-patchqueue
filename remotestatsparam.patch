@@ -3,7 +3,7 @@
 
 Fix optional param for remote STATS requests.
 
-Forward port from snircd 1.4.0 / ircu - http://hg.quakenet.org/snircd/diff/0760b66e7816/ircd/m_stats.c
+Backport from snircd 1.4.0 / ircu - http://hg.quakenet.org/snircd/diff/0760b66e7816/ircd/m_stats.c
 
 diff -r 0d60587c3068 ircd/m_stats.c
 --- a/ircd/m_stats.c	Sun Jun 30 17:45:29 2013 +0200
