@@ -1,24 +1,51 @@
 # HG changeset patch
-# Parent 8da9cea16f7da3638b302e90845e37cd5edd2ade
+# Parent cc139acb52d2d2b7039bf84e7f01ab3f210b49e7
 
 Update readme.snircd for snircd 1.3.5 release
 
-diff -r 8da9cea16f7d doc/readme.snircd
+diff -r cc139acb52d2 doc/readme.snircd
 --- a/doc/readme.snircd
 +++ b/doc/readme.snircd
-@@ -4,9 +4,10 @@
+@@ -4,9 +4,37 @@
  ircu. This version is based on version 2.10.12 released by Undernet's
  Coder Committee. The original code can be obtained from their webpage,
  http://coder-com.undernet.org and the latest release of Snircd can be obtained
 -from QuakeNet's Development Team webpage, http://development.quakenet.org.
 +from QuakeNet's Development Team webpage, http://hg.quakenet.org.
++
++
++
++                                                                  d::
++        QuakeNet Snail IRCd 1.3.5                                 ''d$:     :h
++                                                                     d$   :$h'
++                                  .......                             d$..$h'
++                             ..cc$$$$$$$$$c.                  ...c$$$$$$$$$h
++                           .d$$'        '$$$h.              cc$$$$:::::d$!$h
++                         c$$'              '$$c           .$$$$:::()::d$!$h'
++                       .c$$'                 $$h.        .d$$::::::::d$!!$h
++                     .$$h'                    $$$.       $$$::::::::$$!!$h'
++                    .$$h'      .;dd,           $$$.      $$$:::::::d$!!$h'
++                    $$$'      dd$$$hh,          $$$.     $$$:::::::d$!!$h
++                    $$$      d$$' '$hh.          $$$.   .$$$:::::d$!!!!$h
++                    $$$      $$d    $$$           d$$.  $$$:::::d$!!!!$h'
++                    $$$      $$$ d  $$$          .d$$$.c$$::::::d$!!!!$h
++                    $$$.     '$$$$  $$$         .$$$$$$$$::::::d$$!!!$h'
++                    '$$h.           $$$       .d$$:::::::::::::d$$!!!$h
++                      "$$$h        .$$$    ,$$$:::::::::::::::d$$!!!$h'
++    ..hh              .c$$:$h       $$$'   ,$$$::::::::::::::d$$!!!$h'
++    d$$           .c$$$:::$$h,     $$h    $$$:::::::::::::d$$$!!!$h'
++    $$$.        .$$h::::::::$$$dddd$h'   $$$::::::::::::dd$$!!!!$h'
++    '$$$$c...cc$$h:::::::::::$$$$$$$hhhh$$$::::::::::d$$$$$$$hhh'
++     '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$hhhhhhhh'''
++
++
  
  - version history ------------------------------------------------------------
 +v1.3.4,   HG,  unknown...
  v1.3.1,   HG,  bug fixes, warn user if input line is too long.
            WWW, 10/11/2007
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,215 +94,359 @@
+@@ -93,215 +121,359 @@
  
   * Oper mode +X
       Allows opers to:
