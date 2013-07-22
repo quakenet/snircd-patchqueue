@@ -1,5 +1,6 @@
-only disallow _local_ users setting usermode -i when feature AUTOINVISIBLE is turned on
-and do not enforce this setting on remote users, leads to desynch
+
+Fix feature AUTOINVISIBLE disallowing remote users to set -i, only enforce this on local users.
+
 
 diff -r 71fe467decbf ircd/s_user.c
 --- a/ircd/s_user.c	Sat Jun 29 18:48:55 2013 +0200
