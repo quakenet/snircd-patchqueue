@@ -13,6 +13,7 @@ SERVER <server name> 1 <link timestamp> <start timestmap> J10 <server numeric><m
 Example:
 PASS :SIM:J3_Rasf2[Fg
 SERVER irc.netsplit.net 1 1361660437 1361660438 J10 1IA]] +hn6 :NetSplit IRC Server
+ERROR :Closing Link: irc.netsplit.net by hub.netsplit.net (Simulate success irc.netsplit.net)
 
 diff -r 79aba0186bf6 ircd/m_server.c
 --- a/ircd/m_server.c
