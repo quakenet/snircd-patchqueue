@@ -440,7 +440,7 @@ diff -r 3762b96af898 doc/quakenet.conf
 -# port   = number;      mask   = "ipmask"    vhost = "virtualhostinterfaceip"
 -# server = yes;         hidden = yes
 +# port   = [ipv4|ipv6] number;
-+# mask   = "ipmask"    vhost = "virtualhostinterfaceip"
++# mask   = "ipmask"    vhost = [ipv4|ipv6] "virtualhostinterfaceip"
 +# server = yes         hidden = yes
 +#
 +# default is to bind to ALL interfaces, IPv4 and IPv6!
