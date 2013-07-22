@@ -1,6 +1,8 @@
 # HG changeset patch
 # Parent bfc5036ab99de4cf6fd43a8577779d1521b44c62
 
+Fix for server bouncing channel mode limits.
+
 diff -r bfc5036ab99d ChangeLog
 --- a/ChangeLog	Fri Jul 19 20:44:21 2013 +0200
 +++ b/ChangeLog	Fri Jul 19 20:46:34 2013 +0200
