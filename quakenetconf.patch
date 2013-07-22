@@ -1,6 +1,8 @@
 # HG changeset patch
 # Parent 75cef5a6b820a5a9899856df0ded7a138b6b553e
 
+Updates to the quakenet.conf
+
 diff -r 75cef5a6b820 doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
