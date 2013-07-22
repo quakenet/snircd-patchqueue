@@ -1,7 +1,7 @@
 # HG changeset patch
 # Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
 
-Properly handle kick for a channel member already in a zombie state.
+Fix channel member being left in a zombie state when different kinds of kick cross.
 
 Backported from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/5f1306ec2068
 
@@ -17,7 +17,7 @@ diff -r e4f53aeb83c3 ircd/m_kick.c
 +    /* 
 +     * target user is a zombie
 +     *   make_zombie will figure out if the user should remain a zombie
-+     *   or be removed from the channel now
++     *   or be removed from the channel now - snircd
 +     */
 +    if (member)
 +      make_zombie(member, who, cptr, sptr, chptr);
