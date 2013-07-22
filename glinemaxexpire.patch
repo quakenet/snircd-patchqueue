@@ -5,7 +5,7 @@ Restore ircu value for define GLINE_MAX_EXPIRE (7 days instead of 1 year).
 
 This is the max duration a gline can have when an operator uses /GLINE.
 
-This does not affect glines set by servers/services.
+This does not affect glines set by servers.
 
 diff -r 059a1d81b9fb include/gline.h
 --- a/include/gline.h	Wed Jul 03 19:00:21 2013 +0200
