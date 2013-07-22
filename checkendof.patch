@@ -5,9 +5,9 @@ it should feed back the input the client gave
 and not the found nick, channel, server (different case)
 not worth correcting that here now though
 
-diff -r e4f53aeb83c3 ircd/m_check.c
---- a/ircd/m_check.c	Sat Jun 29 16:18:12 2013 +0200
-+++ b/ircd/m_check.c	Sun Jun 30 16:40:30 2013 +0200
+diff -r b078cc4a3321 ircd/m_check.c
+--- a/ircd/m_check.c
++++ b/ircd/m_check.c
 @@ -302,7 +302,7 @@
        send_reply(sptr, RPL_DATASTR, "<none>");
    }
@@ -53,12 +53,14 @@ diff -r e4f53aeb83c3 ircd/m_check.c
    if (!strchr(hoststr, '!') && !strchr(hoststr, '@'))
      ircd_strncpy(hostm,hoststr,HOSTLEN);
    else {
-@@ -624,7 +628,7 @@
+@@ -623,8 +627,8 @@
+     if (IsMe(acptr))   /* Always the last acptr record */
        break;
  
-     if(count > 500) { /* sanity stuff */
+-    if(count > 500) { /* sanity stuff */
 -      send_reply(sptr, RPL_ENDOFCHECK, " ");
-+      send_reply(sptr, RPL_ENDOFCHECK, input);
++    if(count >= 500) { /* sanity stuff */
++      send_reply(sptr, SND_EXPLICIT | RPL_DATASTR, ":More than %d results, truncating...", count);
        break;
      }
  
@@ -71,9 +73,9 @@ diff -r e4f53aeb83c3 ircd/m_check.c
    }
  
    return count;
-diff -r e4f53aeb83c3 ircd/s_err.c
---- a/ircd/s_err.c	Sat Jun 29 16:18:12 2013 +0200
-+++ b/ircd/s_err.c	Sun Jun 30 16:40:30 2013 +0200
+diff -r b078cc4a3321 ircd/s_err.c
+--- a/ircd/s_err.c
++++ b/ircd/s_err.c
 @@ -614,7 +614,7 @@
  /* 290 */
    { RPL_DATASTR, ":%s", "290" },
