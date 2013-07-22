@@ -1,3 +1,5 @@
+Fix server flag n propagation to other servers, correct flag shown in stats v
+
 When we introduce a new server we got from our uplink to our downlinks,
 check the IsSendOpername() against this new server
 and not on the client (thus the server link) that sent us this message.
