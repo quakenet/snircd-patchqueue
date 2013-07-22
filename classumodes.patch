@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 79fc57550c4695a5eda68227ced615ea7ec59868
+# Parent ff17c46fa54da1e46b49cddfb006d4d0cff010eb
 
 Fix class usermodes not being applied, and fix the user getting modes twice.
 
@@ -13,10 +13,10 @@ are send to the user at the end.
 
 Backport from ircu.
 
-diff -r 79fc57550c46 ircd/s_user.c
+diff -r ff17c46fa54d ircd/s_user.c
 --- a/ircd/s_user.c
 +++ b/ircd/s_user.c
-@@ -370,6 +370,14 @@
+@@ -370,6 +370,16 @@
        }
      }
  
@@ -24,14 +24,16 @@ diff -r 79fc57550c46 ircd/s_user.c
 +     * Set user's initial modes
 +     */
 +    tmpstr = (char*)client_get_default_umode(sptr);
-+    char *umodev[] = { NULL, NULL, NULL, NULL };
-+    umodev[2] = tmpstr;
-+    set_user_mode(cptr, sptr, 3, umodev, ALLOWMODES_ANY);
++    if (tmpstr) {
++      char *umodev[] = { NULL, NULL, NULL, NULL };
++      umodev[2] = tmpstr;
++      set_user_mode(cptr, sptr, 3, umodev, ALLOWMODES_ANY);
++    }
 +
      SetUser(sptr);
      cli_handler(sptr) = CLIENT_HANDLER;
      SetLocalNumNick(sptr);
-@@ -400,16 +408,6 @@
+@@ -400,16 +410,6 @@
                             cli_info(sptr), NumNick(cptr) /* two %s's */);
  
      IPcheck_connect_succeeded(sptr);
