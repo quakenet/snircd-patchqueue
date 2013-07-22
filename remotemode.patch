@@ -1,24 +1,24 @@
 # HG changeset patch
 # Parent ee93616dea87dcfb7f603e2310e7741bc186a2e3
 
-# add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
-#
-# <source numeric server> RM <target numeric user> <modes> [<modes2> .. <modes6>] (note: no : prefixing last parameter)
-#
-# allow +-idwRnIxqQ
-# allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
-#
-# usermode i can only be unset if the user is +rx or +h - this prevents the user from becoming visible with their realhost
-# usermode x can only be set, not unset (same as normal)
-# usermode h can only be unset, if the user is +rx (or +r and allowed to set +x) - this prevents exposing the realhost out of the blue
-#
-# easy to add/remove modes
-#
-# REMOTEMODE travels from source server to victim server, from where a normal usermode change is broadcasted to the network
-#
-# unfortunately the code is a bit messy because of the sethost stuff, should we in the future accept the sethost.patch (see queue), it can be cleaned up quite a bit
-#
-# part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
+add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
+
+<source numeric server> RM <target numeric user> <modes> [<modes2> .. <modes6>] (note: no : prefixing last parameter)
+
+allow +-idwRnIxqQ
+allow +h <user@host> and -h (so we dont need remote sethost/SH token anymore), other modes are not allowed to be set remotely
+
+usermode i can only be unset if the user is +rx or +h - this prevents the user from becoming visible with their realhost
+usermode x can only be set, not unset (same as normal)
+usermode h can only be unset, if the user is +rx (or +r and allowed to set +x) - this prevents exposing the realhost out of the blue
+
+easy to add/remove modes
+
+REMOTEMODE travels from source server to victim server, from where a normal usermode change is broadcasted to the network
+
+unfortunately the code is a bit messy because of the sethost stuff, should we in the future accept the sethost.patch (see queue), it can be cleaned up quite a bit
+
+part of the code is duplicate of the mode part in s_user.c for now, to avoid the chance of breaking things there
 
 diff -r ee93616dea87 include/handlers.h
 --- a/include/handlers.h
