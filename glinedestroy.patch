@@ -8,10 +8,10 @@ This prefix should only be used when there are no servers split that have the gl
 because during a netmerge, if the other end has this gline,
 it will be reintroduced to our side of the network.
 
-Syntax:
+A destroy for a gline is propagated even when the gline was not found,
+this allows destroying a gline even in the event the servers are desynched.
 
-P10 (Uworld gline, no lastmod)
-"<source numeric> GL * %-<mask>"
+Syntax:
 
 P10 (normal gline, lastmod)
 "<source numeric> GL * %-<mask> <expire> <lastmod> :<reason>"
