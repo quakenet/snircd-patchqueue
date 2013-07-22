@@ -423,7 +423,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
  #Pseudo "CHANSERV" {
-@@ -253,105 +343,85 @@
+@@ -253,105 +343,94 @@
  #};
  Pseudo "AUTH" {
    name = "Q";
@@ -435,10 +435,19 @@ diff -r 3762b96af898 doc/quakenet.conf
  
  # -----------------------------------------------------------------------------
 -# Port (aka plines)
-+# Port
++# IAuth
  # -----------------------------------------------------------------------------
 -# port   = number;      mask   = "ipmask"    vhost = "virtualhostinterfaceip"
 -# server = yes;         hidden = yes
++# You can ask a separate server whether to allow users to connect.
++# Uncomment this ONLY if you have an iauth helper program.
++# IAuth {
++#  program = "../path/to/iauth" "-n" "options go here";
++# };
++
++# -----------------------------------------------------------------------------
++# Port
++# -----------------------------------------------------------------------------
 +# port   = [ipv4|ipv6] number;
 +# mask   = "ipmask"    vhost = [ipv4|ipv6] "virtualhostinterfaceip"
 +# server = yes         hidden = yes
