@@ -1,4 +1,4 @@
-dont sent kicks upstream for local channels
+fix badchan kicks for users on a local channel going upstream
 
 diff -r b3e677e85b26 ircd/gline.c
 --- a/ircd/gline.c
