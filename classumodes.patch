@@ -1,0 +1,50 @@
+# HG changeset patch
+# Parent 79fc57550c4695a5eda68227ced615ea7ec59868
+
+Fix class usermodes not being applied, and fix the user getting modes twice.
+
+3rd param is the number of parameters, which should be 3,
+when 1 just the current modes are reported.
+
+Apply the class modes before SetUser(),
+to prevent the mode change from being shown to the user.
+The mode changes (all of them, from /user, iauth, class, autovisible),
+are send to the user at the end.
+
+Backport from ircu.
+
+diff -r 79fc57550c46 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -370,6 +370,14 @@
+       }
+     }
+ 
++    /*
++     * Set user's initial modes
++     */
++    tmpstr = (char*)client_get_default_umode(sptr);
++    char *umodev[] = { NULL, NULL, NULL, NULL };
++    umodev[2] = tmpstr;
++    set_user_mode(cptr, sptr, 3, umodev, ALLOWMODES_ANY);
++
+     SetUser(sptr);
+     cli_handler(sptr) = CLIENT_HANDLER;
+     SetLocalNumNick(sptr);
+@@ -400,16 +408,6 @@
+                            cli_info(sptr), NumNick(cptr) /* two %s's */);
+ 
+     IPcheck_connect_succeeded(sptr);
+-    /*
+-     * Set user's initial modes
+-     */
+-    tmpstr = (char*)client_get_default_umode(sptr);
+-    if (tmpstr) {
+-      char *umodev[] = { NULL, NULL, NULL, NULL };
+-      umodev[2] = tmpstr;
+-      set_user_mode(cptr, sptr, 1, umodev, ALLOWMODES_ANY);
+-    }
+-
+   }
+   else {
+     struct Client *acptr = user->server;
