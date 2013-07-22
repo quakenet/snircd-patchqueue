@@ -1,9 +1,7 @@
-make RPL_ENDOFCHECK consistent with other end of replies, changed text and feed back the input from the client
 
-not sure this is worth it for snircd 1.3.5
-it should feed back the input the client gave
-and not the found nick, channel, server (different case)
-not worth correcting that here now though
+Make RPL_ENDOFCHECK consistent with other end of replies, changed text and feed back the input from the client.
+Inform oper when there are too many results, and the list is truncated.
+
 
 diff -r b078cc4a3321 ircd/m_check.c
 --- a/ircd/m_check.c
