@@ -3,6 +3,7 @@ infofix.patch
 hginfo.patch
 compilewarnings.patch
 readme.snircd.patch
+snircdinfo.patch
 delete_ircd_auth_files.patch
 testserverlink.patch
 opmodenobanlimit.patch
