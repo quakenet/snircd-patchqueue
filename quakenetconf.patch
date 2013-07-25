@@ -1,12 +1,12 @@
 # HG changeset patch
-# Parent 3762b96af8989dcf56e2fbdbfa068a54986526a0
+# Parent 30144db3f62c88ea6a1493897e99a9bd45cbac4d
 
 Updates to the quakenet.conf
 
-diff -r 3762b96af898 doc/quakenet.conf
+diff -r 30144db3f62c doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
-@@ -6,16 +6,40 @@
+@@ -6,16 +6,41 @@
  #  v.12 config file, last edited 08.12.2007/paul
  # -----------------------------------------------------------------------------
  
@@ -15,7 +15,8 @@ diff -r 3762b96af898 doc/quakenet.conf
 +# -----------------------------------------------------------------------------
 +# name = "servername";
 +# description = "server description"
-+# numeric = 0-4095; must be unique on network
++# numeric = 1-4095; must be unique on network
++#           bug in conf parser will not accept 0 for numeric
 +#
 +# IP of local interface to use for outgoing connections (optional)
 +# vhost = "ipv4vhost";
@@ -51,7 +52,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  Admin {
    Location = "@@@";
    Location = "QuakeNet IRC server";
-@@ -23,106 +47,141 @@
+@@ -23,106 +48,141 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -254,7 +255,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  };
  
  Jupe {
-@@ -134,7 +193,7 @@
+@@ -134,7 +194,7 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -263,7 +264,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # host     = "user@host";      reason = "The reason the user will see";
  # realname = "realnametoban";    file = "path/to/file/with/reason/to/show";
-@@ -145,66 +204,98 @@
+@@ -145,66 +205,98 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -397,7 +398,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # username = "ident"    host = "host"    password = "passwd"
  
-@@ -214,7 +305,7 @@
+@@ -214,7 +306,7 @@
  #Spoofhost "testsline2.quakenet.org" { username = "x"; host = "nohost"; };
  
  # -----------------------------------------------------------------------------
@@ -406,7 +407,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  
  #Server Admin
-@@ -236,7 +327,7 @@
+@@ -236,7 +328,7 @@
  };
  
  # -----------------------------------------------------------------------------
@@ -415,7 +416,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  #Quarantine {
  #  "#shells" = "Thou shalt not support the h4><0rz";
-@@ -244,7 +335,7 @@
+@@ -244,7 +336,7 @@
  #};
  
  # -----------------------------------------------------------------------------
@@ -424,7 +425,7 @@ diff -r 3762b96af898 doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
  #Pseudo "CHANSERV" {
-@@ -253,105 +344,94 @@
+@@ -253,105 +345,94 @@
  #};
  Pseudo "AUTH" {
    name = "Q";
