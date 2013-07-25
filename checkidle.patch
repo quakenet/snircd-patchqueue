@@ -1,0 +1,22 @@
+# HG changeset patch
+# Parent 7070088d444beb4a1c18fddb4f5071ad03dc310f
+
+Show idle time for local user, even if it is the requesting oper or a +k user
+
+diff -r 7070088d444b ircd/m_check.c
+--- a/ircd/m_check.c
++++ b/ircd/m_check.c
+@@ -471,11 +471,8 @@
+       send_reply(sptr, RPL_DATASTR, chntext);
+   }
+ 
+-  /* If client processing command ISN'T target (or a registered
+-   * Network Service), show idle time since the last time we
+-   * parsed something.
+-   */
+-  if (MyUser(acptr) && !(IsService(acptr) == -1) && !(strCasediff(acptr->cli_name, sptr->cli_name) == 0)) {
++  /* my user, show idle time */
++  if (MyUser(acptr)) {
+     nowr = CurrentTime - cli_user(acptr)->last;
+     ircd_snprintf(0, outbuf, sizeof(outbuf), "       Idle for:: %d days, %02ld:%02ld:%02ld",
+         nowr / 86400, (nowr / 3600) % 24, (nowr / 60) % 60, nowr % 60);
