@@ -44,7 +44,7 @@ topic_reveal.patch
 privs.patch
 servernameinconnect.patch
 killsaskill.patch
-opernotify
+opernotify.patch
 glinereasons.patch
 identrules.patch
 statsv.patch
