@@ -44,22 +44,6 @@ diff -r 956177bd34a7 ircd/s_auth.c
 diff -r 956177bd34a7 ircd/s_user.c
 --- a/ircd/s_user.c	Fri Jul 19 22:51:36 2013 +0100
 +++ b/ircd/s_user.c	Fri Jul 19 22:54:29 2013 +0100
-@@ -485,6 +485,7 @@
-                              NumNick(sptr), cli_info(sptr));
- 
-   tmpstr = umode_str(sptr, UMODE_ALL_PARAMS);
-+
-   /* Send oper name and full IP address to IPv6-grokking servers. */
-   sendcmdto_flagarray_serv_butone(user->server, CMD_NICK, cptr,
-                              ipv6andopername, 2, NULL, 0,
-@@ -570,7 +571,6 @@
-                   const char* nick, int parc, char* parv[])
- {
-   if (IsServer(sptr)) {
--
-     /*
-      * A server introducing a new client, change source
-      */
 @@ -749,6 +749,10 @@
    assert(cli_local(sptr));
    targets = cli_targets(sptr);
@@ -227,14 +211,6 @@ diff -r 956177bd34a7 ircd/s_user.c
  
    if (IsRegistered(sptr)) {
      if (!FlagHas(&setflags, FLAG_OPER) && IsOper(sptr)) {
-@@ -1589,7 +1629,6 @@
-                     cli_user(cptr)->account, cli_user(cptr)->acc_create,
- 		    cli_user(cptr)->acc_id, cli_user(cptr)->acc_flags);
- 
--
-     while ((*m++ = *t++))
-       ; /* Empty loop */
- 
 @@ -1695,6 +1734,7 @@
        char* t = cli_user(sptr)->opername;
        while ((*m++ = *t++))
