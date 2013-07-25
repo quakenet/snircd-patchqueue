@@ -27,6 +27,7 @@ remotestatsparam.patch
 quakenetconf.patch
 checkendof.patch
 checkaccount.patch
+checkremote.patch
 blockitaliccodeinchanmodec.patch
 fixkickforzombie.patch
 enforcechanmodebignlocalonly.patch

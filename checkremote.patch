@@ -1,0 +1,61 @@
+# HG changeset patch
+# Parent 7f68ff816a2054667cfe8207f0c96f3b96eb0e50
+
+Add remote CHECK
+
+Syntax:
+
+Oper: /CHECK [<server>] <input> [-flags]
+
+P10: <source numeric> CC <target server numeric> <input> [-flags]
+
+Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/4a1375040d2f
+
+diff -r 7f68ff816a20 include/msg.h
+--- a/include/msg.h
++++ b/include/msg.h
+@@ -262,6 +262,7 @@
+ 
+ #define MSG_CHECK       "CHECK"
+ #define TOK_CHECK       "CC"
++#define CMD_CHECK		MSG_CHECK, TOK_CHECK
+ 
+ #define MSG_REHASH              "REHASH"        /* REHA */
+ #define TOK_REHASH              "REHASH"
+diff -r 7f68ff816a20 ircd/m_check.c
+--- a/ircd/m_check.c
++++ b/ircd/m_check.c
+@@ -37,6 +37,7 @@
+ #include "list.h"
+ #include "listener.h"
+ #include "match.h"
++#include "msg.h"
+ #include "numeric.h"
+ #include "numnicks.h"
+ #include "querycmds.h"
+@@ -67,7 +68,7 @@
+  */
+ 
+ /*
+- * Syntax: CHECK <channel|nick|server|hostmask> [-flags]
++ * Syntax: CHECK [<server>] <channel|nick|server|hostmask> [-flags]
+  * 
+  * Where valid flags are:
+  * -c: Show channels when checking a hostmask.
+@@ -96,6 +97,16 @@
+     return 0;
+   }
+ 
++  /* remote query */
++  if (parc >= 4 || (parc == 3 && parv[2][0] != '-')) {
++    if (hunt_server_cmd(sptr, CMD_CHECK, cptr, 1,
++                        parc == 4 ? "%C %s %s" : "%C %s",
++                        1, parc, parv) != HUNTED_ISME)
++      return 0;
++    parv++;
++    parc--;
++  }
++
+   /* This checks to see if any flags have been supplied */
+   if ((parc >= 3) && (parv[2][0] == '-')) {
+     for (i = 0; parv[2][i]; i++) {
