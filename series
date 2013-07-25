@@ -68,7 +68,6 @@ enforceinvisible.patch
 snircdumodescheckisanoper.patch
 automodeni.patch
 noopername.patch
-opernotify.patch
 minoplevel.patch
 ischannelservice.patch
 hackdeop.patch
