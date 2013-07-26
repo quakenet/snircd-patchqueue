@@ -40,7 +40,6 @@ snircd.patch
 reconnects.patch
 nonetriderkick.patch
 channelmarker.patch
-topic_reveal.patch
 privs.patch
 servernameinconnect.patch
 killsaskill.patch
