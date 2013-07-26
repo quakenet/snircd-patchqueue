@@ -1,8 +1,8 @@
 split m_check into mo_check (oper) and ms_check (server) message functions
 
-diff -r 3a5d0499141a include/handlers.h
---- a/include/handlers.h	Tue Mar 23 21:30:55 2010 +0100
-+++ b/include/handlers.h	Tue Mar 23 21:31:57 2010 +0100
+diff -r 26edd3f62b02 include/handlers.h
+--- a/include/handlers.h	Fri Jul 26 20:21:47 2013 +0100
++++ b/include/handlers.h	Fri Jul 26 20:34:34 2013 +0100
 @@ -88,19 +88,6 @@
  
  extern int m_admin(struct Client*, struct Client*, int, char*[]);
@@ -23,7 +23,7 @@ diff -r 3a5d0499141a include/handlers.h
  extern int m_cap(struct Client*, struct Client*, int, char*[]);
  extern int m_cnotice(struct Client*, struct Client*, int, char*[]);
  extern int m_cprivmsg(struct Client*, struct Client*, int, char*[]);
-@@ -156,6 +143,7 @@
+@@ -157,6 +144,7 @@
  extern int m_whowas(struct Client*, struct Client*, int, char*[]);
  extern int mo_admin(struct Client*, struct Client*, int, char*[]);
  extern int mo_asll(struct Client*, struct Client*, int, char*[]);
@@ -31,7 +31,7 @@ diff -r 3a5d0499141a include/handlers.h
  extern int mo_clearmode(struct Client*, struct Client*, int, char*[]);
  extern int mo_close(struct Client*, struct Client*, int, char*[]);
  extern int mo_connect(struct Client*, struct Client*, int, char*[]);
-@@ -194,6 +182,7 @@
+@@ -195,6 +183,7 @@
  extern int ms_asll(struct Client*, struct Client*, int, char*[]);
  extern int ms_away(struct Client*, struct Client*, int, char*[]);
  extern int ms_burst(struct Client*, struct Client*, int, char*[]);
@@ -39,9 +39,9 @@ diff -r 3a5d0499141a include/handlers.h
  extern int ms_clearmode(struct Client*, struct Client*, int, char*[]);
  extern int ms_connect(struct Client*, struct Client*, int, char*[]);
  extern int ms_create(struct Client*, struct Client*, int, char*[]);
-diff -r 3a5d0499141a ircd/m_check.c
---- a/ircd/m_check.c	Tue Mar 23 21:30:55 2010 +0100
-+++ b/ircd/m_check.c	Tue Mar 23 21:31:57 2010 +0100
+diff -r 26edd3f62b02 ircd/m_check.c
+--- a/ircd/m_check.c	Fri Jul 26 20:21:47 2013 +0100
++++ b/ircd/m_check.c	Fri Jul 26 20:34:34 2013 +0100
 @@ -31,6 +31,7 @@
  #include "ircd_alloc.h"
  #include "ircd_defs.h"
@@ -175,7 +175,7 @@ diff -r 3a5d0499141a ircd/m_check.c
        case 'c':
          flags |= CHECK_CHECKCHAN;
          break;
-@@ -149,29 +222,29 @@
+@@ -149,24 +222,24 @@
      }
    }
  
@@ -190,14 +190,8 @@ diff -r 3a5d0499141a ircd/m_check.c
 -      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
 +      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", mask);
    }
--  else if ((acptr = FindClient(parv[1])) && !(FindServer(parv[1]))) { /* client and not a server */
-+  else if ((acptr = FindClient(mask)) && !(FindServer(mask))) { /* client and not a server */
-     if (!IsRegistered(acptr)) {
--      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
-+      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", mask);
-       return 0;
-     }
- 
+-  else if ((acptr = FindUser(parv[1]))) {
++  else if ((acptr = FindUser(mask))) {
      checkClient(sptr, acptr);
    }
 -  else if ((acptr = FindServer(parv[1]))) { /* server */
@@ -213,10 +207,10 @@ diff -r 3a5d0499141a ircd/m_check.c
   
    return 1;
  }
-diff -r 3a5d0499141a ircd/parse.c
---- a/ircd/parse.c	Tue Mar 23 21:30:55 2010 +0100
-+++ b/ircd/parse.c	Tue Mar 23 21:31:57 2010 +0100
-@@ -654,21 +654,12 @@
+diff -r 26edd3f62b02 ircd/parse.c
+--- a/ircd/parse.c	Fri Jul 26 20:21:47 2013 +0100
++++ b/ircd/parse.c	Fri Jul 26 20:34:34 2013 +0100
+@@ -668,21 +668,12 @@
      { m_cap, m_cap, m_ignore, m_cap, m_ignore }
    },
  #endif
