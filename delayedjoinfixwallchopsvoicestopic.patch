@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 163ac585cb74966bcf8ef55fd8008ae9b277c284
+# Parent e6c4a152e575ee6a42c3b02206c48c623b53d8af
 
 Reveal Delayedjoin user when sending wallchops and wallvoices, or changing the channel topic.
 
@@ -8,31 +8,31 @@ Backport from snircd 1.4.0
 http://hg.quakenet.org/snircd/rev/1b452072b7d2
 http://hg.quakenet.org/snircd/rev/009cf0ea7cb8
 
-diff -r 163ac585cb74 ircd/m_topic.c
---- a/ircd/m_topic.c	Wed Jul 03 18:47:41 2013 +0200
-+++ b/ircd/m_topic.c	Wed Jul 03 18:59:07 2013 +0200
-@@ -159,6 +159,7 @@
- int ms_topic(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
- {
-   struct Channel *chptr;
-+  struct Membership* member;
-   char *topic = 0, *name, *p = 0;
-   time_t ts = 0;
- 
-@@ -191,6 +192,10 @@
-     if (parc > 4 && (ts = atoi(parv[3])) && chptr->topic_time > ts)
-       continue;
- 
-+    /* Reveal delayedjoin user */
-+    if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
-+      RevealDelayedJoin(member);
+diff -r e6c4a152e575 ircd/m_topic.c
+--- a/ircd/m_topic.c
++++ b/ircd/m_topic.c
+@@ -72,8 +72,18 @@
+      sendcmdto_serv_butone(sptr, CMD_TOPIC, cptr, "%H %Tu %Tu :%s", chptr,
+ 		           chptr->creationtime, chptr->topic_time, chptr->topic);
+    if (newtopic)
++   {
++     struct Membership *member;
 +
-     do_settopic(sptr,cptr,chptr,topic, ts);
-   }
-   return 0;
-diff -r 163ac585cb74 ircd/m_wallchops.c
---- a/ircd/m_wallchops.c	Wed Jul 03 18:47:41 2013 +0200
-+++ b/ircd/m_wallchops.c	Wed Jul 03 18:59:07 2013 +0200
++     /* If the member is delayed-join, show them. */
++     member = find_channel_member(sptr, chptr);
++     if (member && IsDelayedJoin(member))
++       RevealDelayedJoin(member);
++
+      sendcmdto_channel_butserv_butone(from, CMD_TOPIC, chptr, NULL, 0,
+       				       "%H :%s", chptr, chptr->topic);
++   }
++
+       /* if this is the same topic as before we send it to the person that
+        * set it (so they knew it went through ok), but don't bother sending
+        * it to everyone else on the channel to save bandwidth
+diff -r e6c4a152e575 ircd/m_wallchops.c
+--- a/ircd/m_wallchops.c
++++ b/ircd/m_wallchops.c
 @@ -102,6 +102,7 @@
  int m_wallchops(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
  {
@@ -61,9 +61,9 @@ diff -r 163ac585cb74 ircd/m_wallchops.c
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
  			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
  			       "%H :%s", chptr, parv[parc - 1]);
-diff -r 163ac585cb74 ircd/m_wallvoices.c
---- a/ircd/m_wallvoices.c	Wed Jul 03 18:47:41 2013 +0200
-+++ b/ircd/m_wallvoices.c	Wed Jul 03 18:59:07 2013 +0200
+diff -r e6c4a152e575 ircd/m_wallvoices.c
+--- a/ircd/m_wallvoices.c
++++ b/ircd/m_wallvoices.c
 @@ -101,6 +101,7 @@
  int m_wallvoices(struct Client* cptr, struct Client* sptr, int parc, char* parv[])
  {
