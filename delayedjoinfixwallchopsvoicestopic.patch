@@ -46,7 +46,7 @@ diff -r e6c4a152e575 ircd/m_wallchops.c
            }
  
 +      /* Reveal delayedjoin user */
-+      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
++      if ((member = find_member_channel(sptr, chptr)) && IsDelayedJoin(member))
 +        RevealDelayedJoin(member);
 +
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
@@ -77,7 +77,7 @@ diff -r e6c4a152e575 ircd/m_wallvoices.c
            }
  
 +      /* Reveal delayedjoin user */
-+      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
++      if ((member = find_member_channel(sptr, chptr)) && IsDelayedJoin(member))
 +        RevealDelayedJoin(member);
 +
        sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
