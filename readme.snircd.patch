@@ -52,6 +52,31 @@ diff -r 2013c684ab02 doc/readme.snircd
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
                 Port of 'asuka' extensions for ircu 2.10.11 to 2.10.12
                 Development moved to SVN from CVS
+@@ -66,20 +97,20 @@
+ - contributors ---------------------------------------------------------------
+ 
+ Current Development Team:
++                  Gunnar Beutner   <shroud@quakenet.org>
+                     Chris Porter   <slug@quakenet.org>
+-                         Cruicky   <cruicky@quakenet.org>
+                    Paul Richards   <paul@quakenet.org>
+-                  Gunnar Beutner   <shroud@quakenet.org>
+-                   David Mansell   <splidge@quakenet.org>
+-               Fredrik Söderblom   <froo@quakenet.org>
+                            Wiebe   <wiebe@quakenet.org>
+ Developers/Contributors:
+                         Joe Cise   <pilsner@quakenet.org>
+                      Rasmus Have   <bigfoot@quakenet.org>
+                  Gregory Bristol   <qoreq@quakenet.org>
+                     Darren Smith   <data@quakenet.org>
++                   David Mansell   <splidge@quakenet.org>
+                    Iain Sheppard   <magpie@quakenet.org>
++               Fredrik Söderblom   <froo@quakenet.org>
+                  Mike Cartwright   <mike@quakenet.org>
++                         Cruicky   <cruicky@quakenet.org>
+ Thanks To:            Reed Loden   <reed@reedloden.com>
+                       Alex Badea   <vampire@p16.pub.ro>
+                     Perry Lorier   <isomer@coders.net>
 @@ -93,215 +124,359 @@
  
   * Oper mode +X
