@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent a5c0c4b6e220134753302d432bc5723b22209ab9
+# Parent f507cce89a57eeec72416237835fcc58f2447345
 
 Add % prefix for gline allowing a global gline to be destroyed (removed from memory)
 instead of being kept in memory in a deactivated state until it expires.
@@ -19,7 +19,7 @@ P10 (normal gline, lastmod)
 Oper
 "GLINE %-<mask> * <expire> :<reason>"
 
-diff -r a5c0c4b6e220 include/gline.h
+diff -r f507cce89a57 include/gline.h
 --- a/include/gline.h
 +++ b/include/gline.h
 @@ -65,6 +65,7 @@
@@ -39,7 +39,7 @@ diff -r a5c0c4b6e220 include/gline.h
  
  /** Return nick mask of a G-line. */
  #define GlineNick(g)		((g)->gl_nick)
-diff -r a5c0c4b6e220 ircd/gline.c
+diff -r f507cce89a57 ircd/gline.c
 --- a/ircd/gline.c
 +++ b/ircd/gline.c
 @@ -376,7 +376,8 @@
@@ -97,7 +97,7 @@ diff -r a5c0c4b6e220 ircd/gline.c
      gline_free(gline); /* get rid of it */
  
    return 0;
-diff -r a5c0c4b6e220 ircd/m_gline.c
+diff -r f507cce89a57 ircd/m_gline.c
 --- a/ircd/m_gline.c
 +++ b/ircd/m_gline.c
 @@ -134,6 +134,13 @@
@@ -127,14 +127,16 @@ diff -r a5c0c4b6e220 ircd/m_gline.c
  
    return gline_add(cptr, sptr, mask, reason, expire_off, lastmod, flags);
  }
-@@ -251,6 +264,12 @@
+@@ -251,6 +264,14 @@
        flags |= GLINE_OPERFORCE;
    }
  
 +  /* destroy gline - snircd */
 +  else if (*mask == '%') {
 +    mask++;
++    /* disallow oper to destroy gline
 +    flags |= GLINE_DESTROY;
++    */
 +  }
 +
    if (*mask == '+') {
