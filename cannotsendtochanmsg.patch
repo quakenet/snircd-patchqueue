@@ -379,7 +379,7 @@ diff -r 2d1e87f36ae5 ircd/m_wallchops.c
 -            return 0;
 -          }
 +  /* Reveal delayedjoin user */
-+  if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
++  if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
 +    RevealDelayedJoin(member);
  
 -      if ((chptr->mode.mode & MODE_NOCTCP) && ircd_strncmp(parv[parc - 1],"\001ACTION ",8))
@@ -389,7 +389,7 @@ diff -r 2d1e87f36ae5 ircd/m_wallchops.c
 -          }
 -
 -      /* Reveal delayedjoin user */
--      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
+-      if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
 -        RevealDelayedJoin(member);
 -
 -      sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
@@ -465,11 +465,11 @@ diff -r 2d1e87f36ae5 ircd/m_wallvoices.c
 -            return 0;
 -          }
 +  /* Reveal delayedjoin user */
-+  if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
++  if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
 +    RevealDelayedJoin(member);
  
 -      /* Reveal delayedjoin user */
--      if ((member = find_member_link(chptr, cptr)) && IsDelayedJoin(member))
+-      if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
 -        RevealDelayedJoin(member);
 -
 -      sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
