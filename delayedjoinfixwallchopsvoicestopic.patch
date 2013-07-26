@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 3ab612b95b8dc67efb0b8a85684c3806ad163c2f
+# Parent b33cb8c0208a4fa055b080122febcbee502d9dae
 
 Reveal Delayedjoin user when sending wallchops and wallvoices, or changing the channel topic.
 
@@ -8,7 +8,7 @@ Backport from snircd 1.4.0
 http://hg.quakenet.org/snircd/rev/1b452072b7d2
 http://hg.quakenet.org/snircd/rev/009cf0ea7cb8
 
-diff -r 3ab612b95b8d ircd/m_topic.c
+diff -r b33cb8c0208a ircd/m_topic.c
 --- a/ircd/m_topic.c
 +++ b/ircd/m_topic.c
 @@ -72,8 +72,18 @@
@@ -30,7 +30,7 @@ diff -r 3ab612b95b8d ircd/m_topic.c
        /* if this is the same topic as before we send it to the person that
         * set it (so they knew it went through ok), but don't bother sending
         * it to everyone else on the channel to save bandwidth
-diff -r 3ab612b95b8d ircd/m_wallchops.c
+diff -r b33cb8c0208a ircd/m_wallchops.c
 --- a/ircd/m_wallchops.c
 +++ b/ircd/m_wallchops.c
 @@ -102,6 +102,7 @@
@@ -46,7 +46,7 @@ diff -r 3ab612b95b8d ircd/m_wallchops.c
            }
  
 +      /* Reveal delayedjoin user */
-+      if ((member = find_channel_member(sptr, chptr)) && IsDelayedJoin(member))
++      if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
 +        RevealDelayedJoin(member);
 +
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
@@ -61,7 +61,7 @@ diff -r 3ab612b95b8d ircd/m_wallchops.c
        sendcmdto_channel_butone(sptr, CMD_WALLCHOPS, chptr, cptr,
  			       SKIP_DEAF | SKIP_BURST | SKIP_NONOPS,
  			       "%H :%s", chptr, parv[parc - 1]);
-diff -r 3ab612b95b8d ircd/m_wallvoices.c
+diff -r b33cb8c0208a ircd/m_wallvoices.c
 --- a/ircd/m_wallvoices.c
 +++ b/ircd/m_wallvoices.c
 @@ -101,6 +101,7 @@
@@ -77,7 +77,7 @@ diff -r 3ab612b95b8d ircd/m_wallvoices.c
            }
  
 +      /* Reveal delayedjoin user */
-+      if ((member = find_channel_member(sptr, chptr)) && IsDelayedJoin(member))
++      if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
 +        RevealDelayedJoin(member);
 +
        sendcmdto_channel_butone(sptr, CMD_WALLVOICES, chptr, cptr,
