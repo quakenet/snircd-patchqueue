@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 3303f23758b0f0bc35a9d786a027aba155488e62
+# Parent 4e198b121c286785bbdc97fefed95f6d7b95c9ab
 
-diff -r 3303f23758b0 include/check.h
+diff -r 4e198b121c28 include/check.h
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/include/check.h	Wed Jul 17 21:38:16 2013 +0100
++++ b/include/check.h	Fri Jul 26 19:55:24 2013 +0100
 @@ -0,0 +1,49 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/check.h
@@ -54,10 +54,10 @@ diff -r 3303f23758b0 include/check.h
 +extern signed int checkHostmask(struct Client *sptr, char *hoststr, int flags);
 +
 +#endif /* INCLUDED_check_h */
-diff -r 3303f23758b0 include/client.h
---- a/include/client.h	Wed Jul 17 21:30:44 2013 +0100
-+++ b/include/client.h	Wed Jul 17 21:38:16 2013 +0100
-@@ -774,6 +774,9 @@
+diff -r 4e198b121c28 include/client.h
+--- a/include/client.h	Thu Jul 25 22:43:11 2013 +0100
++++ b/include/client.h	Fri Jul 26 19:55:24 2013 +0100
+@@ -776,6 +776,9 @@
  #define HIDE_IP 0 /**< Do not show IP address in get_client_name() */
  #define SHOW_IP 1 /**< Show ident and IP address in get_client_name() */
  
@@ -67,9 +67,9 @@ diff -r 3303f23758b0 include/client.h
  extern const char* get_client_name(const struct Client* sptr, int showip);
  extern const char* client_get_default_umode(const struct Client* sptr);
  extern int client_get_ping(const struct Client* local_client);
-diff -r 3303f23758b0 include/handlers.h
---- a/include/handlers.h	Wed Jul 17 21:30:44 2013 +0100
-+++ b/include/handlers.h	Wed Jul 17 21:38:16 2013 +0100
+diff -r 4e198b121c28 include/handlers.h
+--- a/include/handlers.h	Thu Jul 25 22:43:11 2013 +0100
++++ b/include/handlers.h	Fri Jul 26 19:55:24 2013 +0100
 @@ -88,6 +88,19 @@
  
  extern int m_admin(struct Client*, struct Client*, int, char*[]);
@@ -90,9 +90,9 @@ diff -r 3303f23758b0 include/handlers.h
  extern int m_cap(struct Client*, struct Client*, int, char*[]);
  extern int m_cnotice(struct Client*, struct Client*, int, char*[]);
  extern int m_cprivmsg(struct Client*, struct Client*, int, char*[]);
-diff -r 3303f23758b0 include/ircd_features.h
---- a/include/ircd_features.h	Wed Jul 17 21:30:44 2013 +0100
-+++ b/include/ircd_features.h	Wed Jul 17 21:38:16 2013 +0100
+diff -r 4e198b121c28 include/ircd_features.h
+--- a/include/ircd_features.h	Thu Jul 25 22:43:11 2013 +0100
++++ b/include/ircd_features.h	Fri Jul 26 19:55:24 2013 +0100
 @@ -102,6 +102,7 @@
    FEAT_ANNOUNCE_INVITES,
  
@@ -101,10 +101,10 @@ diff -r 3303f23758b0 include/ircd_features.h
    FEAT_CONFIG_OPERCMDS,
    FEAT_SETHOST,
    FEAT_SETHOST_USER,
-diff -r 3303f23758b0 include/msg.h
---- a/include/msg.h	Wed Jul 17 21:30:44 2013 +0100
-+++ b/include/msg.h	Wed Jul 17 21:38:16 2013 +0100
-@@ -260,6 +260,10 @@
+diff -r 4e198b121c28 include/msg.h
+--- a/include/msg.h	Thu Jul 25 22:43:11 2013 +0100
++++ b/include/msg.h	Fri Jul 26 19:55:24 2013 +0100
+@@ -265,6 +265,10 @@
  #define TOK_SERVSET             "SERVSET"
  #define CMD_SERVSET		MSG_SERVSET, TOK_SERVSET
  
@@ -115,9 +115,9 @@ diff -r 3303f23758b0 include/msg.h
  #define MSG_REHASH              "REHASH"        /* REHA */
  #define TOK_REHASH              "REHASH"
  #define CMD_REHASH		MSG_REHASH, TOK_REHASH
-diff -r 3303f23758b0 include/s_user.h
---- a/include/s_user.h	Wed Jul 17 21:30:44 2013 +0100
-+++ b/include/s_user.h	Wed Jul 17 21:38:16 2013 +0100
+diff -r 4e198b121c28 include/s_user.h
+--- a/include/s_user.h	Thu Jul 25 22:43:11 2013 +0100
++++ b/include/s_user.h	Fri Jul 26 19:55:24 2013 +0100
 @@ -54,6 +54,12 @@
  #define ALLOWMODES_ANY	0 /**< Allow any user mode */
  #define ALLOWMODES_DEFAULT  1 /**< Only allow the subset of modes that are legit defaults */
@@ -131,9 +131,9 @@ diff -r 3303f23758b0 include/s_user.h
  /** Formatter function for send_user_info().
   * @param who Client being displayed.
   * @param sptr Client requesting information.
-diff -r 3303f23758b0 ircd/IPcheck.c
---- a/ircd/IPcheck.c	Wed Jul 17 21:30:44 2013 +0100
-+++ b/ircd/IPcheck.c	Wed Jul 17 21:38:16 2013 +0100
+diff -r 4e198b121c28 ircd/IPcheck.c
+--- a/ircd/IPcheck.c	Thu Jul 25 22:43:11 2013 +0100
++++ b/ircd/IPcheck.c	Fri Jul 26 19:55:24 2013 +0100
 @@ -120,7 +120,7 @@
    ip_registry_canonicalize(&canon, ip);
    entry = hashTable[ip_registry_hash(&canon)];
@@ -143,9 +143,9 @@ diff -r 3303f23758b0 ircd/IPcheck.c
      if (ipmask_check(&canon, &entry->addr, bits))
        break;
    }
-diff -r 3303f23758b0 ircd/Makefile.in
---- a/ircd/Makefile.in	Wed Jul 17 21:30:44 2013 +0100
-+++ b/ircd/Makefile.in	Wed Jul 17 21:38:16 2013 +0100
+diff -r 4e198b121c28 ircd/Makefile.in
+--- a/ircd/Makefile.in	Thu Jul 25 22:43:11 2013 +0100
++++ b/ircd/Makefile.in	Fri Jul 26 19:55:24 2013 +0100
 @@ -119,6 +119,7 @@
  	m_away.c \
  	m_burst.c \
@@ -154,9 +154,9 @@ diff -r 3303f23758b0 ircd/Makefile.in
  	m_clearmode.c \
  	m_close.c \
  	m_connect.c \
-diff -r 3303f23758b0 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Wed Jul 17 21:30:44 2013 +0100
-+++ b/ircd/ircd_features.c	Wed Jul 17 21:38:16 2013 +0100
+diff -r 4e198b121c28 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Thu Jul 25 22:43:11 2013 +0100
++++ b/ircd/ircd_features.c	Fri Jul 26 19:55:24 2013 +0100
 @@ -367,6 +367,7 @@
    F_B(ANNOUNCE_INVITES, 0, 0, 0),
  
@@ -165,10 +165,10 @@ diff -r 3303f23758b0 ircd/ircd_features.c
    F_B(CONFIG_OPERCMDS, 0, 0, 0),
    F_B(SETHOST, 0, 0, 0),
    F_B(SETHOST_USER, 0, 0, 0),
-diff -r 3303f23758b0 ircd/m_check.c
+diff -r 4e198b121c28 ircd/m_check.c
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/ircd/m_check.c	Wed Jul 17 21:38:16 2013 +0100
-@@ -0,0 +1,809 @@
++++ b/ircd/m_check.c	Fri Jul 26 19:55:24 2013 +0100
+@@ -0,0 +1,804 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_check.c
 + * Copyright (C) 1990 Jarkko Oikarinen and
@@ -325,12 +325,7 @@ diff -r 3303f23758b0 ircd/m_check.c
 +    else
 +      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
 +  }
-+  else if ((acptr = FindClient(parv[1])) && !(FindServer(parv[1]))) { /* client and not a server */
-+    if (!IsRegistered(acptr)) {
-+      send_reply(sptr, ERR_SEARCHNOMATCH, "CHECK", parv[1]);
-+      return 0;
-+    }
-+
++  else if ((acptr = FindUser(parv[1]))) {
 +    checkClient(sptr, acptr);
 +  }
 +  else if ((acptr = FindServer(parv[1]))) { /* server */
@@ -978,10 +973,10 @@ diff -r 3303f23758b0 ircd/m_check.c
 +
 +  return count;
 +}
-diff -r 3303f23758b0 ircd/parse.c
---- a/ircd/parse.c	Wed Jul 17 21:30:44 2013 +0100
-+++ b/ircd/parse.c	Wed Jul 17 21:38:16 2013 +0100
-@@ -647,6 +647,23 @@
+diff -r 4e198b121c28 ircd/parse.c
+--- a/ircd/parse.c	Thu Jul 25 22:43:11 2013 +0100
++++ b/ircd/parse.c	Fri Jul 26 19:55:24 2013 +0100
+@@ -654,6 +654,23 @@
      { m_cap, m_cap, m_ignore, m_cap, m_ignore }
    },
  #endif
@@ -1005,9 +1000,9 @@ diff -r 3303f23758b0 ircd/parse.c
    /* This command is an alias for QUIT during the unregistered part of
     * of the server.  This is because someone jumping via a broken web
     * proxy will send a 'POST' as their first command - which we will
-diff -r 3303f23758b0 ircd/s_err.c
---- a/ircd/s_err.c	Wed Jul 17 21:30:44 2013 +0100
-+++ b/ircd/s_err.c	Wed Jul 17 21:38:16 2013 +0100
+diff -r 4e198b121c28 ircd/s_err.c
+--- a/ircd/s_err.c	Thu Jul 25 22:43:11 2013 +0100
++++ b/ircd/s_err.c	Fri Jul 26 19:55:24 2013 +0100
 @@ -602,19 +602,19 @@
  /* 284 */
    { RPL_FEATURE, 0, "284" },
@@ -1042,10 +1037,10 @@ diff -r 3303f23758b0 ircd/s_err.c
  /* 409 */
    { ERR_NOORIGIN, ":No origin specified", "409" },
  /* 410 */
-diff -r 3303f23758b0 ircd/s_user.c
---- a/ircd/s_user.c	Wed Jul 17 21:30:44 2013 +0100
-+++ b/ircd/s_user.c	Wed Jul 17 21:38:16 2013 +0100
-@@ -1485,7 +1485,8 @@
+diff -r 4e198b121c28 ircd/s_user.c
+--- a/ircd/s_user.c	Thu Jul 25 22:43:11 2013 +0100
++++ b/ircd/s_user.c	Fri Jul 26 19:55:24 2013 +0100
+@@ -1507,7 +1507,8 @@
      m--; /* Step back over the '\0' */
    }
  
