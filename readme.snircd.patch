@@ -77,7 +77,14 @@ diff -r 2013c684ab02 doc/readme.snircd
  Thanks To:            Reed Loden   <reed@reedloden.com>
                        Alex Badea   <vampire@p16.pub.ro>
                      Perry Lorier   <isomer@coders.net>
-@@ -93,215 +124,359 @@
+@@ -87,221 +118,365 @@
+ Special Thanks To:  Tero Nybacka   <sivis@sivis.org>
+                   Darren Coleman   <durzel@quakenet.org>
+   For their contributions to Lain (http://dev-com.b2irc.net) and therefore
+-  the basis for most of the ideas in Asuka. Thanks Guys.
++  the basis for most of the ideas in Asuka & Snircd. Thanks Guys.
+ 
+ - features ------------------------------------------------------------------
  
   * Oper mode +X
       Allows opers to:
