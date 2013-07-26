@@ -6,10 +6,10 @@ mean a lot here, accounts do.
 
 Control this sending/parsing with a new feature TOPIC_BURST_ACCOUNT?
 
-diff -r 5385c7388842 ircd/channel.c
---- a/ircd/channel.c	Mon Aug 10 14:18:35 2009 +0100
-+++ b/ircd/channel.c	Mon Aug 10 14:18:41 2009 +0100
-@@ -1129,8 +1129,11 @@
+diff -r d2513c10947a ircd/channel.c
+--- a/ircd/channel.c	Fri Jul 26 22:09:41 2013 +0100
++++ b/ircd/channel.c	Fri Jul 26 22:12:39 2013 +0100
+@@ -1196,8 +1196,11 @@
    if (opped_members)
      MyFree(opped_members);
    if (feature_bool(FEAT_TOPIC_BURST) && (chptr->topic[0] != '\0'))
@@ -23,9 +23,9 @@ diff -r 5385c7388842 ircd/channel.c
  }
  
  /** Canonify a mask.
-diff -r 5385c7388842 ircd/m_topic.c
---- a/ircd/m_topic.c	Mon Aug 10 14:18:35 2009 +0100
-+++ b/ircd/m_topic.c	Mon Aug 10 14:18:41 2009 +0100
+diff -r d2513c10947a ircd/m_topic.c
+--- a/ircd/m_topic.c	Fri Jul 26 22:09:41 2013 +0100
++++ b/ircd/m_topic.c	Fri Jul 26 22:12:39 2013 +0100
 @@ -49,7 +49,7 @@
   * @param[in] ts Timestamp that topic was set (0 for current time).
   */
@@ -70,28 +70,24 @@ diff -r 5385c7388842 ircd/m_topic.c
    }
    return 0;
  }
-@@ -177,6 +181,7 @@
-   struct Membership* member;
+@@ -176,6 +180,7 @@
+   struct Channel *chptr;
    char *topic = 0, *name, *p = 0;
    time_t ts = 0;
 +  const char *who = 0;
  
    if (parc < 3)
      return need_more_params(sptr, "TOPIC");
-@@ -207,11 +212,15 @@
+@@ -207,7 +212,11 @@
      if (parc > 4 && (ts = atoi(parv[3])) && chptr->topic_time > ts)
        continue;
  
+-    do_settopic(sptr,cptr,chptr,topic, ts);
 +    /* got info on who set the topic sent in burst */
 +    if (parc > 5)
 +      who = parv[4];
 +
-     /* Reveal delayedjoin user */
-     if ((member = find_member_link(chptr, sptr)) && IsDelayedJoin(member))
-       RevealDelayedJoin(member);
- 
--    do_settopic(sptr,cptr,chptr,topic, ts);
-+    do_settopic(sptr, cptr, chptr, topic, ts, who);
++    do_settopic(sptr,cptr,chptr,topic, ts, who);
    }
    return 0;
  }
