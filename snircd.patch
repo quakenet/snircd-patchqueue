@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent ad0877db8e57ab00cefbcfc139dc6374461b3ba8
+# Parent 4ebe7df0737dea7332344504aa2acf9fb8462374
 
-diff -r ad0877db8e57 doc/quakenet.conf
+diff -r 4ebe7df0737d doc/quakenet.conf
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/doc/quakenet.conf	Fri Jul 19 21:22:02 2013 +0100
++++ b/doc/quakenet.conf	Fri Jul 26 19:46:43 2013 +0100
 @@ -0,0 +1,357 @@
 +#
 +#                            Q U A K E N E T   I R C   S E R V E R
@@ -362,21 +362,28 @@ diff -r ad0877db8e57 doc/quakenet.conf
 +  "HIS_URLSERVERS" = "http://www.quakenet.org/serverlist.php";
 +};
 +
-diff -r ad0877db8e57 doc/readme.snircd
+diff -r 4ebe7df0737d doc/readme.snircd
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/doc/readme.snircd	Fri Jul 19 21:22:02 2013 +0100
-@@ -0,0 +1,302 @@
++++ b/doc/readme.snircd	Fri Jul 26 19:46:43 2013 +0100
+@@ -0,0 +1,313 @@
 +- SNIRCD ----------------------------------------------------------------------
 +
 +Snircd is a collection of modifications to the Undernet IRC server known as
 +ircu. This version is based on version 2.10.12 released by Undernet's
 +Coder Committee. The original code can be obtained from their webpage,
 +http://coder-com.undernet.org and the latest release of Snircd can be obtained
-+from QuakeNet's Development Team webpage, http://development.quakenet.org.
++from QuakeNet's Development Team webpage, https://www.quakenet.org/development/
 +
 +- version history ------------------------------------------------------------
 +
-+v1.3.0,   SVN  upstream patches/migration to u2.10.12.10
++v1.4.0,   HG,  
++v1.3.4a,  HG,  Fix CVE-2008-1501
++v1.3.4,   HG,  Fix burst bug, add s,I flags to check, fix sethost bug
++v1.3.3,   HG,  Fix bug in ban handling, spoofhost handling and names
++v1.3.2,   HG,  not released
++v1.3.1,   HG,  not released, upstream patches to u2.10.12.10, warn user if input line is too long,
++               add additional PRIVS
++v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
 +               Port of 'asuka' extensions for ircu 2.10.11 to 2.10.12
 +               Development moved to SVN from CVS
 +               chanmode +M, chanmode +T, ACcount token changes, Oper ID, 
@@ -432,16 +439,20 @@ diff -r ad0877db8e57 doc/readme.snircd
 +
 +- contributors ---------------------------------------------------------------
 +
-+Project Manager:        Joe Cise   <pilsner@quakenet.org>
-+Developers:          Rasmus Have   <bigfoot@quakenet.org>
++Current Development Team:
++                  Gunnar Beutner   <shroud@quakenet.org>
++                    Chris Porter   <slug@quakenet.org>
++                   Paul Richards   <paul@quakenet.org>
++                           Wiebe   <wiebe@quakenet.org>
++Developers/Contributors:
++                        Joe Cise   <pilsner@quakenet.org>
++                     Rasmus Have   <bigfoot@quakenet.org>
 +                 Gregory Bristol   <qoreq@quakenet.org>
 +                    Darren Smith   <data@quakenet.org>
 +                   David Mansell   <splidge@quakenet.org> 
-+               Fredrik Söderblom    <froo@quakenet.org>
-+                    Chris Porter   <slug@quakenet.org>
++               Fredrik Söderblom   <froo@quakenet.org>
 +                   Iain Sheppard   <magpie@quakenet.org>
 +                 Mike Cartwright   <mike@quakenet.org>
-+                   Paul Richards   <paul@quakenet.org>
 +                         Cruicky   <cruicky@quakenet.org
 +Thanks To:            Reed Loden   <reed@reedloden.com>
 +                      Alex Badea   <vampire@p16.pub.ro>
@@ -667,10 +678,10 @@ diff -r ad0877db8e57 doc/readme.snircd
 +This software is provided "as is" with absolutely no warranties, either express
 +or implied. It's use is done so totally at the user's own risk.
 +
-+------------------------ 11.03.2007 -----------------------------------------
-diff -r ad0877db8e57 include/ircd_features.h
---- a/include/ircd_features.h	Fri Jul 19 21:19:51 2013 +0100
-+++ b/include/ircd_features.h	Fri Jul 19 21:22:02 2013 +0100
++-----------------------------------------------------------------------------
+diff -r 4ebe7df0737d include/ircd_features.h
+--- a/include/ircd_features.h	Thu Jul 25 22:43:12 2013 +0100
++++ b/include/ircd_features.h	Fri Jul 26 19:46:43 2013 +0100
 @@ -166,6 +166,7 @@
    FEAT_HIS_URLSERVERS,
    FEAT_HIS_USERGLINE,
@@ -679,9 +690,9 @@ diff -r ad0877db8e57 include/ircd_features.h
  
    /* Misc. random stuff */
    FEAT_NETWORK,
-diff -r ad0877db8e57 include/patchlevel.h
---- a/include/patchlevel.h	Fri Jul 19 21:19:51 2013 +0100
-+++ b/include/patchlevel.h	Fri Jul 19 21:22:02 2013 +0100
+diff -r 4ebe7df0737d include/patchlevel.h
+--- a/include/patchlevel.h	Thu Jul 25 22:43:12 2013 +0100
++++ b/include/patchlevel.h	Fri Jul 26 19:46:43 2013 +0100
 @@ -18,7 +18,7 @@
   * $Id$
   *
@@ -691,10 +702,10 @@ diff -r ad0877db8e57 include/patchlevel.h
  
  #define RELEASE ".12."
  
-diff -r ad0877db8e57 ircd/Makefile.in
---- a/ircd/Makefile.in	Fri Jul 19 21:19:51 2013 +0100
-+++ b/ircd/Makefile.in	Fri Jul 19 21:22:02 2013 +0100
-@@ -293,7 +293,7 @@
+diff -r 4ebe7df0737d ircd/Makefile.in
+--- a/ircd/Makefile.in	Thu Jul 25 22:43:12 2013 +0100
++++ b/ircd/Makefile.in	Fri Jul 26 19:46:43 2013 +0100
+@@ -294,7 +294,7 @@
  	@${RM} /tmp/ircd.tag
  	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} umkpasswd ${BINDIR}
  	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} convert-conf ${BINDIR}
@@ -703,7 +714,7 @@ diff -r ad0877db8e57 ircd/Makefile.in
  
  install-no-symlink: build mkbindir
  	@if [ ! -d ${DPATH} -a ! -f ${DPATH} ]; then \
-@@ -307,7 +307,7 @@
+@@ -308,7 +308,7 @@
  	${INSTALL} -m ${IRCDMODE} -o ${IRCDOWN} -g ${IRCDGRP} ircd ${BINDIR}/ircd
  	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} umkpasswd ${BINDIR}
  	${INSTALL} -s -m 700 -o ${IRCDOWN} -g ${IRCDGRP} convert-conf ${BINDIR}
@@ -712,9 +723,9 @@ diff -r ad0877db8e57 ircd/Makefile.in
  
  uninstall:
  	@if [ "${BINDIR}" != "${DPATH}" ]; then \
-diff -r ad0877db8e57 ircd/ircd_features.c
---- a/ircd/ircd_features.c	Fri Jul 19 21:19:51 2013 +0100
-+++ b/ircd/ircd_features.c	Fri Jul 19 21:22:02 2013 +0100
+diff -r 4ebe7df0737d ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Thu Jul 25 22:43:12 2013 +0100
++++ b/ircd/ircd_features.c	Fri Jul 26 19:46:43 2013 +0100
 @@ -431,6 +431,7 @@
    F_S(HIS_URLSERVERS, 0, "http://www.undernet.org/servers.php", 0),
    F_B(HIS_USERGLINE, 0, 1, 0),
@@ -723,9 +734,9 @@ diff -r ad0877db8e57 ircd/ircd_features.c
  
    /* Misc. random stuff */
    F_S(NETWORK, 0, "UnderNet", 0),
-diff -r ad0877db8e57 ircd/ircd_relay.c
---- a/ircd/ircd_relay.c	Fri Jul 19 21:19:51 2013 +0100
-+++ b/ircd/ircd_relay.c	Fri Jul 19 21:22:02 2013 +0100
+diff -r 4ebe7df0737d ircd/ircd_relay.c
+--- a/ircd/ircd_relay.c	Thu Jul 25 22:43:12 2013 +0100
++++ b/ircd/ircd_relay.c	Fri Jul 26 19:46:43 2013 +0100
 @@ -389,7 +389,7 @@
     */
  
@@ -735,9 +746,9 @@ diff -r ad0877db8e57 ircd/ircd_relay.c
      return;
    }
  
-diff -r ad0877db8e57 ircd/m_invite.c
---- a/ircd/m_invite.c	Fri Jul 19 21:19:51 2013 +0100
-+++ b/ircd/m_invite.c	Fri Jul 19 21:22:02 2013 +0100
+diff -r 4ebe7df0737d ircd/m_invite.c
+--- a/ircd/m_invite.c	Thu Jul 25 22:43:12 2013 +0100
++++ b/ircd/m_invite.c	Fri Jul 26 19:46:43 2013 +0100
 @@ -167,7 +167,7 @@
    /* If we get here, it was a VALID and meaningful INVITE */
  
@@ -747,9 +758,9 @@ diff -r ad0877db8e57 ircd/m_invite.c
      return 0;
    }
    
-diff -r ad0877db8e57 ircd/s_err.c
---- a/ircd/s_err.c	Fri Jul 19 21:19:51 2013 +0100
-+++ b/ircd/s_err.c	Fri Jul 19 21:22:02 2013 +0100
+diff -r 4ebe7df0737d ircd/s_err.c
+--- a/ircd/s_err.c	Thu Jul 25 22:43:12 2013 +0100
++++ b/ircd/s_err.c	Fri Jul 26 19:46:43 2013 +0100
 @@ -1004,7 +1004,7 @@
  /* 485 */
    { ERR_ISREALSERVICE, "%s %s :Cannot kill, kick or deop a network service", "485" },
