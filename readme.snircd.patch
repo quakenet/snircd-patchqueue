@@ -1,12 +1,12 @@
 # HG changeset patch
-# Parent cc139acb52d2d2b7039bf84e7f01ab3f210b49e7
+# Parent 2013c684ab021deeac978249e9ebc36fd542109a
 
 Update readme.snircd for snircd 1.3.5 release
 
-diff -r cc139acb52d2 doc/readme.snircd
+diff -r 2013c684ab02 doc/readme.snircd
 --- a/doc/readme.snircd
 +++ b/doc/readme.snircd
-@@ -4,9 +4,37 @@
+@@ -4,11 +4,42 @@
  ircu. This version is based on version 2.10.12 released by Undernet's
  Coder Committee. The original code can be obtained from their webpage,
  http://coder-com.undernet.org and the latest release of Snircd can be obtained
@@ -41,11 +41,18 @@ diff -r cc139acb52d2 doc/readme.snircd
 +
  
  - version history ------------------------------------------------------------
-+v1.3.4,   HG,  unknown...
- v1.3.1,   HG,  bug fixes, warn user if input line is too long.
-           WWW, 10/11/2007
+-v1.3.1,   HG,  bug fixes, warn user if input line is too long.
+-          WWW, 10/11/2007
++v1.3.4a,  HG,  Fix CVE-2008-1501
++v1.3.4,   HG,  Fix burst bug, add s,I flags to check, fix sethost bug
++v1.3.3,   HG,  Fix bug in ban handling, spoofhost handling and names
++v1.3.2,   HG,  not released
++v1.3.1,   HG,  not released, upstream patches to u2.10.12.10, warn user if input line is too long,
++               add additional PRIVS
  v1.3.0,   SVN, upstream patches/migration to u2.10.12.10
-@@ -93,215 +121,359 @@
+                Port of 'asuka' extensions for ircu 2.10.11 to 2.10.12
+                Development moved to SVN from CVS
+@@ -93,215 +124,359 @@
  
   * Oper mode +X
       Allows opers to:
