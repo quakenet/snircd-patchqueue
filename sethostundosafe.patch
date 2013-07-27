@@ -1,0 +1,23 @@
+# HG changeset patch
+# Parent 2fc8fb10a7302e2ee3312372d4c935671311fa01
+
+Allow removal of sethost only when the user has a +x host.
+
+For safety never allow a user with a sethost to return to their realhost.
+
+diff -r 2fc8fb10a730 ircd/s_user.c
+--- a/ircd/s_user.c
++++ b/ircd/s_user.c
+@@ -1035,8 +1035,10 @@
+   if (EmptyString(hostmask)) {
+     /* is already sethost'ed? */
+     if (IsSetHost(cptr)) {
+-    	/* only an oper can remove sethost */
+-      if (MyConnect(cptr) && !IsAnOper(cptr))
++    	/* only an oper can remove sethost, and they must have a +x host
++    	 * for safety never allow a local user to return to their realhost
++    	 */
++      if (MyConnect(cptr) && (!IsAnOper(cptr) || !HasHiddenHost(cptr)))
+         return 0;
+       restore = 1;
+       sendcmdto_common_channels_butone(cptr, CMD_QUIT, cptr, ":Host change");

@@ -18,6 +18,7 @@ disableglinesfeature.patch
 glinedestroy.patch
 sethostinvalidatebans.patch
 sethostundo.patch
+sethostundosafe.patch
 sethostremotepassparam.patch
 sethostulined.patch
 sethostwhowas.patch
