@@ -1,0 +1,17 @@
+# HG changeset patch
+# Parent 92d34998972356fcaf9ab0512ffd3b709d3fba51
+
+CHECK: Compare IPs when checking for clones, not realhost.
+
+diff -r 92d349989723 ircd/m_check.c
+--- a/ircd/m_check.c
++++ b/ircd/m_check.c
+@@ -172,7 +172,7 @@
+ 
+   for (lp = chptr->members; lp; lp = lp->next_member) {
+     acptr = lp->user;
+-    if (!strcmp(cli_user(cptr)->realhost, cli_user(acptr)->realhost)) {
++    if (0 == memcmp(&cli_ip(cptr), &cli_ip(acptr), sizeof(cli_ip(cptr)))) {
+       clones++;
+     }
+   }
