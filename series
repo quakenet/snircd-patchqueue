@@ -48,6 +48,7 @@ netriderkickoutsideburst.patch
 nserverflag.patch
 commonchansumode.patch
 commonchansrestrictedumode.patch
+infomodes.patch
 whobufferfix.patch
 who-accountid.patch
 iauthupstreamfixes.patch

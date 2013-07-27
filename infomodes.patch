@@ -1,0 +1,31 @@
+# HG changeset patch
+# Parent f4c8d04a875782c13d7f3403438c939fa0e77f8d
+
+Add channel mode d to infomodes, and add user mode O to infomodes.
+
+Backport from ircu - http://sourceforge.net/p/undernet-ircu/undernet-ircu/ci/fa78a87f4d4bf4411effdb4e3ba1072625294a9a/
+
+diff -r f4c8d04a8757 include/channel.h
+--- a/include/channel.h
++++ b/include/channel.h
+@@ -123,7 +123,7 @@
+ #define MODE_WPARAS     (MODE_CHANOP|MODE_VOICE|MODE_BAN|MODE_KEY|MODE_LIMIT|MODE_APASS|MODE_UPASS)
+ 
+ /** Available Channel modes */
+-#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDcCNuMT" : "biklmnopstvrDcCNuMT"
++#define infochanmodes feature_bool(FEAT_OPLEVELS) ? "AbiklmnopstUvrDdcCNuMT" : "biklmnopstvrDdcCNuMT"
+ /** Available Channel modes that take parameters */
+ #define infochanmodeswithparams feature_bool(FEAT_OPLEVELS) ? "AbkloUv" : "bklov"
+ 
+diff -r f4c8d04a8757 include/client.h
+--- a/include/client.h
++++ b/include/client.h
+@@ -90,7 +90,7 @@
+ #define FlagClr(set,flag) ((set)->bits[FLAGSET_INDEX(flag)] &= ~FLAGSET_MASK(flag))
+ 
+ /** String containing valid user modes, in no particular order. */
+-#define infousermodes "dioswkgxRXInPqQ"
++#define infousermodes "diOoswkgxRXInPqQ"
+ 
+ /** Character to indicate no oper name available */
+ #define NOOPERNAMECHARACTER '-'
