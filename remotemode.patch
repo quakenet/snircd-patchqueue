@@ -1,5 +1,5 @@
 # HG changeset patch
-# Parent 37c9c74606033a6520033f95aa61690a8e4bcadd
+# Parent 253e36fbbc9838d1f0c20be3e61dcc14a60ee1ad
 
 # add REMOTEMODE (P10 token RM) allowing a service do change certain modes on users
 # <source numeric server> RM <target numeric user> <mode changes and arguments> (note: no : prefixing last parameter)
@@ -11,23 +11,23 @@
 # unfortunately the code is a bit messy because of the sethost stuff, should we in the future accept the sethost.patch (see queue), it can be cleaned up quite a bit
 # after snircd1.3.5 this patch will be moved further down in the patch queue, to clean up the sethost part, and add other usermodes such as +q
 
-diff -r 37c9c7460603 include/handlers.h
---- a/include/handlers.h
-+++ b/include/handlers.h
+diff -r 253e36fbbc98 include/handlers.h
+--- a/include/handlers.h	Sun Jul 28 21:30:38 2013 +0100
++++ b/include/handlers.h	Sun Jul 28 21:31:18 2013 +0100
 @@ -225,6 +225,7 @@
+ extern int ms_privmsg(struct Client*, struct Client*, int, char*[]);
  extern int ms_privs(struct Client*, struct Client*, int, char*[]);
  extern int ms_quit(struct Client*, struct Client*, int, char*[]);
- extern int ms_reburst(struct Client*, struct Client*, int, char*[]);
 +extern int ms_remotemode(struct Client*, struct Client*, int, char*[]);
  extern int ms_rping(struct Client*, struct Client*, int, char*[]);
  extern int ms_rpong(struct Client*, struct Client*, int, char*[]);
  extern int ms_server(struct Client*, struct Client*, int, char*[]);
-diff -r 37c9c7460603 include/msg.h
---- a/include/msg.h
-+++ b/include/msg.h
-@@ -368,6 +368,10 @@
- #define TOK_REBURST               "RB"
- #define CMD_REBURST               MSG_REBURST, TOK_REBURST
+diff -r 253e36fbbc98 include/msg.h
+--- a/include/msg.h	Sun Jul 28 21:30:38 2013 +0100
++++ b/include/msg.h	Sun Jul 28 21:31:18 2013 +0100
+@@ -369,6 +369,10 @@
+ #define TOK_SETHOST		"SH"
+ #define CMD_SETHOST		MSG_SETHOST, TOK_SETHOST
  
 +#define MSG_REMOTEMODE            "REMOTEMODE"         /* REMOTEMODE */
 +#define TOK_REMOTEMODE            "RM"
@@ -36,20 +36,20 @@ diff -r 37c9c7460603 include/msg.h
  #define MSG_CAP			"CAP"
  #define TOK_CAP			"CAP"
  #define CMD_CAP			MSG_CAP, TOK_CAP
-diff -r 37c9c7460603 ircd/Makefile.in
---- a/ircd/Makefile.in
-+++ b/ircd/Makefile.in
-@@ -163,6 +163,7 @@
+diff -r 253e36fbbc98 ircd/Makefile.in
+--- a/ircd/Makefile.in	Sun Jul 28 21:30:38 2013 +0100
++++ b/ircd/Makefile.in	Sun Jul 28 21:31:18 2013 +0100
+@@ -162,6 +162,7 @@
+ 	m_pseudo.c \
  	m_quit.c \
- 	m_reburst.c \
  	m_rehash.c \
 +	m_remotemode.c \
  	m_reset.c \
  	m_restart.c \
  	m_rping.c \
-diff -r 37c9c7460603 ircd/m_remotemode.c
---- /dev/null
-+++ b/ircd/m_remotemode.c
+diff -r 253e36fbbc98 ircd/m_remotemode.c
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/ircd/m_remotemode.c	Sun Jul 28 21:31:18 2013 +0100
 @@ -0,0 +1,359 @@
 +/*
 + * IRC - Internet Relay Chat, ircd/m_mode.c
@@ -410,11 +410,11 @@ diff -r 37c9c7460603 ircd/m_remotemode.c
 +
 +  return 0;
 +}
-diff -r 37c9c7460603 ircd/parse.c
---- a/ircd/parse.c
-+++ b/ircd/parse.c
+diff -r 253e36fbbc98 ircd/parse.c
+--- a/ircd/parse.c	Sun Jul 28 21:30:38 2013 +0100
++++ b/ircd/parse.c	Sun Jul 28 21:31:18 2013 +0100
 @@ -548,6 +548,13 @@
-     { m_ignore, m_ignore, ms_reburst, m_ignore, m_ignore }
+     { m_ignore, m_ignore, ms_end_of_burst_ack, m_ignore, m_ignore }
    },
    {
 +    MSG_REMOTEMODE,
