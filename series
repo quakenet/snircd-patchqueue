@@ -25,7 +25,6 @@ sbounce.patch
 badchan.patch
 map.patch
 nickgline.patch
-reburst.patch
 friendlyerrors.patch
 opertarget.patch
 ipcheckcounterfix.patch
