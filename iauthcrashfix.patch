@@ -1,49 +1,521 @@
-# HG changeset patch
-# Parent 361add28fb771d38bd2ac10e3d00a3bc313084d8
-diff -r 361add28fb77 -r a0c624d688df ircd/s_auth.c
---- a/ircd/s_auth.c	Mon Jul 08 12:35:53 2013 +0200
-+++ b/ircd/s_auth.c	Mon Jul 08 16:31:30 2013 +0200
-@@ -204,6 +204,8 @@
+Contains some important upstream IAuth fixes.
+
+ircu git IDs:
+
+389b4c485cac5cf8deff89e381020f2a38f1ad34
+41c732d83f3097645dc43ece14f38547045d1d0d
+f50e98744ac3e53605d59a2f313d610c9abc8f26
+
+diff -r 4cfa91f0bad3 ChangeLog
+--- a/ChangeLog	Tue Aug 06 06:23:22 2013 +0200
++++ b/ChangeLog	Tue Aug 06 06:29:41 2013 +0200
+@@ -50,6 +50,23 @@
+ 	* ircd/s_auth.c: "serv" is passed to find_match_server(), which
+ 	does a collapse on the pattern, so it can't be const
  
- /** Active instance of IAuth. */
- static struct IAuth *iauth;
-+/** IAuth respawn timer. */
-+static struct Timer iauth_spawn_timer;
- /** Freelist of AuthRequest structures. */
- static struct AuthRequest *auth_freelist;
++2010-01-03  Michael Poole <mdpoole@troilus.org>
++
++	* ircd/engine_devpoll.c: Make some variables that were local to
++	engine_loop() file-scoped so engine_delete() can see them.
++	(engine_delete): Discard unprocessed events for the deleted
++	socket.
++	(engine_loop): Update to use the new variable names.  Change a
++	frequent debug statement to DEBUG_ENGINE.  Fix the type of the
++	codesize variable.
++
++	* ircd/engine_epoll.c: Same as ircd/engine_devpoll.c, but the
++	debug statement and codesize variable were already fixed.
++
++	* ircd/engine_kqueue.c: Same as ircd/engine_devpoll.c, but also
++	fix a typo in an engine_signal() assertion, and get rid of dead
++	variables in engine_delete().
++
+ 2012-06-20  Michael Poole <mdpoole@troilus.org>
  
-@@ -2266,6 +2268,18 @@
-   memcpy(iauth->i_buffer, sol, iauth->i_count);
+ 	* ircd/ircd_string.c (ipmask_parse): Return zero if there is junk
+diff -r 4cfa91f0bad3 ircd/engine_devpoll.c
+--- a/ircd/engine_devpoll.c	Tue Aug 06 06:23:22 2013 +0200
++++ b/ircd/engine_devpoll.c	Tue Aug 06 06:29:41 2013 +0200
+@@ -74,6 +74,10 @@
+ static int errors = 0;
+ /** Periodic timer to forget errors. */
+ static struct Timer clear_error;
++/** Array of currently polled file descriptors. */
++static struct pollfd *polls;
++/** Number of ::polls elements that have been populated. */
++static int polls_used;
+ 
+ /** Decrement the error count (once per hour).
+  * @param[in] ev Expired timer event (ignored).
+@@ -254,6 +258,8 @@
+ static void
+ engine_delete(struct Socket* sock)
+ {
++  int ii;
++
+   assert(0 != sock);
+   assert(sock == sockList[s_fd(sock)]);
+ 
+@@ -263,6 +269,13 @@
+   set_events(sock, 0); /* get rid of the socket */
+ 
+   sockList[s_fd(sock)] = 0; /* zero the socket list entry */
++
++  /* Drop any unprocessed events citing this socket. */
++  for (ii = 0; ii < polls_used; ii++) {
++    if (polls[ii].fd == s_fd(sock)) {
++      polls[ii] = polls[--polls_used];
++    }
++  }
  }
  
-+static void iauth_spawn_callback(struct Event *ev)
-+{
-+  struct IAuth *iauth;
+ /** Run engine event loop.
+@@ -272,13 +285,13 @@
+ engine_loop(struct Generators* gen)
+ {
+   struct dvpoll dopoll;
+-  struct pollfd *polls;
+   int polls_count;
+   struct Socket* sock;
++  struct pollfd *pfd;
+   int nfds;
+   int i;
+   int errcode;
+-  size_t codesize;
++  socklen_t codesize;
+ 
+   if ((polls_count = feature_int(FEAT_POLLS_PER_LOOP)) < 20)
+     polls_count = 20;
+@@ -297,15 +310,15 @@
+     dopoll.dp_timeout = timer_next(gen) ?
+       (timer_next(gen) - CurrentTime) * 1000 : -1;
+ 
+-    Debug((DEBUG_INFO, "devpoll: delay: %Tu (%Tu) %d", timer_next(gen),
++    Debug((DEBUG_ENGINE, "devpoll: delay: %Tu (%Tu) %d", timer_next(gen),
+ 	   CurrentTime, dopoll.dp_timeout));
+ 
+     /* check for active files */
+-    nfds = ioctl(devpoll_fd, DP_POLL, &dopoll);
++    polls_used = ioctl(devpoll_fd, DP_POLL, &dopoll);
+ 
+     CurrentTime = time(0); /* set current time... */
+ 
+-    if (nfds < 0) {
++    if (polls_used < 0) {
+       if (errno != EINTR) { /* ignore interrupts */
+ 	/* Log the poll error */
+ 	log_write(LS_SOCKET, L_ERROR, 0, "ioctl(DP_POLL) error: %m");
+@@ -321,14 +334,15 @@
+       continue;
+     }
+ 
+-    for (i = 0; i < nfds; i++) {
+-      assert(-1 < polls[i].fd);
++    while (polls_used > 0) {
++      pfd = &polls[--polls_used];
++      assert(-1 < pfd->fd);
+ 
+-      sock = sockList[polls[i].fd];
++      sock = sockList[pfd->fd];
+       if (!sock) /* slots may become empty while processing events */
+ 	continue;
+ 
+-      assert(s_fd(sock) == polls[i].fd);
++      assert(s_fd(sock) == pfd->fd);
+ 
+       gen_ref_inc(sock); /* can't have it going away on us */
+ 
+@@ -352,10 +366,10 @@
+ 	}
+       }
+ 
+-      assert(!(polls[i].revents & POLLERR));
++      assert(!(pfd->revents & POLLERR));
+ 
+ #ifdef POLLHUP
+-      if (polls[i].revents & POLLHUP) { /* hang-up on socket */
++      if (pfd->revents & POLLHUP) { /* hang-up on socket */
+ 	Debug((DEBUG_ENGINE, "devpoll: EOF from client (POLLHUP)"));
+ 	event_generate(ET_EOF, sock, 0);
+ 	nfds--;
+@@ -365,21 +379,21 @@
+ 
+       switch (s_state(sock)) {
+       case SS_CONNECTING:
+-	if (polls[i].revents & POLLWRITEFLAGS) { /* connection completed */
++	if (pfd->revents & POLLWRITEFLAGS) { /* connection completed */
+ 	  Debug((DEBUG_ENGINE, "devpoll: Connection completed"));
+ 	  event_generate(ET_CONNECT, sock, 0);
+ 	}
+ 	break;
+ 
+       case SS_LISTENING:
+-	if (polls[i].revents & POLLREADFLAGS) { /* connect. to be accept. */
++	if (pfd->revents & POLLREADFLAGS) { /* connect. to be accept. */
+ 	  Debug((DEBUG_ENGINE, "devpoll: Ready for accept"));
+ 	  event_generate(ET_ACCEPT, sock, 0);
+ 	}
+ 	break;
+ 
+       case SS_NOTSOCK:
+-	if (polls[i].revents & POLLREADFLAGS) { /* data on socket */
++	if (pfd->revents & POLLREADFLAGS) { /* data on socket */
+ 	  /* can't peek; it's not a socket */
+ 	  Debug((DEBUG_ENGINE, "devpoll: non-socket readable"));
+ 	  event_generate(ET_READ, sock, 0);
+@@ -387,7 +401,7 @@
+ 	break;
+ 
+       case SS_CONNECTED:
+-	if (polls[i].revents & POLLREADFLAGS) { /* data on socket */
++	if (pfd->revents & POLLREADFLAGS) { /* data on socket */
+ 	  char c;
+ 
+ 	  switch (recv(s_fd(sock), &c, 1, MSG_PEEK)) { /* check EOF */
+@@ -412,18 +426,18 @@
+ 	    break;
+ 	  }
+ 	}
+-	if (polls[i].revents & POLLWRITEFLAGS) { /* socket writable */
++	if (pfd->revents & POLLWRITEFLAGS) { /* socket writable */
+ 	  Debug((DEBUG_ENGINE, "devpoll: Data can be written"));
+ 	  event_generate(ET_WRITE, sock, 0);
+ 	}
+ 	break;
+ 
+       case SS_DATAGRAM: case SS_CONNECTDG:
+-	if (polls[i].revents & POLLREADFLAGS) { /* socket readable */
++	if (pfd->revents & POLLREADFLAGS) { /* socket readable */
+ 	  Debug((DEBUG_ENGINE, "devpoll: Datagram to be read"));
+ 	  event_generate(ET_READ, sock, 0);
+ 	}
+-	if (polls[i].revents & POLLWRITEFLAGS) { /* socket writable */
++	if (pfd->revents & POLLWRITEFLAGS) { /* socket writable */
+ 	  Debug((DEBUG_ENGINE, "devpoll: Datagram can be written"));
+ 	  event_generate(ET_WRITE, sock, 0);
+ 	}
+diff -r 4cfa91f0bad3 ircd/engine_epoll.c
+--- a/ircd/engine_epoll.c	Tue Aug 06 06:23:22 2013 +0200
++++ b/ircd/engine_epoll.c	Tue Aug 06 06:29:41 2013 +0200
+@@ -104,6 +104,10 @@
+ static int errors;
+ /** Periodic timer to forget errors. */
+ static struct Timer clear_error;
++/** Current array of event descriptors. */
++static struct epoll_event *events;
++/** Number of ::events elements that have been populated. */
++static int events_used;
+ 
+ /** Decrement the error count (once per hour).
+  * @param[in] ev Expired timer event (ignored).
+@@ -236,10 +240,17 @@
+ static void
+ engine_delete(struct Socket *sock)
+ {
++  int ii;
 +
-+  assert(0 != ev_timer(ev));
-+  assert(0 != t_data(ev_timer(ev)));
-+
-+  iauth = (struct IAuth*) t_data(ev_timer(ev));
-+
-+  iauth_do_spawn(iauth, 1);
-+}
-+
- /** Handle socket activity for an %IAuth connection.
-  * @param[in] ev &Socket event; the IAuth connection is the user data
-  *   pointer for the socket.
-@@ -2281,8 +2295,13 @@
-   switch (ev_type(ev)) {
-   case ET_DESTROY:
-     /* Hm, what happened here? */
--    if (!IAuthHas(iauth, IAUTH_CLOSING))
--      iauth_do_spawn(iauth, 1);
-+    if (!IAuthHas(iauth, IAUTH_CLOSING)) {
-+      /* We must not respawn the IAuth instance right here because this callback
-+       * function may have been called by iauth_disconnect() - which would garble our
-+       * IAuth sockets once we return from this function. */
-+      timer_add(timer_init(&iauth_spawn_timer), iauth_spawn_callback, (void *)iauth,
-+        TT_RELATIVE, 1);
+   assert(0 != sock);
+   Debug((DEBUG_ENGINE, "epoll: Deleting socket %d [%p], state %s",
+ 	 s_fd(sock), sock, state_to_name(s_state(sock))));
+-  /* No action necessary; epoll removes the socket on close(). */
++  /* Drop any unprocessed events citing this socket. */
++  for (ii = 0; ii < events_used; ii++) {
++    if (events[ii].data.ptr == sock) {
++      events[ii] = events[--events_used];
 +    }
-     break;
-   case ET_READ:
-     iauth_read(iauth);
++  }
+ }
+ 
+ /** Run engine event loop.
+@@ -248,27 +259,27 @@
+ static void
+ engine_loop(struct Generators *gen)
+ {
+-  struct epoll_event *events;
++  struct epoll_event *evt;
+   struct Socket *sock;
+   socklen_t codesize;
+-  int events_count, i, wait, nevs, errcode;
++  int events_count, tmp, wait, errcode;
+ 
+   if ((events_count = feature_int(FEAT_POLLS_PER_LOOP)) < 20)
+     events_count = 20;
+   events = MyMalloc(sizeof(events[0]) * events_count);
+   while (running) {
+-    if ((i = feature_int(FEAT_POLLS_PER_LOOP)) >= 20 && i != events_count) {
+-      events = MyRealloc(events, sizeof(events[0]) * i);
+-      events_count = i;
++    if ((tmp = feature_int(FEAT_POLLS_PER_LOOP)) >= 20 && tmp != events_count) {
++      events = MyRealloc(events, sizeof(events[0]) * tmp);
++      events_count = tmp;
+     }
+ 
+     wait = timer_next(gen) ? (timer_next(gen) - CurrentTime) * 1000 : -1;
+     Debug((DEBUG_ENGINE, "epoll: delay: %d (%d) %d", timer_next(gen),
+            CurrentTime, wait));
+-    nevs = epoll_wait(epoll_fd, events, events_count, wait);
++    events_used = epoll_wait(epoll_fd, events, events_count, wait);
+     CurrentTime = time(0);
+ 
+-    if (nevs < 0) {
++    if (events_used < 0) {
+       if (errno != EINTR) {
+         log_write(LS_SOCKET, L_ERROR, 0, "epoll() error: %m");
+         if (!errors++)
+@@ -280,8 +291,9 @@
+       continue;
+     }
+ 
+-    for (i = 0; i < nevs; i++) {
+-      if (!(sock = events[i].data.ptr))
++    while (events_used > 0) {
++      evt = &events[--events_used];
++      if (!(sock = evt->data.ptr))
+         continue;
+       gen_ref_inc(sock);
+       Debug((DEBUG_ENGINE,
+@@ -289,7 +301,7 @@
+              sock, s_fd(sock), state_to_name(s_state(sock)),
+              sock_flags(s_events(sock))));
+ 
+-      if (events[i].events & EPOLLERR) {
++      if (evt->events & EPOLLERR) {
+         errcode = 0;
+         codesize = sizeof(errcode);
+         if (getsockopt(s_fd(sock), SOL_SOCKET, SO_ERROR, &errcode,
+@@ -300,16 +312,16 @@
+           gen_ref_dec(sock);
+           continue;
+         }
+-      } else if (events[i].events & EPOLLHUP) {
++      } else if (evt->events & EPOLLHUP) {
+         event_generate(ET_EOF, sock, 0);
+       } else switch (s_state(sock)) {
+       case SS_CONNECTING:
+-        if (events[i].events & EPOLLOUT) /* connection completed */
++        if (evt->events & EPOLLOUT) /* connection completed */
+           event_generate(ET_CONNECT, sock, 0);
+         break;
+ 
+       case SS_LISTENING:
+-        if (events[i].events & EPOLLIN) /* incoming connection */
++        if (evt->events & EPOLLIN) /* incoming connection */
+           event_generate(ET_ACCEPT, sock, 0);
+         break;
+ 
+@@ -317,9 +329,9 @@
+       case SS_CONNECTED:
+       case SS_DATAGRAM:
+       case SS_CONNECTDG:
+-        if (events[i].events & EPOLLIN)
++        if (evt->events & EPOLLIN)
+           event_generate(ET_READ, sock, 0);
+-        if (events[i].events & EPOLLOUT)
++        if (evt->events & EPOLLOUT)
+           event_generate(ET_WRITE, sock, 0);
+         break;
+       }
+diff -r 4cfa91f0bad3 ircd/engine_kqueue.c
+--- a/ircd/engine_kqueue.c	Tue Aug 06 06:23:22 2013 +0200
++++ b/ircd/engine_kqueue.c	Tue Aug 06 06:29:41 2013 +0200
+@@ -49,6 +49,10 @@
+ static int kqueue_max;
+ /** File descriptor for kqueue pseudo-file. */
+ static int kqueue_id;
++/** Current array of event descriptors. */
++static struct kevent *events;
++/** Number of ::events elements that have been populated. */
++static int events_used;
+ 
+ /** Number of recent errors from kqueue. */
+ static int errors = 0;
+@@ -101,7 +105,7 @@
+   struct kevent sigevent;
+   struct sigaction act;
+ 
+-  assert(0 != signal);
++  assert(0 != sig);
+ 
+   Debug((DEBUG_ENGINE, "kqueue: Adding filter for signal %d [%p]",
+ 	 sig_signal(sig), sig));
+@@ -276,7 +280,7 @@
+ static void
+ engine_delete(struct Socket* sock)
+ {
+-  struct kevent dellist[2];
++  int ii;
+ 
+   assert(0 != sock);
+   assert(sock == sockList[s_fd(sock)]);
+@@ -284,21 +288,14 @@
+   Debug((DEBUG_ENGINE, "kqueue: Deleting socket %d [%p], state %s",
+ 	 s_fd(sock), sock, state_to_name(s_state(sock))));
+ 
+-  dellist[0].ident = s_fd(sock); /* set up the delete list */
+-  dellist[0].filter = EVFILT_READ; /* readable filter */
+-  dellist[0].flags = EV_DELETE; /* delete it */
+-  dellist[0].fflags = 0;
+-  dellist[0].data = 0;
+-  dellist[0].udata = 0;
++  sockList[s_fd(sock)] = 0;
+ 
+-  dellist[1].ident = s_fd(sock);
+-  dellist[1].filter = EVFILT_WRITE; /* writable filter */
+-  dellist[1].flags = EV_DELETE; /* delete it */
+-  dellist[1].fflags = 0;
+-  dellist[1].data = 0;
+-  dellist[1].udata = 0;
+-
+-  sockList[s_fd(sock)] = 0;
++  /* Drop any unprocessed events citing this socket. */
++  for (ii = 0; ii < events_used; ii++) {
++    if (events[ii].ident == s_fd(sock)) {
++      events[ii] = events[--events_used];
++    }
++  }
+ }
+ 
+ /** Run engine event loop.
+@@ -307,14 +304,13 @@
+ static void
+ engine_loop(struct Generators* gen)
+ {
+-  struct kevent *events;
+   int events_count;
++  struct kevent *evt;
+   struct Socket* sock;
+   struct timespec wait;
+-  int nevs;
+   int i;
+   int errcode;
+-  size_t codesize;
++  socklen_t codesize;
+ 
+   if ((events_count = feature_int(FEAT_POLLS_PER_LOOP)) < 20)
+     events_count = 20;
+@@ -330,16 +326,16 @@
+     wait.tv_sec = timer_next(gen) ? (timer_next(gen) - CurrentTime) : -1;
+     wait.tv_nsec = 0;
+ 
+-    Debug((DEBUG_INFO, "kqueue: delay: %Tu (%Tu) %Tu", timer_next(gen),
++    Debug((DEBUG_ENGINE, "kqueue: delay: %Tu (%Tu) %Tu", timer_next(gen),
+ 	   CurrentTime, wait.tv_sec));
+ 
+     /* check for active events */
+-    nevs = kevent(kqueue_id, 0, 0, events, events_count,
+-		  wait.tv_sec < 0 ? 0 : &wait);
++    events_used = kevent(kqueue_id, 0, 0, events, events_count,
++                         wait.tv_sec < 0 ? 0 : &wait);
+ 
+     CurrentTime = time(0); /* set current time... */
+ 
+-    if (nevs < 0) {
++    if (events_used < 0) {
+       if (errno != EINTR) { /* ignore kevent interrupts */
+ 	/* Log the kqueue error */
+ 	log_write(LS_SOCKET, L_ERROR, 0, "kevent() error: %m");
+@@ -355,21 +351,22 @@
+       continue;
+     }
+ 
+-    for (i = 0; i < nevs; i++) {
+-      if (events[i].filter == EVFILT_SIGNAL) {
++    while (events_used > 0) {
++      evt = &events[--events_used];
++
++      if (evt->filter == EVFILT_SIGNAL) {
+ 	/* it's a signal; deal appropriately */
+-	event_generate(ET_SIGNAL, events[i].udata, events[i].ident);
++	event_generate(ET_SIGNAL, evt->udata, evt->ident);
+ 	continue; /* skip socket processing loop */
+       }
+ 
+-      assert(events[i].filter == EVFILT_READ ||
+-	     events[i].filter == EVFILT_WRITE);
++      assert(evt->filter == EVFILT_READ || evt->filter == EVFILT_WRITE);
+ 
+-      sock = sockList[events[i].ident];
++      sock = sockList[evt->ident];
+       if (!sock) /* slots may become empty while processing events */
+ 	continue;
+ 
+-      assert(s_fd(sock) == events[i].ident);
++      assert(s_fd(sock) == evt->ident);
+ 
+       gen_ref_inc(sock); /* can't have it going away on us */
+ 
+@@ -395,14 +392,14 @@
+ 
+       switch (s_state(sock)) {
+       case SS_CONNECTING:
+-	if (events[i].filter == EVFILT_WRITE) { /* connection completed */
++	if (evt->filter == EVFILT_WRITE) { /* connection completed */
+ 	  Debug((DEBUG_ENGINE, "kqueue: Connection completed"));
+ 	  event_generate(ET_CONNECT, sock, 0);
+ 	}
+ 	break;
+ 
+       case SS_LISTENING:
+-	if (events[i].filter == EVFILT_READ) { /* connect. to be accept. */
++	if (evt->filter == EVFILT_READ) { /* connect. to be accept. */
+ 	  Debug((DEBUG_ENGINE, "kqueue: Ready for accept"));
+ 	  event_generate(ET_ACCEPT, sock, 0);
+ 	}
+@@ -410,22 +407,22 @@
+ 
+       case SS_NOTSOCK: /* doing nothing socket-specific */
+       case SS_CONNECTED:
+-	if (events[i].filter == EVFILT_READ) { /* data on socket */
++	if (evt->filter == EVFILT_READ) { /* data on socket */
+ 	  Debug((DEBUG_ENGINE, "kqueue: EOF or data to be read"));
+-	  event_generate(events[i].flags & EV_EOF ? ET_EOF : ET_READ, sock, 0);
++	  event_generate(evt->flags & EV_EOF ? ET_EOF : ET_READ, sock, 0);
+ 	}
+-	if (events[i].filter == EVFILT_WRITE) { /* socket writable */
++	if (evt->filter == EVFILT_WRITE) { /* socket writable */
+ 	  Debug((DEBUG_ENGINE, "kqueue: Data can be written"));
+ 	  event_generate(ET_WRITE, sock, 0);
+ 	}
+ 	break;
+ 
+       case SS_DATAGRAM: case SS_CONNECTDG:
+-	if (events[i].filter == EVFILT_READ) { /* socket readable */
++	if (evt->filter == EVFILT_READ) { /* socket readable */
+ 	  Debug((DEBUG_ENGINE, "kqueue: Datagram to be read"));
+ 	  event_generate(ET_READ, sock, 0);
+ 	}
+-	if (events[i].filter == EVFILT_WRITE) { /* socket writable */
++	if (evt->filter == EVFILT_WRITE) { /* socket writable */
+ 	  Debug((DEBUG_ENGINE, "kqueue: Datagram can be written"));
+ 	  event_generate(ET_WRITE, sock, 0);
+ 	}
+diff -r 4cfa91f0bad3 ircd/s_auth.c
+--- a/ircd/s_auth.c	Tue Aug 06 06:23:22 2013 +0200
++++ b/ircd/s_auth.c	Tue Aug 06 06:29:41 2013 +0200
+@@ -1404,19 +1404,19 @@
+   if (iauth == NULL)
+     return;
+ 
++  /* Close error socket. */
++  if (s_fd(i_stderr(iauth)) != -1) {
++    close(s_fd(i_stderr(iauth)));
++    socket_del(i_stderr(iauth));
++    s_fd(i_stderr(iauth)) = -1;
++  }
++
+   /* Close main socket. */
+   if (s_fd(i_socket(iauth)) != -1) {
+     close(s_fd(i_socket(iauth)));
+     socket_del(i_socket(iauth));
+     s_fd(i_socket(iauth)) = -1;
+   }
+-
+-  /* Close error socket. */
+-  if (s_fd(i_stderr(iauth)) != -1) {
+-    close(s_fd(i_stderr(iauth)));
+-    socket_del(i_stderr(iauth));
+-    s_fd(i_stderr(iauth)) = -1;
+-  }
+ }
+ 
+ /** Close all %IAuth connections marked as closing. */

@@ -58,6 +58,6 @@ remotemode.patch
 cloak.patch
 webirc.patch
 iauthspoof.patch
-iauthcrashfix.patch
 limitbouncefix.patch
 classumodes.patch
+iauthcrashfix.patch
