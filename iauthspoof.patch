@@ -1,6 +1,4 @@
-# HG changeset patch
-# Parent bf5c933d38153082b961a0cb7b4be88ee6622fe7
-
+Implements the IAuth command H which lets the IAuth daemon set the client's spoof host.
 diff -r bf5c933d3815 doc/readme.iauth
 --- a/doc/readme.iauth	Sat Jul 20 09:24:13 2013 +0200
 +++ b/doc/readme.iauth	Sat Jul 20 09:27:32 2013 +0200
