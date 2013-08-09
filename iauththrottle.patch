@@ -1,0 +1,76 @@
+Implements support throttling/unthrottling specific IP addresses using
+the IAuth command "T".
+diff -r 13f8764eb4b8 -r 56bcfa3ee63c doc/readme.iauth
+--- a/doc/readme.iauth	Tue Aug 06 06:29:41 2013 +0200
++++ b/doc/readme.iauth	Fri Aug 09 16:35:24 2013 +0200
+@@ -495,3 +495,11 @@
+ Comments: Used by the iauth instance to set a user's spoof host.
+ Compatibility: This is an Undernet extension and ircd does not support
+   this message.
++
++T - Throttle/Unthrottle Client
++Syntax: H <op> <addr>
++Example: T - 192.168.1.10
++Comments: Throttles (op +) or unthrottles (op -) an IP address.
++Compatibility: This is an Undernet extension and ircd does not support
++  this message.
++
+diff -r 13f8764eb4b8 -r 56bcfa3ee63c ircd/s_auth.c
+--- a/ircd/s_auth.c	Tue Aug 06 06:29:41 2013 +0200
++++ b/ircd/s_auth.c	Fri Aug 09 16:35:24 2013 +0200
+@@ -2135,6 +2135,47 @@
+   return 0;
+ }
+ 
++/** Throttles or unthrottles the specified IP address.
++ * @param[in] iauth Active IAuth session.
++ * @param[in] cli Client referenced by command.
++ * @param[in] parc Number of parameters (2).
++ * @param[in] params Operation type and IP address.
++ * @return Zero.
++ */
++static int iauth_cmd_throttle(struct IAuth *iauth, struct Client *cli,
++                            int parc, char **params)
++{
++  const char *op;
++  struct irc_in_addr addr;
++  struct Client *acptr;
++
++  /* Process parameters */
++  if (EmptyString(params[0])) {
++    sendto_iauth(cli, "E Missing :Missing op parameter");
++    return 0;
++  } else
++    op = params[0];
++
++  if (EmptyString(params[1])) {
++    sendto_iauth(cli, "E Missing :Missing addr parameter");
++    return 0;
++  }
++
++  if (!ircd_aton(&addr, params[1])) {
++    sendto_iauth(cli, "E Invalid :Unable to parse IP address [%s]", params[1]);
++    return 0;
++  }
++
++  if (strcmp(op, "+") == 0)
++    ip_registry_check_local(&addr, NULL);
++  else if (strcmp(op, "-") == 0)
++    ip_registry_connect_fail(&addr);
++  else
++    sendto_iauth(cli, "E Invalid :Invalid op parameter");
++
++  return 0;
++}
++
+ /** Parse a \a message from \a iauth.
+  * @param[in] iauth Active IAuth session.
+  * @param[in] message Message to be parsed.
+@@ -2160,6 +2201,7 @@
+   case 's': handler = iauth_cmd_newstats; has_cli = 0; break;
+   case 'S': handler = iauth_cmd_stats; has_cli = 0; break;
+   case 'X': handler = iauth_cmd_xquery; has_cli = 0; break;
++  case 'T': handler = iauth_cmd_throttle; has_cli = 0; break;
+   case 'o': handler = iauth_cmd_username_forced; has_cli = 1; break;
+   case 'U': handler = iauth_cmd_username_good; has_cli = 1; break;
+   case 'u': handler = iauth_cmd_username_bad; has_cli = 1; break;
