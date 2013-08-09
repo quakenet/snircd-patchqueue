@@ -1,8 +1,9 @@
 Implements support throttling/unthrottling specific IP addresses using
 the IAuth command "T".
-diff -r 13f8764eb4b8 -r 56bcfa3ee63c doc/readme.iauth
---- a/doc/readme.iauth	Tue Aug 06 06:29:41 2013 +0200
-+++ b/doc/readme.iauth	Fri Aug 09 16:35:24 2013 +0200
+
+diff -r 50bfda735c55 doc/readme.iauth
+--- a/doc/readme.iauth	Fri Aug 09 23:43:00 2013 +0200
++++ b/doc/readme.iauth	Fri Aug 09 23:43:36 2013 +0200
 @@ -495,3 +495,11 @@
  Comments: Used by the iauth instance to set a user's spoof host.
  Compatibility: This is an Undernet extension and ircd does not support
@@ -15,9 +16,21 @@ diff -r 13f8764eb4b8 -r 56bcfa3ee63c doc/readme.iauth
 +Compatibility: This is an Undernet extension and ircd does not support
 +  this message.
 +
-diff -r 13f8764eb4b8 -r 56bcfa3ee63c ircd/s_auth.c
---- a/ircd/s_auth.c	Tue Aug 06 06:29:41 2013 +0200
-+++ b/ircd/s_auth.c	Fri Aug 09 16:35:24 2013 +0200
+diff -r 50bfda735c55 doc/readme.snircd
+--- a/doc/readme.snircd	Fri Aug 09 23:43:00 2013 +0200
++++ b/doc/readme.snircd	Fri Aug 09 23:43:36 2013 +0200
+@@ -292,6 +292,8 @@
+ 
+  * CLOAK: Allows finding spam relays using selectively visible clients.
+ 
++ * THROTTLE: Lets IAuth throttle/unthrottle specific IP addresses.
++
+ - configuration options ------------------------------------------------
+ 
+ Privileges for opers:
+diff -r 50bfda735c55 ircd/s_auth.c
+--- a/ircd/s_auth.c	Fri Aug 09 23:43:00 2013 +0200
++++ b/ircd/s_auth.c	Fri Aug 09 23:43:36 2013 +0200
 @@ -2135,6 +2135,47 @@
    return 0;
  }
