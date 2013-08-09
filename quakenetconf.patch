@@ -1,9 +1,9 @@
 # HG changeset patch
-# Parent 30144db3f62c88ea6a1493897e99a9bd45cbac4d
+# Parent daba6d456b1e1ffbc4ae8b417f135ed4f42c7179
 
 Updates to the quakenet.conf
 
-diff -r 30144db3f62c doc/quakenet.conf
+diff -r daba6d456b1e doc/quakenet.conf
 --- a/doc/quakenet.conf
 +++ b/doc/quakenet.conf
 @@ -6,16 +6,41 @@
@@ -425,7 +425,7 @@ diff -r 30144db3f62c doc/quakenet.conf
  # -----------------------------------------------------------------------------
  # name = "X";    nick = "X@channels.bla" ;    prepend = "LOGIN ";
  #Pseudo "CHANSERV" {
-@@ -253,105 +345,94 @@
+@@ -253,105 +345,97 @@
  #};
  Pseudo "AUTH" {
    name = "Q";
@@ -545,6 +545,8 @@ diff -r 30144db3f62c doc/quakenet.conf
 +  "HIS_URLSERVERS" = "http://www.quakenet.org/servers";
 +  "NETWORK" = "QuakeNet";
 +  "URLREG" = "http://www.quakenet.org/getauthed";
++  "IPCHECK_CLONE_LIMIT" = "5";
++# "IPCHECK_CLONE_PERIOD" = "40";
 +  "ANNOUNCE_INVITES" = "TRUE";
 +  "LOCAL_CHANNELS" = "FALSE";
 +  "TOPIC_BURST" = "TRUE";
@@ -592,6 +594,7 @@ diff -r 30144db3f62c doc/quakenet.conf
 -  "HIS_SERVERINFO" = "QuakeNet IRC Server";
 -  "HIS_URLSERVERS" = "http://www.quakenet.org/serverlist.php";
 +  "HIS_USERIP" = "FALSE";
++  "HIS_WHO_FILTERIP" = "FALSE";
 +# "DISABLE_GLINES" = "FALSE";
  };
  
