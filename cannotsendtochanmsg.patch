@@ -1,6 +1,3 @@
-# HG changeset patch
-# Parent 2d1e87f36ae5ff2e63108a62e3ed0e3825e17906
-
 Make numeric reply 404 ERR_CANNOTSENDTOCHAN more verbose and include the mode that blocked the message.
 
 diff -r 2d1e87f36ae5 include/channel.h

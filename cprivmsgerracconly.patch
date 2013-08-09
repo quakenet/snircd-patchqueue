@@ -1,4 +1,3 @@
-
 Fix wrong user in ERR_ACCOUNTONLY reply for CPRIVMSG command (should be dest, not source).
 
 diff -r 1681593e1a43 ircd/s_user.c

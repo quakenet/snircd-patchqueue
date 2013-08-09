@@ -1,6 +1,3 @@
-# HG changeset patch
-# Parent da4fffdd6fc15d37dfbcb0c07f8cfefb43d3367a
-
 Show real host when the user has a hiddenhost (not just an account) or a sethost.
 
 diff -r da4fffdd6fc1 ircd/m_check.c

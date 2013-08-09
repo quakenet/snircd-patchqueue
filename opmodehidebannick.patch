@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent c241774dec3286e7d620a5e5ea7355461c39b9af
-
-Hide IRC Operators nick in the channel banlist for bans set using /OPMODE
+Hide IRC Operators nick in the channel banlist for bans set using /OPMODE.
 
 Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/9a188302ba56
 

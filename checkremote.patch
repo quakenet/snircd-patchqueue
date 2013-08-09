@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent 7f68ff816a2054667cfe8207f0c96f3b96eb0e50
-
-Add remote CHECK
+Implement remote CHECK command.
 
 Syntax:
 

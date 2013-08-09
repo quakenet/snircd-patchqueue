@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
-
-Fix channel member being left in a zombie state when different kinds of kick cross.
+Fix channel member being left in a zombie state when different kinds of kicks cross.
 
 Backported from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/5f1306ec2068
 

@@ -1,6 +1,5 @@
-
-The kicking of a delayedjoin user by a chanop is shown to ALL chanops on the channel,
-for accountability reasons (instead of only to source and victim).
+Kicks for delay-joined users are shown to all channel ops rather than just the source
+of the kick and the victim.
 
 diff -r 8848d2de2b4b ircd/m_kick.c
 --- a/ircd/m_kick.c

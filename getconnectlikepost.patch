@@ -1,6 +1,4 @@
-# HG changeset patch
-# Parent 0d60587c3068d25c107ee81893791469b2623f0c
-Make GET and CONNECT an alias for QUIT during the unregistered part of the server (like POST)
+Make GET and CONNECT an alias for QUIT during the unregistered part of the server (like POST).
 
 diff -r 0d60587c3068 ircd/parse.c
 --- a/ircd/parse.c	Sun Jun 30 17:45:29 2013 +0200

@@ -1,4 +1,4 @@
-make anti net rider code use better fitting kick message when receiving burst from service outside of net.burst (e.g. Q)
+Make anti net rider code use better fitting kick message when receiving burst from service outside of net.burst (e.g. Q).
 
 diff -r d26997ea109e ircd/m_burst.c
 --- a/ircd/m_burst.c

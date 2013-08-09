@@ -1,6 +1,4 @@
-# HG changeset patch
-# Parent e1de3d14c9df051e11288e8de6181e4989e3b138
-
+Implement the WEBIRC command and pass its parameters to IAuth if available.
 diff -r e1de3d14c9df doc/readme.iauth
 --- a/doc/readme.iauth	Sat Jul 20 09:18:24 2013 +0200
 +++ b/doc/readme.iauth	Sat Jul 20 09:23:57 2013 +0200

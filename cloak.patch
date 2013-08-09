@@ -1,5 +1,14 @@
-# HG changeset patch
-# Parent 5afe724e9d8531c7117edbcd607420d45cb808d7
+Implements user cloaking which may be used to detect spam relays.
+
+Services can use user mode +C to mark clients as "cloaked" and use
+ADDCLOAK / CLEARCLOAK to set which other clients may see the cloaked
+user.
+
+Cloaked users are automatically deaf, i.e. are not receiving any channel
+messages.
+
+User mode +C is not settable on the ircd and instead has to be sent in
+the initial NICK message for the user.
 
 diff -r 5afe724e9d85 include/client.h
 --- a/include/client.h

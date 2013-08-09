@@ -1,6 +1,3 @@
-# HG changeset patch
-# Parent 63737fc1f1d6262eb785282e50f9a93cea7b2709
-
 Take the nick part into account as well when checking the length of the gline mask.
 
 diff -r 63737fc1f1d6 ircd/gline.c

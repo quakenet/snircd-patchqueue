@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent 7070088d444beb4a1c18fddb4f5071ad03dc310f
-
-Show idle time for local user, even if it is the requesting oper or a +k user
+Show idle time for local user, even if it is the requesting oper or a +k user.
 
 diff -r 7070088d444b ircd/m_check.c
 --- a/ircd/m_check.c

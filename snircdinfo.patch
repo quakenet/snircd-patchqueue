@@ -1,6 +1,4 @@
-# HG changeset patch
-# Parent 09c6127155ca4b566e6fd0a07e6180adf0c59650
-
+Update version information to include an ASCII snail.
 diff -r 09c6127155ca ircd/version.c.SH
 --- a/ircd/version.c.SH
 +++ b/ircd/version.c.SH

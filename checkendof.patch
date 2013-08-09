@@ -1,7 +1,5 @@
-
 Make RPL_ENDOFCHECK consistent with other end of replies, changed text and feed back the input from the client.
 Inform oper when there are too many results, and the list is truncated.
-
 
 diff -r b078cc4a3321 ircd/m_check.c
 --- a/ircd/m_check.c

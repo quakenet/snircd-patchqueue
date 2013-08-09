@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent fb1b893632ce842402085dfd8b55c2d0f0e0c312
-
-Update readme.snircd for snircd 1.3.5 release
+Update readme.snircd for snircd 1.3.5 release.
 
 diff -r fb1b893632ce doc/readme.snircd
 --- a/doc/readme.snircd

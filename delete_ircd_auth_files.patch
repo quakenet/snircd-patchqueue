@@ -1,12 +1,8 @@
-# HG changeset patch
-# Parent 5fdeef90993e59c4e7402b2ae7835736cd2cce86
-
 Remove ircd/ircd_auth.c and include/ircd_auth.h.
 
 They are gone in ircu and unused in snircd.
 
 The new files are ircd/s_auth.c and include/s_auth.h.
-
 
 diff -r 5fdeef90993e include/ircd_auth.h
 --- a/include/ircd_auth.h

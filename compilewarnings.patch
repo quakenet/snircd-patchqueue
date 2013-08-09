@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent bb5955d8f128cc9758676f2322d58ea7db9bac22
-
-Fix 2 snircd compile warnings.
+Fix two snircd compile warnings.
 
 channel.c: In function ‘SetAutoChanModes’:
 channel.c:1344:17: warning: pointer targets in assignment differ in signedness [-Wpointer-sign]

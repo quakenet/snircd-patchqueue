@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent daba6d456b1e1ffbc4ae8b417f135ed4f42c7179
-
-Updates to the quakenet.conf
+Updates to the quakenet.conf configuration file.
 
 diff -r daba6d456b1e doc/quakenet.conf
 --- a/doc/quakenet.conf

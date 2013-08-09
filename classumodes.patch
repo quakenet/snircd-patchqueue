@@ -1,9 +1,6 @@
-# HG changeset patch
-# Parent ff17c46fa54da1e46b49cddfb006d4d0cff010eb
+Fix class usermodes not being applied, and fix the user getting modes reply twice.
 
-Fix class usermodes not being applied, and fix the user getting modes twice.
-
-3rd param is the number of parameters, which should be 3,
+Third parameter is the number of parameters, which should be 3,
 when 1 just the current modes are reported.
 
 Apply the class modes before SetUser(),

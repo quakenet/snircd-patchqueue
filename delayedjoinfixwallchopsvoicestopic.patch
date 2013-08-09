@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent b33cb8c0208a4fa055b080122febcbee502d9dae
-
-Reveal Delayedjoin user when sending wallchops and wallvoices, or changing the channel topic.
+Reveal delay-joined user when sending wallchops and wallvoices, or changing the channel topic.
 
 Backport from snircd 1.4.0
 

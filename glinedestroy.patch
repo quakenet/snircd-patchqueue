@@ -1,6 +1,3 @@
-# HG changeset patch
-# Parent f507cce89a57eeec72416237835fcc58f2447345
-
 Add % prefix for gline allowing a global gline to be destroyed (removed from memory)
 instead of being kept in memory in a deactivated state until it expires.
 
@@ -16,7 +13,7 @@ Syntax:
 P10 (normal gline, lastmod)
 "<source numeric> GL * %-<mask> <expire> <lastmod> :<reason>"
 
-Oper
+Oper (commented out)
 "GLINE %-<mask> * <expire> :<reason>"
 
 diff -r f507cce89a57 include/gline.h

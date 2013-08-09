@@ -1,6 +1,4 @@
-# HG changeset patch
-# Parent 98f03fd09b815db029e9b1fa9d850a896eb9d8e1
-Fix channel bans and user silences not being checked against account host when the user has a sethost
+Fix channel bans and user silences not being checked against account host when the user has a sethost.
 
 Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/876732831347
 

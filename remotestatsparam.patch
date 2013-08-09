@@ -1,7 +1,4 @@
-# HG changeset patch
-# Parent 0d60587c3068d25c107ee81893791469b2623f0c
-
-Fix optional param for remote STATS requests.
+Fix optional parameter for remote STATS requests.
 
 Backport from snircd 1.4.0 / ircu - http://hg.quakenet.org/snircd/diff/0760b66e7816/ircd/m_stats.c
 

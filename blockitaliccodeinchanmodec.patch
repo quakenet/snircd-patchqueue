@@ -1,6 +1,3 @@
-# HG changeset patch
-# Parent e4f53aeb83c3563ad0e75fc67c1f11fcb4d284b9
-
 Block italic (29) control code (mIRC version 7.xx) with channel mode +c.
 
 diff -r e4f53aeb83c3 ircd/ircd_relay.c
