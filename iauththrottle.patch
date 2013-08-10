@@ -1,9 +1,9 @@
 Implements support throttling/unthrottling specific IP addresses using
 the IAuth command "T".
 
-diff -r 50bfda735c55 doc/readme.iauth
---- a/doc/readme.iauth	Fri Aug 09 23:43:00 2013 +0200
-+++ b/doc/readme.iauth	Fri Aug 09 23:43:36 2013 +0200
+diff -r c7bcffd866c6 doc/readme.iauth
+--- a/doc/readme.iauth	Sat Aug 10 00:06:11 2013 +0200
++++ b/doc/readme.iauth	Sat Aug 10 08:52:05 2013 +0200
 @@ -495,3 +495,11 @@
  Comments: Used by the iauth instance to set a user's spoof host.
  Compatibility: This is an Undernet extension and ircd does not support
@@ -16,9 +16,9 @@ diff -r 50bfda735c55 doc/readme.iauth
 +Compatibility: This is an Undernet extension and ircd does not support
 +  this message.
 +
-diff -r 50bfda735c55 doc/readme.snircd
---- a/doc/readme.snircd	Fri Aug 09 23:43:00 2013 +0200
-+++ b/doc/readme.snircd	Fri Aug 09 23:43:36 2013 +0200
+diff -r c7bcffd866c6 doc/readme.snircd
+--- a/doc/readme.snircd	Sat Aug 10 00:06:11 2013 +0200
++++ b/doc/readme.snircd	Sat Aug 10 08:52:05 2013 +0200
 @@ -292,6 +292,8 @@
  
   * CLOAK: Allows finding spam relays using selectively visible clients.
@@ -28,9 +28,70 @@ diff -r 50bfda735c55 doc/readme.snircd
  - configuration options ------------------------------------------------
  
  Privileges for opers:
-diff -r 50bfda735c55 ircd/s_auth.c
---- a/ircd/s_auth.c	Fri Aug 09 23:43:00 2013 +0200
-+++ b/ircd/s_auth.c	Fri Aug 09 23:43:36 2013 +0200
+diff -r c7bcffd866c6 include/IPcheck.h
+--- a/include/IPcheck.h	Sat Aug 10 00:06:11 2013 +0200
++++ b/include/IPcheck.h	Sat Aug 10 08:52:05 2013 +0200
+@@ -23,5 +23,7 @@
+ extern int IPcheck_remote_connect(struct Client *cptr, int is_burst);
+ extern void IPcheck_disconnect(struct Client *cptr);
+ extern unsigned short IPcheck_nr(struct Client* cptr);
++extern int ip_registry_check_local(const struct irc_in_addr *addr, int add_client, time_t* next_target_out);
++extern void ip_registry_connect_fail(const struct irc_in_addr *addr);
+ 
+ #endif /* INCLUDED_ipcheck_h */
+diff -r c7bcffd866c6 ircd/IPcheck.c
+--- a/ircd/IPcheck.c	Sat Aug 10 00:06:11 2013 +0200
++++ b/ircd/IPcheck.c	Sat Aug 10 08:52:05 2013 +0200
+@@ -265,14 +265,18 @@
+  * separated by no more than IPCHECK_CLONE_PERIOD seconds.
+  * @param[in] addr Address of client.
+  * @param[out] next_target_out Receives time to grant another free target.
++ * @param add_client Whether to add the new client if they're allowed to connect.
+  * @return Non-zero if the connection is permitted, zero if denied.
+  */
+-int ip_registry_check_local(const struct irc_in_addr *addr, time_t* next_target_out)
++int ip_registry_check_local(const struct irc_in_addr *addr, int add_client, time_t* next_target_out)
+ {
+   struct IPRegistryEntry* entry = ip_registry_find(addr);
+   unsigned int free_targets = STARTTARGETS;
+ 
+   if (0 == entry) {
++    if (!add_client)
++      return 1;
++
+     entry       = ip_registry_new_entry();
+     ip_registry_canonicalize(&entry->addr, addr);
+     ip_registry_add(entry);
+@@ -283,7 +287,7 @@
+    * It is hard and not interesting, to change that.
+    * Refuse connection if it would overflow the counter.
+    */
+-  if (0 == ++entry->connected)
++  if (add_client && 0 == ++entry->connected)
+   {
+     ++entry->connected;
+   }
+@@ -301,7 +305,7 @@
+     if (next_target_out)
+       *next_target_out = CurrentTime - (TARGET_DELAY * free_targets - 1);
+   }
+-  else if ((CurrentTime - cli_since(&me)) > IPCHECK_CLONE_DELAY) {
++  else if ((CurrentTime - cli_since(&me)) > IPCHECK_CLONE_DELAY && add_client) {
+     /*
+      * Don't refuse connection when we just rebooted the server
+      */
+@@ -500,7 +504,7 @@
+ int IPcheck_local_connect(const struct irc_in_addr *a, time_t* next_target_out)
+ {
+   assert(0 != next_target_out);
+-  return ip_registry_check_local(a, next_target_out);
++  return ip_registry_check_local(a, 1, next_target_out);
+ }
+ 
+ /** Check whether a client is allowed to connect remotely.
+diff -r c7bcffd866c6 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sat Aug 10 00:06:11 2013 +0200
++++ b/ircd/s_auth.c	Sat Aug 10 08:52:05 2013 +0200
 @@ -2135,6 +2135,47 @@
    return 0;
  }
@@ -67,7 +128,7 @@ diff -r 50bfda735c55 ircd/s_auth.c
 +  }
 +
 +  if (strcmp(op, "+") == 0)
-+    ip_registry_check_local(&addr, NULL);
++    ip_registry_check_local(&addr, 0, NULL);
 +  else if (strcmp(op, "-") == 0)
 +    ip_registry_connect_fail(&addr);
 +  else
