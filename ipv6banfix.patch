@@ -3,21 +3,21 @@ Date:   Wed Jun 20 20:20:25 2012 -0400
 
     Improve ipmask_parse()'s handling of invalid IPv6 inputs.
 
-diff -r 3c608fabb8ab ChangeLog
---- a/ChangeLog	Tue Jul 02 21:34:15 2013 +0200
-+++ b/ChangeLog	Tue Jul 02 23:43:57 2013 +0200
+diff -r a29a9a5ea032 ChangeLog
+--- a/ChangeLog	Sat Aug 10 00:06:11 2013 +0200
++++ b/ChangeLog	Sun Aug 11 09:29:55 2013 +0200
 @@ -1,3 +1,8 @@
 +2012-06-20  Michael Poole <mdpoole@troilus.org>
 +
 +	* ircd/ircd_string.c (ipmask_parse): Return zero if there is junk
 +	after eight valid IPv6 address elements.
 +
- 2010-01-03  Michael Poole <mdpoole@troilus.org>
+ 2011-05-15  Michael Poole  <mdpoole@troilus.org>
  
- 	* ircd/Makefile.in (IRCD_SRC): Add m_xquery.c and m_xreply.c to
-diff -r 3c608fabb8ab ircd/ircd_string.c
---- a/ircd/ircd_string.c	Tue Jul 02 21:34:15 2013 +0200
-+++ b/ircd/ircd_string.c	Tue Jul 02 23:43:57 2013 +0200
+ 	* ircd/s_auth.c (iauth_cmd_done_account): Do not copy the
+diff -r a29a9a5ea032 ircd/ircd_string.c
+--- a/ircd/ircd_string.c	Sat Aug 10 00:06:11 2013 +0200
++++ b/ircd/ircd_string.c	Sun Aug 11 09:29:55 2013 +0200
 @@ -620,6 +620,8 @@
      default:
        return 0;

@@ -6,12 +6,12 @@ ircu git IDs:
 41c732d83f3097645dc43ece14f38547045d1d0d
 f50e98744ac3e53605d59a2f313d610c9abc8f26
 
-diff -r 4cfa91f0bad3 ChangeLog
---- a/ChangeLog	Tue Aug 06 06:23:22 2013 +0200
-+++ b/ChangeLog	Tue Aug 06 06:29:41 2013 +0200
-@@ -50,6 +50,23 @@
- 	* ircd/s_auth.c: "serv" is passed to find_match_server(), which
- 	does a collapse on the pattern, so it can't be const
+diff -r b9e9c110cfa2 ChangeLog
+--- a/ChangeLog	Sun Aug 11 09:29:58 2013 +0200
++++ b/ChangeLog	Sun Aug 11 09:32:41 2013 +0200
+@@ -67,6 +67,23 @@
+ 	* ircd/m_xreply.c: Add missing includes.
+ 	(ms_xreply): Fix spelling of struct Client and findNUser().
  
 +2010-01-03  Michael Poole <mdpoole@troilus.org>
 +
@@ -30,12 +30,12 @@ diff -r 4cfa91f0bad3 ChangeLog
 +	fix a typo in an engine_signal() assertion, and get rid of dead
 +	variables in engine_delete().
 +
- 2012-06-20  Michael Poole <mdpoole@troilus.org>
+ 2010-01-01  Kevin L. Mitchell  <klmitch@mit.edu>
  
- 	* ircd/ircd_string.c (ipmask_parse): Return zero if there is junk
-diff -r 4cfa91f0bad3 ircd/engine_devpoll.c
---- a/ircd/engine_devpoll.c	Tue Aug 06 06:23:22 2013 +0200
-+++ b/ircd/engine_devpoll.c	Tue Aug 06 06:29:41 2013 +0200
+ 	* doc/readme.xquery: documentation for design and use of the
+diff -r b9e9c110cfa2 ircd/engine_devpoll.c
+--- a/ircd/engine_devpoll.c	Sun Aug 11 09:29:58 2013 +0200
++++ b/ircd/engine_devpoll.c	Sun Aug 11 09:32:41 2013 +0200
 @@ -74,6 +74,10 @@
  static int errors = 0;
  /** Periodic timer to forget errors. */
@@ -194,9 +194,9 @@ diff -r 4cfa91f0bad3 ircd/engine_devpoll.c
  	  Debug((DEBUG_ENGINE, "devpoll: Datagram can be written"));
  	  event_generate(ET_WRITE, sock, 0);
  	}
-diff -r 4cfa91f0bad3 ircd/engine_epoll.c
---- a/ircd/engine_epoll.c	Tue Aug 06 06:23:22 2013 +0200
-+++ b/ircd/engine_epoll.c	Tue Aug 06 06:29:41 2013 +0200
+diff -r b9e9c110cfa2 ircd/engine_epoll.c
+--- a/ircd/engine_epoll.c	Sun Aug 11 09:29:58 2013 +0200
++++ b/ircd/engine_epoll.c	Sun Aug 11 09:32:41 2013 +0200
 @@ -104,6 +104,10 @@
  static int errors;
  /** Periodic timer to forget errors. */
@@ -315,9 +315,9 @@ diff -r 4cfa91f0bad3 ircd/engine_epoll.c
            event_generate(ET_WRITE, sock, 0);
          break;
        }
-diff -r 4cfa91f0bad3 ircd/engine_kqueue.c
---- a/ircd/engine_kqueue.c	Tue Aug 06 06:23:22 2013 +0200
-+++ b/ircd/engine_kqueue.c	Tue Aug 06 06:29:41 2013 +0200
+diff -r b9e9c110cfa2 ircd/engine_kqueue.c
+--- a/ircd/engine_kqueue.c	Sun Aug 11 09:29:58 2013 +0200
++++ b/ircd/engine_kqueue.c	Sun Aug 11 09:32:41 2013 +0200
 @@ -49,6 +49,10 @@
  static int kqueue_max;
  /** File descriptor for kqueue pseudo-file. */
@@ -489,9 +489,9 @@ diff -r 4cfa91f0bad3 ircd/engine_kqueue.c
  	  Debug((DEBUG_ENGINE, "kqueue: Datagram can be written"));
  	  event_generate(ET_WRITE, sock, 0);
  	}
-diff -r 4cfa91f0bad3 ircd/s_auth.c
---- a/ircd/s_auth.c	Tue Aug 06 06:23:22 2013 +0200
-+++ b/ircd/s_auth.c	Tue Aug 06 06:29:41 2013 +0200
+diff -r b9e9c110cfa2 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sun Aug 11 09:29:58 2013 +0200
++++ b/ircd/s_auth.c	Sun Aug 11 09:32:41 2013 +0200
 @@ -1404,19 +1404,19 @@
    if (iauth == NULL)
      return;
