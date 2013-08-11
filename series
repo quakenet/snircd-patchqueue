@@ -32,6 +32,7 @@ checkremote.patch
 checkclient.patch
 checkidle.patch
 checkclone.patch
+checkmarker.patch
 blockitaliccodeinchanmodec.patch
 fixkickforzombie.patch
 enforcechanmodebignlocalonly.patch
