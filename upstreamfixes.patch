@@ -1,0 +1,42 @@
+Contains upstream fixes from the ircu repository.
+
+Git commit IDs:
+
+25107247373df4aa75bddc2c2befd7c2dfadec6c
+diff -r 0cd66334a2fb ChangeLog
+--- a/ChangeLog	Sat Aug 10 08:52:05 2013 +0200
++++ b/ChangeLog	Sun Aug 11 09:27:16 2013 +0200
+@@ -67,6 +67,11 @@
+ 	fix a typo in an engine_signal() assertion, and get rid of dead
+ 	variables in engine_delete().
+ 
++2010-01-03  Michael Poole <mdpoole@troilus.org>
++
++	* ircd/m_names.c (m_names): Terminate the buffer used for listing
++	clients who are not in any channel.
++
+ 2012-06-20  Michael Poole <mdpoole@troilus.org>
+ 
+ 	* ircd/ircd_string.c (ipmask_parse): Return zero if there is junk
+diff -r 0cd66334a2fb ircd/m_names.c
+--- a/ircd/m_names.c	Sat Aug 10 08:52:05 2013 +0200
++++ b/ircd/m_names.c	Sun Aug 11 09:27:16 2013 +0200
+@@ -288,6 +288,7 @@
+ 
+         if (mlen + idx + NICKLEN + 3 > BUFSIZE)     /* space, \r\n\0 */
+         {
++          buf[idx-1] = '\0';
+           send_reply(sptr, RPL_NAMREPLY, buf);
+           strcpy(buf, "* * :");
+           idx = 5;
+@@ -295,7 +296,10 @@
+         }
+       }
+       if (flag)
++      {
++        buf[idx-1] = '\0';
+         send_reply(sptr, RPL_NAMREPLY, buf);
++      }
+       send_reply(sptr, RPL_ENDOFNAMES, "*");
+     }
+     else if ((chptr = FindChannel(para)) != NULL)
