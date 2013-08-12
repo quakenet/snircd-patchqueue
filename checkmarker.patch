@@ -1,7 +1,4 @@
 Reset the clients' markers after /check.
-
-Note that this patch is not entirely correct either as it should really
-reset the marker to the current marker value, rather than 0.
 diff -r f6715abd1173 ircd/m_check.c
 --- a/ircd/m_check.c	Sun Aug 11 09:52:07 2013 +0200
 +++ b/ircd/m_check.c	Sun Aug 11 09:59:34 2013 +0200
