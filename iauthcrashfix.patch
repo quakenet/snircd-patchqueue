@@ -2,13 +2,14 @@ Contains some important upstream IAuth fixes.
 
 ircu git IDs:
 
+f8092c062a6932df138f0a9cf2855628a065c27c
 389b4c485cac5cf8deff89e381020f2a38f1ad34
 41c732d83f3097645dc43ece14f38547045d1d0d
 f50e98744ac3e53605d59a2f313d610c9abc8f26
 
-diff -r b9e9c110cfa2 ChangeLog
---- a/ChangeLog	Sun Aug 11 09:29:58 2013 +0200
-+++ b/ChangeLog	Sun Aug 11 09:32:41 2013 +0200
+diff -r 9ecc67592393 ChangeLog
+--- a/ChangeLog	Sun Aug 11 10:00:28 2013 +0200
++++ b/ChangeLog	Mon Sep 02 21:43:16 2013 +0200
 @@ -67,6 +67,23 @@
  	* ircd/m_xreply.c: Add missing includes.
  	(ms_xreply): Fix spelling of struct Client and findNUser().
@@ -33,9 +34,9 @@ diff -r b9e9c110cfa2 ChangeLog
  2010-01-01  Kevin L. Mitchell  <klmitch@mit.edu>
  
  	* doc/readme.xquery: documentation for design and use of the
-diff -r b9e9c110cfa2 ircd/engine_devpoll.c
---- a/ircd/engine_devpoll.c	Sun Aug 11 09:29:58 2013 +0200
-+++ b/ircd/engine_devpoll.c	Sun Aug 11 09:32:41 2013 +0200
+diff -r 9ecc67592393 ircd/engine_devpoll.c
+--- a/ircd/engine_devpoll.c	Sun Aug 11 10:00:28 2013 +0200
++++ b/ircd/engine_devpoll.c	Mon Sep 02 21:43:16 2013 +0200
 @@ -74,6 +74,10 @@
  static int errors = 0;
  /** Periodic timer to forget errors. */
@@ -194,9 +195,9 @@ diff -r b9e9c110cfa2 ircd/engine_devpoll.c
  	  Debug((DEBUG_ENGINE, "devpoll: Datagram can be written"));
  	  event_generate(ET_WRITE, sock, 0);
  	}
-diff -r b9e9c110cfa2 ircd/engine_epoll.c
---- a/ircd/engine_epoll.c	Sun Aug 11 09:29:58 2013 +0200
-+++ b/ircd/engine_epoll.c	Sun Aug 11 09:32:41 2013 +0200
+diff -r 9ecc67592393 ircd/engine_epoll.c
+--- a/ircd/engine_epoll.c	Sun Aug 11 10:00:28 2013 +0200
++++ b/ircd/engine_epoll.c	Mon Sep 02 21:43:16 2013 +0200
 @@ -104,6 +104,10 @@
  static int errors;
  /** Periodic timer to forget errors. */
@@ -315,9 +316,9 @@ diff -r b9e9c110cfa2 ircd/engine_epoll.c
            event_generate(ET_WRITE, sock, 0);
          break;
        }
-diff -r b9e9c110cfa2 ircd/engine_kqueue.c
---- a/ircd/engine_kqueue.c	Sun Aug 11 09:29:58 2013 +0200
-+++ b/ircd/engine_kqueue.c	Sun Aug 11 09:32:41 2013 +0200
+diff -r 9ecc67592393 ircd/engine_kqueue.c
+--- a/ircd/engine_kqueue.c	Sun Aug 11 10:00:28 2013 +0200
++++ b/ircd/engine_kqueue.c	Mon Sep 02 21:43:16 2013 +0200
 @@ -49,6 +49,10 @@
  static int kqueue_max;
  /** File descriptor for kqueue pseudo-file. */
@@ -489,9 +490,9 @@ diff -r b9e9c110cfa2 ircd/engine_kqueue.c
  	  Debug((DEBUG_ENGINE, "kqueue: Datagram can be written"));
  	  event_generate(ET_WRITE, sock, 0);
  	}
-diff -r b9e9c110cfa2 ircd/s_auth.c
---- a/ircd/s_auth.c	Sun Aug 11 09:29:58 2013 +0200
-+++ b/ircd/s_auth.c	Sun Aug 11 09:32:41 2013 +0200
+diff -r 9ecc67592393 ircd/s_auth.c
+--- a/ircd/s_auth.c	Sun Aug 11 10:00:28 2013 +0200
++++ b/ircd/s_auth.c	Mon Sep 02 21:43:16 2013 +0200
 @@ -1404,19 +1404,19 @@
    if (iauth == NULL)
      return;
@@ -519,3 +520,23 @@ diff -r b9e9c110cfa2 ircd/s_auth.c
  }
  
  /** Close all %IAuth connections marked as closing. */
+@@ -2299,8 +2299,7 @@
+ 
+   switch (ev_type(ev)) {
+   case ET_DESTROY:
+-    /* Hm, what happened here? */
+-    if (!IAuthHas(iauth, IAUTH_CLOSING))
++    if (!IAuthHas(iauth, IAUTH_CLOSING) && !s_active(i_stderr(iauth)))
+       iauth_do_spawn(iauth, 1);
+     break;
+   case ET_READ:
+@@ -2373,7 +2372,8 @@
+ 
+   switch (ev_type(ev)) {
+   case ET_DESTROY:
+-    /* We do not restart iauth here: the stdout handler does that for us. */
++    if (!IAuthHas(iauth, IAUTH_CLOSING) && !s_active(i_socket(iauth)))
++      iauth_do_spawn(iauth, 1);
+     break;
+   case ET_READ:
+     iauth_read_stderr(iauth);
