@@ -1,8 +1,8 @@
 Updates to the quakenet.conf configuration file.
 
-diff -r daba6d456b1e doc/quakenet.conf
---- a/doc/quakenet.conf
-+++ b/doc/quakenet.conf
+diff -r ef9867b70853 doc/quakenet.conf
+--- a/doc/quakenet.conf	Sun Aug 11 10:00:27 2013 +0200
++++ b/doc/quakenet.conf	Mon Sep 16 22:49:59 2013 +0200
 @@ -6,16 +6,41 @@
  #  v.12 config file, last edited 08.12.2007/paul
  # -----------------------------------------------------------------------------
@@ -115,7 +115,7 @@ diff -r daba6d456b1e doc/quakenet.conf
 +  # this should not be greater than the number
 +  # of connections the server is compiled for  
 +  maxlinks = @@@;
-+  usermode = "+iw";
++  usermode = "+i";
  };
  
  # VIP user class (aka locals, opers etc..)
