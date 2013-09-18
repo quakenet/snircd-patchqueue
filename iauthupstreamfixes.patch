@@ -10,10 +10,11 @@ ircu git IDs:
 8a0fce5ce44018405ec3aab7115f7b7028c90329
 3cfdd224928b767bf33e7de2507b6cad3bcfe3ba
 b6f0b0f286a14781eb07d8aa08c9e500eefb8082
+ac43a9ca643546041560c7386b7c34d28d57ee4e
 
-diff -r b098094b60b6 ChangeLog
---- a/ChangeLog	Tue Jul 09 16:41:38 2013 +0200
-+++ b/ChangeLog	Tue Jul 09 16:42:17 2013 +0200
+diff -r 046c2eac0b05 ChangeLog
+--- a/ChangeLog	Wed Sep 18 06:05:45 2013 +0200
++++ b/ChangeLog	Wed Sep 18 06:06:08 2013 +0200
 @@ -1,3 +1,67 @@
 +2011-05-15  Michael Poole  <mdpoole@troilus.org>
 +
@@ -82,9 +83,9 @@ diff -r b098094b60b6 ChangeLog
  2007-03-09  Michael Poole <mdpoole@troilus.org>
  
  	* include/patchlevel.h (PATCHLEVEL): Bump for u2.10.12.10 release.
-diff -r b098094b60b6 doc/readme.iauth
---- a/doc/readme.iauth	Tue Jul 09 16:41:38 2013 +0200
-+++ b/doc/readme.iauth	Tue Jul 09 16:42:17 2013 +0200
+diff -r 046c2eac0b05 doc/readme.iauth
+--- a/doc/readme.iauth	Wed Sep 18 06:05:45 2013 +0200
++++ b/doc/readme.iauth	Wed Sep 18 06:06:08 2013 +0200
 @@ -408,6 +408,18 @@
  Comments: Indicates that the specified client should be disconnected
    for the reason given.  Operators should be notified.
@@ -104,9 +105,82 @@ diff -r b098094b60b6 doc/readme.iauth
  D - Done Checking
  Syntax: D <id> <remoteip> <remoteport> [class]
  Example: D 5 192.168.1.10 23367
-diff -r b098094b60b6 ircd/s_auth.c
---- a/ircd/s_auth.c	Tue Jul 09 16:41:38 2013 +0200
-+++ b/ircd/s_auth.c	Tue Jul 09 16:42:17 2013 +0200
+diff -r 046c2eac0b05 ircd/ircd.c
+--- a/ircd/ircd.c	Wed Sep 18 06:05:45 2013 +0200
++++ b/ircd/ircd.c	Wed Sep 18 06:06:08 2013 +0200
+@@ -348,13 +348,36 @@
+       continue;
+     }
+ 
+-    max_ping = IsRegistered(cptr) ? client_get_ping(cptr) :
+-      feature_int(FEAT_CONNECTTIMEOUT);
+-   
+-    Debug((DEBUG_DEBUG, "check_pings(%s)=status:%s limit: %d current: %d",
++    Debug((DEBUG_DEBUG, "check_pings(%s)=status:%s current: %d",
+ 	   cli_name(cptr),
+ 	   IsPingSent(cptr) ? "[Ping Sent]" : "[]", 
+-	   max_ping, (int)(CurrentTime - cli_lasttime(cptr))));
++	   (int)(CurrentTime - cli_lasttime(cptr))));
++
++    /* Unregistered clients pingout after max_ping seconds, they don't
++     * get given a second chance - if they were then people could not quite
++     * finish registration and hold resources without being subject to k/g
++     * lines
++     */
++    if (!IsRegistered(cptr)) {
++      assert(!IsServer(cptr));
++      max_ping = feature_int(FEAT_CONNECTTIMEOUT);
++      /* If client authorization time has expired, ask auth whether they
++       * should be checked again later. */
++      if ((CurrentTime-cli_firsttime(cptr) >= max_ping)
++          && auth_ping_timeout(cptr))
++        continue;
++      if (!IsRegistered(cptr)) {
++	/* OK, they still have enough time left, so we'll just skip to the
++	 * next client.  Set the next check to be when their time is up, if
++	 * that's before the currently scheduled next check -- hikari */
++	expire = cli_firsttime(cptr) + max_ping;
++	if (expire < next_check)
++	  next_check = expire;
++	continue;
++      }
++    }
++
++    max_ping = client_get_ping(cptr);
+ 
+     /* If it's a server and we have not sent an AsLL lately, do so. */
+     if (IsServer(cptr)) {
+@@ -390,27 +413,6 @@
+       continue;
+     }
+ 
+-    /* Unregistered clients pingout after max_ping seconds, they don't
+-     * get given a second chance - if they were then people could not quite
+-     * finish registration and hold resources without being subject to k/g
+-     * lines
+-     */
+-    if (!IsRegistered(cptr)) {
+-      assert(!IsServer(cptr));
+-      /* If client authorization time has expired, ask auth whether they
+-       * should be checked again later. */
+-      if ((CurrentTime-cli_firsttime(cptr) >= max_ping)
+-          && auth_ping_timeout(cptr))
+-        continue;
+-      /* OK, they still have enough time left, so we'll just skip to the
+-       * next client.  Set the next check to be when their time is up, if
+-       * that's before the currently scheduled next check -- hikari */
+-      expire = cli_firsttime(cptr) + max_ping;
+-      if (expire < next_check)
+-        next_check = expire;
+-      continue;
+-    }
+-
+     /* Quit the client after max_ping*2 - they should have answered by now */
+     if (CurrentTime-cli_lasttime(cptr) >= (max_ping*2) )
+     {
+diff -r 046c2eac0b05 ircd/s_auth.c
+--- a/ircd/s_auth.c	Wed Sep 18 06:05:45 2013 +0200
++++ b/ircd/s_auth.c	Wed Sep 18 06:06:08 2013 +0200
 @@ -83,6 +83,7 @@
      AR_IAUTH_HURRY,     /**< we told iauth to hurry up */
      AR_IAUTH_USERNAME,  /**< iauth sent a username (preferred or forced) */
@@ -457,9 +531,9 @@ diff -r b098094b60b6 ircd/s_auth.c
      break;
    default:
      assert(0 && "Unrecognized event type");
-diff -r b098094b60b6 tools/iauth-test
---- a/tools/iauth-test	Tue Jul 09 16:41:38 2013 +0200
-+++ b/tools/iauth-test	Tue Jul 09 16:42:17 2013 +0200
+diff -r 046c2eac0b05 tools/iauth-test
+--- a/tools/iauth-test	Wed Sep 18 06:05:45 2013 +0200
++++ b/tools/iauth-test	Wed Sep 18 06:06:08 2013 +0200
 @@ -26,6 +26,8 @@
  # SIGRTMIN + 2 -> Set policy options ('O').
  # SIGRTMIN + 3 -> Simulate config change ('a', 'A').
