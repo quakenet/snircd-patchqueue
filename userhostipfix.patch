@@ -3,7 +3,7 @@ Also allow users to see their own ip with those commands.
 
 Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/18a330d57bdf
 
-diff -r 490869d6a4bc ircd/m_userhost.c
+diff -r ad4cf05c7b6a ircd/m_userhost.c
 --- a/ircd/m_userhost.c
 +++ b/ircd/m_userhost.c
 @@ -104,7 +104,7 @@
@@ -15,17 +15,15 @@ diff -r 490869d6a4bc ircd/m_userhost.c
  	      cli_user(cptr)->host : cli_user(cptr)->realhost);
  }
  
-diff -r 490869d6a4bc ircd/m_userip.c
+diff -r ad4cf05c7b6a ircd/m_userip.c
 --- a/ircd/m_userip.c
 +++ b/ircd/m_userip.c
-@@ -106,7 +106,9 @@
+@@ -106,7 +106,7 @@
  	       * of +x.  If an oper wants the real IP, he should go to
  	       * /whois to get it.
  	       */
 -	      (HasHiddenHost(cptr) || HasSetHost(cptr) || feature_bool(FEAT_HIS_USERIP)) && !IsAnOper(sptr) ?
-+	      ((HasHiddenHost(cptr) || IsSetHost(cptr) ||              /* hiddenhost or sethost */
-+	        (feature_bool(FEAT_HIS_USERIP) && !IsAnOper(sptr))) && /* HIS_USERIP enabled and not an operator */
-+	       (sptr != cptr)) ?
++	      ((HasHiddenHost(cptr) || IsSetHost(cptr)) && (sptr != cptr)) ?
  	      feature_str(FEAT_HIDDEN_IP) :
  	      ircd_ntoa(&cli_ip(cptr)));
  }
