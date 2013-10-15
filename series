@@ -55,6 +55,7 @@ iauthupstreamfixes.patch
 xquery.patch
 ipv6banfix.patch
 remotemode.patch
+createsettime.patch
 cloak.patch
 webirc.patch
 iauthspoof.patch

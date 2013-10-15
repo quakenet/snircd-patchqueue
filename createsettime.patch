@@ -1,0 +1,50 @@
+# HG changeset patch
+# Parent 10ad74353eb24f3035d0ad75dcc10bbf3ab7617e
+
+Make SETTIME correction for timestamp drift in CREATE messages controlled by feature TIMESTAMP_DRIFT_SETTIME, default TRUE.
+
+Timestamp drift is when the channel timestamp in the CREATE message is more than 60 seconds ahead of network time.
+
+diff -r 10ad74353eb2 include/ircd_features.h
+--- a/include/ircd_features.h
++++ b/include/ircd_features.h
+@@ -36,6 +36,7 @@
+   FEAT_LOG,
+   FEAT_DOMAINNAME,
+   FEAT_RELIABLE_CLOCK,
++  FEAT_TIMESTAMP_DRIFT_SETTIME,
+   FEAT_BUFFERPOOL,
+   FEAT_HAS_FERGUSON_FLUSHER,
+   FEAT_CLIENT_FLOOD,
+diff -r 10ad74353eb2 ircd/ircd_features.c
+--- a/ircd/ircd_features.c
++++ b/ircd/ircd_features.c
+@@ -289,6 +289,7 @@
+       0, log_feature_unmark, log_feature_mark, log_feature_report),
+   F_S(DOMAINNAME, 0, DOMAINNAME, 0),
+   F_B(RELIABLE_CLOCK, 0, 0, 0),
++  F_B(TIMESTAMP_DRIFT_SETTIME, 0, 1, 0),
+   F_I(BUFFERPOOL, 0, 27000000, 0),
+   F_B(HAS_FERGUSON_FLUSHER, 0, 0, 0),
+   F_I(CLIENT_FLOOD, 0, 1024, 0),
+diff -r 10ad74353eb2 ircd/m_create.c
+--- a/ircd/m_create.c
++++ b/ircd/m_create.c
+@@ -85,6 +85,7 @@
+ #include "client.h"
+ #include "hash.h"
+ #include "ircd.h"
++#include "ircd_features.h"
+ #include "ircd_log.h"
+ #include "ircd_reply.h"
+ #include "ircd_string.h"
+@@ -130,7 +131,8 @@
+     cli_serv(cli_user(sptr)->server)->lag = TStime() - chanTS;
+ 
+   /* If this server is >1 minute fast, warn */
+-  if (TStime() - chanTS<-60)
++  /* only when TIMESTAMP_DRIFT_SETTIME is TRUE - snircd */
++  if ((TStime() - chanTS<-60) && feature_bool(FEAT_TIMESTAMP_DRIFT_SETTIME))
+   {
+     static time_t rate;
+     sendto_opmask_butone_ratelimited(0, SNO_NETWORK, &rate,
