@@ -8,7 +8,7 @@ P10: <source numeric> CC <target server numeric> <input> [-flags]
 
 Backport from snircd 1.4.0 - http://hg.quakenet.org/snircd/rev/4a1375040d2f
 
-diff -r 7f68ff816a20 include/msg.h
+diff -r df2539e3e745 include/msg.h
 --- a/include/msg.h
 +++ b/include/msg.h
 @@ -262,6 +262,7 @@
@@ -19,7 +19,7 @@ diff -r 7f68ff816a20 include/msg.h
  
  #define MSG_REHASH              "REHASH"        /* REHA */
  #define TOK_REHASH              "REHASH"
-diff -r 7f68ff816a20 ircd/m_check.c
+diff -r df2539e3e745 ircd/m_check.c
 --- a/ircd/m_check.c
 +++ b/ircd/m_check.c
 @@ -37,6 +37,7 @@
@@ -46,7 +46,7 @@ diff -r 7f68ff816a20 ircd/m_check.c
 +  /* remote query */
 +  if (parc >= 4 || (parc == 3 && parv[2][0] != '-')) {
 +    if (hunt_server_cmd(sptr, CMD_CHECK, cptr, 1,
-+                        parc == 4 ? "%C %s %s" : "%C %s",
++                        parc == 4 ? "%C %s %s" : "%C %s -",
 +                        1, parc, parv) != HUNTED_ISME)
 +      return 0;
 +    parv++;
