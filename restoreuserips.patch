@@ -1,0 +1,89 @@
+Remove HIS_USER and HIS_WHO_FILTERIP.
+They are no longer necessary and never completely hid IPs.
+
+diff -r cf9645179bb3 doc/quakenet.conf
+--- a/doc/quakenet.conf	Sat Feb 15 14:38:30 2014 +0100
++++ b/doc/quakenet.conf	Sat Feb 15 15:47:58 2014 +0100
+@@ -434,8 +434,6 @@
+   "SETHOST" = "TRUE";
+   "SETHOST_USER" = "TRUE";
+   "SETHOST_AUTO" = "TRUE";
+-  "HIS_USERIP" = "FALSE";
+-  "HIS_WHO_FILTERIP" = "FALSE";
+ # "DISABLE_GLINES" = "FALSE";
+ };
+ 
+diff -r cf9645179bb3 doc/readme.snircd
+--- a/doc/readme.snircd	Sat Feb 15 14:38:30 2014 +0100
++++ b/doc/readme.snircd	Sat Feb 15 15:47:58 2014 +0100
+@@ -428,19 +428,6 @@
+  As per QuakeNet Security, this option sets usermode +i on all connecting clients
+  automatically and disallows users to set usermode -i.
+ 
+-HIS_USERIP
+- * Type: boolean
+- * Default: TRUE
+-
+- As per QuakeNet Security, add the ability to hide the IP in /USERIP from users.
+- The IP set in feature HIDDEN_IP is shown instead.
+-
+-HIS_WHO_FILTERIP
+- * Type: boolean
+- * Default: TRUE
+-
+- As per QuakeNet Security, disallow users from matching IP using /WHO <mask> i.
+-
+ AUTOCHANMODES
+  * Type: boolean
+  * Default: TRUE
+diff -r cf9645179bb3 include/ircd_features.h
+--- a/include/ircd_features.h	Sat Feb 15 14:38:30 2014 +0100
++++ b/include/ircd_features.h	Sat Feb 15 15:47:58 2014 +0100
+@@ -153,7 +153,6 @@
+   FEAT_HIS_WHOIS_LOCALCHAN,
+   FEAT_HIS_WHO_SERVERNAME,
+   FEAT_HIS_WHO_HOPCOUNT,
+-  FEAT_HIS_WHO_FILTERIP,
+   FEAT_HIS_MODEWHO,
+   FEAT_HIS_BANWHO,
+   FEAT_HIS_KILLWHO,
+@@ -167,7 +166,6 @@
+   FEAT_HIS_URLSERVERS,
+   FEAT_HIS_USERGLINE,
+   FEAT_HIS_LUSERS_ME,
+-  FEAT_HIS_USERIP,
+ 
+   /* Misc. random stuff */
+   FEAT_NETWORK,
+diff -r cf9645179bb3 ircd/ircd_features.c
+--- a/ircd/ircd_features.c	Sat Feb 15 14:38:30 2014 +0100
++++ b/ircd/ircd_features.c	Sat Feb 15 15:47:58 2014 +0100
+@@ -406,7 +406,6 @@
+   F_B(HIS_WHOIS_LOCALCHAN, 0, 1, 0),
+   F_B(HIS_WHO_SERVERNAME, 0, 1, 0),
+   F_B(HIS_WHO_HOPCOUNT, 0, 1, 0),
+-  F_B(HIS_WHO_FILTERIP, 0, 1, 0),
+   F_B(HIS_MODEWHO, 0, 1, 0),
+   F_B(HIS_BANWHO, 0, 1, 0),
+   F_B(HIS_KILLWHO, 0, 1, 0),
+@@ -420,7 +419,6 @@
+   F_S(HIS_URLSERVERS, 0, "http://www.undernet.org/servers.php", 0),
+   F_B(HIS_USERGLINE, 0, 1, 0),
+   F_B(HIS_LUSERS_ME, 0, 0, 0),
+-  F_B(HIS_USERIP, 0, 1, 0),
+ 
+   /* Misc. random stuff */
+   F_S(NETWORK, 0, "UnderNet", 0),
+diff -r cf9645179bb3 ircd/m_who.c
+--- a/ircd/m_who.c	Sat Feb 15 14:38:30 2014 +0100
++++ b/ircd/m_who.c	Sat Feb 15 15:47:58 2014 +0100
+@@ -277,9 +277,6 @@
+   if (feature_bool(FEAT_HIS_WHO_SERVERNAME) && !IsAnOper(sptr))
+     matchsel &= ~WHO_FIELD_SER;
+ 
+-  if (feature_bool(FEAT_HIS_WHO_FILTERIP) && !IsAnOper(sptr))
+-    matchsel &= ~WHO_FIELD_NIP;
+-
+   if (qrt && (fields & WHO_FIELD_QTY))
+   {
+     p = qrt;

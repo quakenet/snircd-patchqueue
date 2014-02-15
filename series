@@ -64,3 +64,4 @@ classumodes.patch
 iauthcrashfix.patch
 iauththrottle.patch
 upstreamfixes.patch
+restoreuserips.patch
